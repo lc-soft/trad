@@ -13,3 +13,4 @@ _deps
 build
 .vs
 .vscode
+node_modules

@@ -1,12 +1,15 @@
 const { Parser } = require('acorn')
 const { ImportParser } = require('./import')
+const Adapter = require('../adapter')
 
 class Compiler {
   constructor() {
     this.eol = '\n'
+    this.adapters = {}
     this.parsers = {
-      ImportDeclaration: new ImportParser()
+      ImportDeclaration: new ImportParser(this.adapters)
     }
+    Adapter.install(this)
   }
 
   compile(code) {

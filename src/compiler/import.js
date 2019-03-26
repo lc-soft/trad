@@ -1,7 +1,6 @@
-const modules = require('./modules.json')
-
 class ImportParser {
-  constructor() {
+  constructor(adapters) {
+    this.adapters = adapters
     this.excludes = {}
   }
 
@@ -10,23 +9,23 @@ class ImportParser {
     const source = input.source.value
   
     input.specifiers.forEach((specifier) => {
-      let target = modules[source]
-      
-      if (!target) {
-        target = {
+      let adapter = this.adapters[source]
+
+      if (!adapter) {
+        adapter = {
           includes: [`"${source}.h"`]
         }
       }
-      if (target.includes instanceof Array) {
-        includes = includes.concat(target.includes)
+      if (adapter.includes instanceof Array) {
+        includes = includes.concat(adapter.includes)
       }
       if (specifier.type === 'ImportDefaultSpecifier') {
-        target = target.default
+        adapter = adapter.default
       } else if (specifier.type === 'ImportDeclaration') {
-        target = target.exports[specifier.local.name]
+        adapter = adapter.exports[specifier.local.name]
       }
-      if (target && target.includes instanceof Array) {
-        includes = includes.concat(target.includes) 
+      if (adapter && adapter.includes instanceof Array) {
+        includes = includes.concat(adapter.includes) 
       }
     })
     return includes.filter((file) => {

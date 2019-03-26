@@ -7,7 +7,12 @@ function run(argv) {
       throw new Error(err)
     }
     compiler = new Compiler()
-    console.log(compiler.compile(data))
+    try {
+      outputs = compiler.compile(data)
+      console.log(outputs)
+    } catch(err) {
+      console.log(err)
+    }
   })
 }
 

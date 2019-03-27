@@ -6,10 +6,16 @@ class Compiler {
   constructor(options) {
     this.eol = '\n'
     this.ports = options.ports
+    this.scopes = []
+    this.scopeIndex = -1
     this.parser = new (Parser.extend(options.plugins))(this)
     this.handlers = {
       ImportDeclaration: new ImportParser(this)
     }
+  }
+
+  get scope() {
+    return this.scopes[this.scopeIndex]
   }
 
   parse(input) {
@@ -23,9 +29,15 @@ class Compiler {
   }
 
   parseInputs(inputs) {
+    const scope = {}
+
+    this.scopeIndex += 1
+    this.scopes.push(scope)
     inputs.forEach((input) => {
       this.parseInputs(this.parse(input))
     })
+    this.scopeIndex -= 1
+    this.scopes.pop(scope)
   }
 
   compile(code) {

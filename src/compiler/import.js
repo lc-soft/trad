@@ -6,17 +6,18 @@ class ImportParser {
 
   parse(input) {
     let includes = []
-    const objects = {}
     const source = input.source.value
     const ports = this.compiler.ports
-  
+    const scope = this.compiler.scope
+
     input.specifiers.forEach((specifier) => {
       const name = specifier.local.name
-      let obj = objects[name]
       let port = ports[source]
+      let obj = scope[name]
 
       if (!port) {
         port = {
+          type: 'module',
           includes: [`"${source}.h"`]
         }
       }
@@ -24,12 +25,8 @@ class ImportParser {
         includes = includes.concat(port.includes)
       }
       if (!obj) {
-        obj = {
-          name,
-          port,
-          exports: {}
-        }
-        objects[name] = obj 
+        obj = { name, port }
+        scope[name] = obj 
       }
       if (specifier.type === 'ImportDefaultSpecifier') {
         port = port.default

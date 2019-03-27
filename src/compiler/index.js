@@ -1,32 +1,39 @@
-const { Parser } = require('acorn')
+const acorn = require('acorn')
+const { Parser } = require('./parser')
 const { ImportParser } = require('./import')
-const Adapter = require('../adapter')
 
 class Compiler {
-  constructor() {
+  constructor(options) {
     this.eol = '\n'
-    this.adapters = {}
-    this.parsers = {
-      ImportDeclaration: new ImportParser(this.adapters)
+    this.ports = options.ports
+    this.parser = new (Parser.extend(options.plugins))(this)
+    this.handlers = {
+      ImportDeclaration: new ImportParser(this)
     }
-    Adapter.install(this)
+  }
+
+  parse(input) {
+    const handler = this.handlers[input.type]
+
+    if (handler) {
+      return handler.parse(input)
+    }
+    this.parser.output(`/* ${input.type} ignored */`)
+    return []
+  }
+
+  parseInputs(inputs) {
+    inputs.forEach((input) => {
+      this.parseInputs(this.parse(input))
+    })
   }
 
   compile(code) {
-    const acornParser = Parser.extend(require("acorn-jsx")())
-    const inputs = acornParser.parse(code, { sourceType: 'module' })
-    let outputs = []
+    const parser = acorn.Parser.extend(require("acorn-jsx")())
+    const input = parser.parse(code, { sourceType: 'module' })
 
-    inputs.body.forEach((input) => {
-      const parser = this.parsers[input.type]
-      if (parser) {
-        outputs = outputs.concat(parser.parse(input))
-      } else {
-        outputs.push(`/* ${input.type} ignored */`)
-      }
-    })
-    outputs.push('')
-    return outputs.join(this.eol)
+    this.parseInputs(input.body)
+    return this.parser.outputs.join(this.eol)
   }
 }
 

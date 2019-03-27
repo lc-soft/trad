@@ -1,40 +1,53 @@
 class ImportParser {
-  constructor(adapters) {
-    this.adapters = adapters
+  constructor(compiler) {
+    this.compiler = compiler
     this.excludes = {}
   }
 
   parse(input) {
     let includes = []
+    const objects = {}
     const source = input.source.value
+    const ports = this.compiler.ports
   
     input.specifiers.forEach((specifier) => {
-      let adapter = this.adapters[source]
+      const name = specifier.local.name
+      let obj = objects[name]
+      let port = ports[source]
 
-      if (!adapter) {
-        adapter = {
+      if (!port) {
+        port = {
           includes: [`"${source}.h"`]
         }
       }
-      if (adapter.includes instanceof Array) {
-        includes = includes.concat(adapter.includes)
+      if (port.includes instanceof Array) {
+        includes = includes.concat(port.includes)
+      }
+      if (!obj) {
+        obj = {
+          name,
+          port,
+          exports: {}
+        }
+        objects[name] = obj 
       }
       if (specifier.type === 'ImportDefaultSpecifier') {
-        adapter = adapter.default
+        port = port.default
       } else if (specifier.type === 'ImportDeclaration') {
-        adapter = adapter.exports[specifier.local.name]
+        port = port.exports[name]
       }
-      if (adapter && adapter.includes instanceof Array) {
-        includes = includes.concat(adapter.includes) 
+      if (port && port.includes instanceof Array) {
+        includes = includes.concat(port.includes) 
       }
     })
-    return includes.filter((file) => {
+    includes.forEach((file) => {
       if (this.excludes[file]) {
-        return false
+        return
       }
       this.excludes[file] = true
-      return true
-    }).map(file => `#include ${file}`)
+      this.compiler.parser.output(`#include ${file}`)
+    })
+    return []
   }
 }
 

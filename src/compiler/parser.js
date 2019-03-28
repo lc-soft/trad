@@ -1,14 +1,20 @@
 class Parser {
-  constructor() {
+  constructor(compiler) {
+    this.compiler = compiler
+  }
+
+  parse() {}
+}
+
+class MainParser extends Parser {
+  constructor(compiler) {
+    super(compiler)
+
     this.outputs = []
   }
 
   output(data) {
     this.outputs.push(data)
-  }
-  
-  parse() {
-    return []
   }
 
   static extend(plugins = []) {
@@ -21,4 +27,4 @@ class Parser {
   }
 }
 
-module.exports = { Parser }
+module.exports = { Parser, MainParser }

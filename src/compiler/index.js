@@ -1,16 +1,28 @@
 const acorn = require('acorn')
-const { Parser } = require('./parser')
+const { MainParser } = require('./parser')
 const { ImportParser } = require('./import')
+const { ClassParser, MethodParser } = require('./class')
+const { FunctionParser } = require('./function')
+const { BlockStatmentParser } = require('./statement')
 
 class Compiler {
   constructor(options) {
     this.eol = '\n'
+    this.indent = 0
     this.ports = options.ports
+    // Object scope stack
     this.scopes = []
     this.scopeIndex = -1
-    this.parser = new (Parser.extend(options.plugins))(this)
+    // Parser context stack
+    this.contexts = []
+    this.contextIndex = -1
+    this.parser = new (MainParser.extend(options.plugins))(this)
     this.handlers = {
-      ImportDeclaration: new ImportParser(this)
+      ImportDeclaration: new ImportParser(this),
+      ClassDeclaration: new ClassParser(this),
+      MethodDefinition: new MethodParser(this),
+      FunctionExpression: new FunctionParser(this),
+      BlockStatement: new BlockStatmentParser(this)
     }
   }
 
@@ -18,14 +30,49 @@ class Compiler {
     return this.scopes[this.scopeIndex]
   }
 
+  get context() {
+    return this.contexts[this.contextIndex]
+  }
+
+  set context(value) {
+    this.contexts[this.contextIndex] = value
+  }
+
+  findContext(callback) {
+    for (let i = this.contextIndex; i >= 0; --i) {
+      if (callback(this.contexts[i])) {
+        return this.contexts[i]
+      }
+    }
+    return null
+  }
+
+  output(data) {
+    this.parser.output(data)
+  }
+
   parse(input) {
     const handler = this.handlers[input.type]
 
     if (handler) {
-      return handler.parse(input)
+      handler.parse(input)
+      return
     }
-    this.parser.output(`/* ${input.type} ignored */`)
-    return []
+    this.output(`/* ${input.type} ignored */`)
+  }
+
+  beginParse(input) {
+    const context = {}
+    this.contextIndex += 1
+    this.contexts.push(context)
+    this.context = input
+    this.indent += 1
+  }
+
+  endParse() {
+    this.contextIndex -= 1
+    this.contexts.pop()
+    this.indent -= 1
   }
 
   parseInputs(inputs) {
@@ -34,10 +81,12 @@ class Compiler {
     this.scopeIndex += 1
     this.scopes.push(scope)
     inputs.forEach((input) => {
-      this.parseInputs(this.parse(input))
+      this.beginParse(input)
+      this.parse(input)
+      this.endParse()
     })
     this.scopeIndex -= 1
-    this.scopes.pop(scope)
+    this.scopes.pop()
   }
 
   compile(code) {

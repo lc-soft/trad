@@ -1,5 +1,6 @@
 const LCUI = {
   type: 'module',
+  source: 'LCUI',
   includes: [
     '<LCUI_Build.h>',
     '<LCUI/LCUI.h>'
@@ -13,6 +14,7 @@ const LCUI = {
 
 const LCUIWidget = {
   type: 'module',
+  source: 'LCUI',
   includes: [
     '<LCUI_Build.h>',
     '<LCUI/LCUI.h>',

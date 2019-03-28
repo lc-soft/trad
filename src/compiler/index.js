@@ -1,5 +1,4 @@
 const acorn = require('acorn')
-const { MainParser } = require('./parser')
 const { ImportParser } = require('./import')
 const { ClassParser, MethodParser } = require('./class')
 const { FunctionParser } = require('./function')
@@ -10,6 +9,7 @@ class Compiler {
     this.eol = '\n'
     this.indent = 0
     this.tabSize = 8
+    this.outputs = []
     this.ports = options.ports
     // Object scope stack
     this.scopes = []
@@ -17,7 +17,6 @@ class Compiler {
     // Parser context stack
     this.contexts = []
     this.contextIndex = -1
-    this.parser = new (MainParser.extend(options.plugins))(this)
     this.handlers = {
       ImportDeclaration: new ImportParser(this),
       ClassDeclaration: new ClassParser(this),
@@ -59,15 +58,14 @@ class Compiler {
   }
 
   output(str) {
-    this.parser.output(' '.repeat(this.indent * this.tabSize) + str)
+    this.outputs.push(' '.repeat(this.indent * this.tabSize) + str)
   }
 
   parse(input) {
     const handler = this.handlers[input.type]
 
     if (handler) {
-      handler.parse(input)
-      return
+      return handler.parse(input)
     }
     this.output(`/* ${input.type} ignored */`)
   }
@@ -89,13 +87,15 @@ class Compiler {
 
     this.scopeIndex += 1
     this.scopes.push(scope)
-    inputs.forEach((input) => {
+    const results = inputs.map((input) => {
       this.beginParse(input)
-      this.parse(input)
+      const result = this.parse(input)
       this.endParse()
+      return result
     })
     this.scopeIndex -= 1
     this.scopes.pop()
+    return results
   }
 
   compile(code) {
@@ -103,7 +103,16 @@ class Compiler {
     const input = parser.parse(code, { sourceType: 'module' })
 
     this.parseInputs(input.body)
-    return this.parser.outputs.join(this.eol)
+    return this.outputs.join(this.eol)
+  }
+
+  static extend(...plugins) {
+    let cls = this
+
+    plugins.forEach((plugin) => {
+      cls = plugin.install(cls)
+    })
+    return cls
   }
 }
 

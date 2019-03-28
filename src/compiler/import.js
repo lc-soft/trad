@@ -8,12 +8,12 @@ class ImportParser {
     let includes = []
     const source = input.source.value
     const ports = this.compiler.ports
-    const scope = this.compiler.scope
 
     input.specifiers.forEach((specifier) => {
-      const name = specifier.local.name
+      let name = specifier.local.name
       let port = ports[source]
-      let obj = scope[name]
+      let binding = null
+      let type = 'module'
 
       if (!port) {
         port = {
@@ -24,17 +24,21 @@ class ImportParser {
       if (port.includes instanceof Array) {
         includes = includes.concat(port.includes)
       }
-      if (!obj) {
-        obj = { name, port }
-        scope[name] = obj 
-      }
       if (specifier.type === 'ImportDefaultSpecifier') {
-        port = port.default
-      } else if (specifier.type === 'ImportDeclaration') {
-        port = port.exports[name]
+        binding = port.default
+        name = 'default'
+      } else {
+        binding = port.exports[name]
+        type = 'class'
       }
-      if (port && port.includes instanceof Array) {
-        includes = includes.concat(port.includes) 
+      this.compiler.scope[name] = {
+        name,
+        type,
+        port,
+        binding
+      }
+      if (binding && binding.includes instanceof Array) {
+        includes = includes.concat(binding.includes) 
       }
     })
     includes.forEach((file) => {
@@ -42,7 +46,7 @@ class ImportParser {
         return
       }
       this.excludes[file] = true
-      this.compiler.parser.output(`#include ${file}`)
+      this.compiler.output(`#include ${file}`)
     })
     return []
   }

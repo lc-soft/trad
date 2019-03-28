@@ -1,5 +1,6 @@
 const fs = require('fs')
 const ports = require('./ports')
+const LCUI = require('./plugins/LCUI')
 const { Compiler } = require('./compiler')
 
 function run(argv) {
@@ -7,7 +8,7 @@ function run(argv) {
     if (err) {
       throw new Error(err)
     }
-    compiler = new Compiler({ ports })
+    compiler = new (Compiler.extend(LCUI))({ ports })
     try {
       outputs = compiler.compile(data)
       console.log(outputs)

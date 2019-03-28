@@ -3,12 +3,13 @@ const { MainParser } = require('./parser')
 const { ImportParser } = require('./import')
 const { ClassParser, MethodParser } = require('./class')
 const { FunctionParser } = require('./function')
-const { BlockStatmentParser } = require('./statement')
+const { BlockStatmentParser, ReturnStatementParser } = require('./statement')
 
 class Compiler {
   constructor(options) {
     this.eol = '\n'
     this.indent = 0
+    this.tabSize = 8
     this.ports = options.ports
     // Object scope stack
     this.scopes = []
@@ -22,7 +23,8 @@ class Compiler {
       ClassDeclaration: new ClassParser(this),
       MethodDefinition: new MethodParser(this),
       FunctionExpression: new FunctionParser(this),
-      BlockStatement: new BlockStatmentParser(this)
+      BlockStatement: new BlockStatmentParser(this),
+      ReturnStatement: new ReturnStatementParser(this)
     }
   }
 
@@ -38,6 +40,15 @@ class Compiler {
     this.contexts[this.contextIndex] = value
   }
 
+  findObject(name) {
+    for (let i = this.scopeIndex; i >= 0; --i) {
+      if (typeof this.scopes[i][name] !== 'undefined') {
+        return this.scopes[i][name]
+      }
+    }
+    return undefined
+  }
+
   findContext(callback) {
     for (let i = this.contextIndex; i >= 0; --i) {
       if (callback(this.contexts[i])) {
@@ -47,8 +58,8 @@ class Compiler {
     return null
   }
 
-  output(data) {
-    this.parser.output(data)
+  output(str) {
+    this.parser.output(' '.repeat(this.indent * this.tabSize) + str)
   }
 
   parse(input) {
@@ -66,13 +77,11 @@ class Compiler {
     this.contextIndex += 1
     this.contexts.push(context)
     this.context = input
-    this.indent += 1
   }
 
   endParse() {
     this.contextIndex -= 1
     this.contexts.pop()
-    this.indent -= 1
   }
 
   parseInputs(inputs) {

@@ -1,11 +1,27 @@
 const { Parser } = require('./parser')
 
-class BlockStatmentParser extends Parser {
+class ReturnStatementParser extends Parser {
   parse(input) {
-    this.compiler.output('{')
-    this.compiler.parseInputs(input.body)
-    this.compiler.output('}')
+    const result = this.compiler.parse(input.argument)
+
+    if (typeof result !== 'string') {
+      this.compiler.output(`return;`)  
+    } else {
+      this.compiler.output(`return ${result};`)
+    }
   }
 }
 
-module.exports = { BlockStatmentParser }
+class BlockStatmentParser extends Parser {
+  parse(input) {
+    const c = this.compiler
+
+    c.output('{')
+    c.indent += 1
+    c.parseInputs(input.body)
+    c.indent -= 1
+    c.output('}')
+  }
+}
+
+module.exports = { BlockStatmentParser, ReturnStatementParser }

@@ -9,12 +9,8 @@ function run(argv) {
       throw new Error(err)
     }
     compiler = new (Compiler.extend(LCUI))({ ports })
-    try {
-      outputs = compiler.compile(data)
-      console.log(outputs)
-    } catch(err) {
-      console.log(err)
-    }
+    compiler.compile(data)
+    console.log(compiler.getSourceFileData())
   })
 }
 

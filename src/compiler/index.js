@@ -1,13 +1,14 @@
 const acorn = require('acorn')
+const ctypes = require('../ctypes')
 const { ImportParser } = require('./import')
 const { ClassParser, MethodParser } = require('./class')
-const { FunctionParser } = require('./function')
+const { FunctionExpressionParser } = require('./function')
 const { BlockStatmentParser, ReturnStatementParser } = require('./statement')
 
 class CompilerContext {
-  constructor(node) {
+  constructor(node, data = {}) {
     this.node = node
-    this.data = {}
+    this.data = data
     this.scope = {}
     this.parser = null
     this.children = []
@@ -18,18 +19,17 @@ class CompilerContext {
 class Compiler {
   constructor(options) {
     this.eol = '\n'
-    this.indent = 0
     this.tabSize = 8
-    this.outputs = []
     this.ports = options.ports
     // Parser context stack
     this.contexts = []
     this.contextIndex = -1
+    this.program = new ctypes.program()
     this.handlers = {
       ImportDeclaration: new ImportParser(this),
       ClassDeclaration: new ClassParser(this),
       MethodDefinition: new MethodParser(this),
-      FunctionExpression: new FunctionParser(this),
+      FunctionExpression: new FunctionExpressionParser(this),
       BlockStatement: new BlockStatmentParser(this),
       ReturnStatement: new ReturnStatementParser(this)
     }
@@ -39,12 +39,12 @@ class Compiler {
     return this.context.scope
   }
 
-  get context() {
-    return this.contexts[this.contextIndex]
+  get global() {
+    return this.contexts[0].scope
   }
 
-  set context(value) {
-    this.contexts[this.contextIndex] = value
+  get context() {
+    return this.contexts[this.contextIndex]
   }
 
   findObject(name) {
@@ -75,8 +75,10 @@ class Compiler {
     return this.contexts.pop()
   }
 
-  output(str) {
-    this.outputs.push(' '.repeat(this.indent * this.tabSize) + str)
+  findContextData(type) {
+    const ctx = this.findContext(c => c.data instanceof type)
+
+    return ctx ? ctx.data : undefined
   }
 
   parse(input) {
@@ -86,11 +88,13 @@ class Compiler {
       this.context.parser = handler
       return handler.parse(input)
     }
-    this.output(`/* ${input.type} ignored */`)
+    const block = this.findContextData(ctypes.block)
+    block.pushCode(`/* ${input.type} ignored */`)
   }
 
-  beginParse(parser, input) {
-    const context = new CompilerContext(parser, input)
+  beginParse(input) {
+    const context = new CompilerContext(input)
+
     this.context.children.push(context)
     this.context.currentIndex += 1
     this.pushContext(context)
@@ -114,12 +118,47 @@ class Compiler {
     const parser = acorn.Parser.extend(require("acorn-jsx")())
     const input = parser.parse(code, { sourceType: 'module' })
 
-    this.pushContext(new CompilerContext(this, input))
+    this.pushContext(new CompilerContext(input, this.program))
     this.beginParse(this, input)
     this.parseChilren(input.body)
     this.endParse()
     this.popContext()
-    return this.outputs.join(this.eol)
+  }
+
+  flat(inputs, outputs = []) {
+    inputs.forEach((input) => {
+      if (input instanceof Array) {
+        this.flat(input, outputs)
+        return
+      }
+      outputs.push(input)
+    })
+    return outputs
+  }
+
+  process(inputs) {
+    let indent = 0
+
+    return this.flat(inputs).map((input, i) => {
+      if (input === '}' && indent > 0) {
+        indent -= 1
+      }
+
+      const output = ' '.repeat(indent * this.tabSize) + input
+
+      if (input === '{') {
+        indent += 1
+      }
+      return output
+    })
+  }
+
+  getSourceFileData() {
+    return this.process(this.program.define()).join(this.eol)
+  }
+
+  getHeaderFileData() {
+
   }
 
   static extend(...plugins) {

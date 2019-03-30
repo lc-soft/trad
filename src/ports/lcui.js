@@ -2,8 +2,8 @@ const LCUI = {
   type: 'module',
   source: 'LCUI',
   includes: [
-    '<LCUI_Build.h>',
-    '<LCUI/LCUI.h>'
+    'LCUI_Build.h',
+    'LCUI/LCUI.h'
   ],
   exports: {
     App: {
@@ -16,22 +16,22 @@ const LCUIWidget = {
   type: 'module',
   source: 'LCUI',
   includes: [
-    '<LCUI_Build.h>',
-    '<LCUI/LCUI.h>',
-    '<LCUI/gui/widget.h>'
+    'LCUI_Build.h',
+    'LCUI/LCUI.h',
+    'LCUI/gui/widget.h'
   ],
   exports: {
     Widget: {
       type: 'class',
-      includes: ['<LCUI/gui/widget.h>']
+      includes: ['LCUI/gui/widget.h']
     },
     Button: {
       type: 'class',
-      includes: ['<LCUI/gui/widget/button.h>']
+      includes: ['LCUI/gui/widget/button.h']
     },
     TextView: {
       type: 'class',
-      includes: ['<LCUI/gui/widget/textview.h>']
+      includes: ['LCUI/gui/widget/textview.h']
     }
   }
 }

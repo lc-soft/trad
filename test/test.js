@@ -9,8 +9,8 @@ function run(file) {
       throw new Error(err)
     }
     compiler = new (Compiler.extend(LCUI))({ ports })
-    outputs = compiler.compile(data)
-    console.log(outputs)
+    compiler.compile(data)
+    console.log(compiler.getSourceFileData())
   })
 }
 

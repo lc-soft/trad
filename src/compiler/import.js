@@ -1,6 +1,14 @@
-class ImportParser {
+const ctypes = require('../ctypes')
+const { Parser } = require('./parser')
+
+function mapIncludes(files) {
+  return files.map(file => new ctypes.include(file, true))
+}
+
+class ImportParser extends Parser {
   constructor(compiler) {
-    this.compiler = compiler
+    super(compiler)
+
     this.excludes = {}
   }
 
@@ -13,42 +21,41 @@ class ImportParser {
       let name = specifier.local.name
       let port = ports[source]
       let binding = null
-      let type = 'module'
+      let type = ctypes.class.module
 
       if (!port) {
         port = {
-          type: 'module',
-          includes: [`"${source}.h"`]
+          type,
+          includes: [`${source}.h`]
         }
+        includes.push(new ctypes.include(`${source}.h`))
       }
-      if (port.includes instanceof Array) {
-        includes = includes.concat(port.includes)
+      else if (port.includes instanceof Array) {
+        includes = includes.concat(mapIncludes(port.includes))
       }
       if (specifier.type === 'ImportDefaultSpecifier') {
         binding = port.default
-        name = 'default'
       } else {
         binding = port.exports[name]
-        type = 'class'
+        type = ctypes.class
       }
-      this.compiler.scope[name] = {
+      this.compiler.global[name] = {
         name,
         type,
         port,
         binding
       }
       if (binding && binding.includes instanceof Array) {
-        includes = includes.concat(binding.includes) 
+        includes = includes.concat(mapIncludes(binding.includes))
       }
     })
-    includes.forEach((file) => {
-      if (this.excludes[file]) {
+    includes.forEach((inc) => {
+      if (this.excludes[inc.value]) {
         return
       }
-      this.excludes[file] = true
-      this.compiler.output(`#include ${file}`)
+      this.excludes[inc.value] = true
+      this.program.push(inc)
     })
-    return []
   }
 }
 

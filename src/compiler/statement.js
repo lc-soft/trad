@@ -1,13 +1,15 @@
+const ctypes = require('../ctypes')
 const { Parser } = require('./parser')
 
 class ReturnStatementParser extends Parser {
   parse(input) {
+    const block = this.findContextData(ctypes.block)
     const result = this.compiler.parse(input.argument)
 
     if (typeof result !== 'string') {
-      this.compiler.output(`return;`)  
+      block.pushCode(`return;`)  
     } else {
-      this.compiler.output(`return ${result};`)
+      block.pushCode(`return ${result};`)
     }
   }
 }
@@ -15,12 +17,15 @@ class ReturnStatementParser extends Parser {
 class BlockStatmentParser extends Parser {
   parse(input) {
     const c = this.compiler
+    const parent = c.findContextData(ctypes.block)
 
-    c.output('{')
-    c.indent += 1
+    if (!(parent instanceof ctypes.function)) {
+      const block = new ctypes.block()
+      this.context = c.context
+      this.context.data = block
+      parent.push(block)
+    }
     c.parseChilren(input.body)
-    c.indent -= 1
-    c.output('}')
   }
 }
 

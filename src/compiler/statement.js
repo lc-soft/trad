@@ -18,7 +18,7 @@ class BlockStatmentParser extends Parser {
 
     c.output('{')
     c.indent += 1
-    c.parseInputs(input.body)
+    c.parseChilren(input.body)
     c.indent -= 1
     c.output('}')
   }

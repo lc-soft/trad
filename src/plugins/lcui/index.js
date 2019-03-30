@@ -51,7 +51,7 @@ function install(Compiler) {
       }
       this.output(`${name} = LCUIWidget_New("${type}");`)
       this.output('')
-      this.parseInputs(input.children).forEach((child) => {
+      this.parseChilren(input.children).forEach((child) => {
         if (!child) {
           return
         }

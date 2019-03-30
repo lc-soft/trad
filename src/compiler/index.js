@@ -4,6 +4,17 @@ const { ClassParser, MethodParser } = require('./class')
 const { FunctionParser } = require('./function')
 const { BlockStatmentParser, ReturnStatementParser } = require('./statement')
 
+class CompilerContext {
+  constructor(node) {
+    this.node = node
+    this.data = {}
+    this.scope = {}
+    this.parser = null
+    this.children = []
+    this.currentIndex = -1
+  }
+}
+
 class Compiler {
   constructor(options) {
     this.eol = '\n'
@@ -11,9 +22,6 @@ class Compiler {
     this.tabSize = 8
     this.outputs = []
     this.ports = options.ports
-    // Object scope stack
-    this.scopes = []
-    this.scopeIndex = -1
     // Parser context stack
     this.contexts = []
     this.contextIndex = -1
@@ -28,7 +36,7 @@ class Compiler {
   }
 
   get scope() {
-    return this.scopes[this.scopeIndex]
+    return this.context.scope
   }
 
   get context() {
@@ -40,10 +48,10 @@ class Compiler {
   }
 
   findObject(name) {
-    for (let i = this.scopeIndex; i >= 0; --i) {
-      if (typeof this.scopes[i][name] !== 'undefined') {
-        return this.scopes[i][name]
-      }
+    const context = this.findContext(ctx => typeof ctx.scope[name] !== 'undefined')
+
+    if (context) {
+      return context.scope[name]
     }
     return undefined
   }
@@ -54,7 +62,17 @@ class Compiler {
         return this.contexts[i]
       }
     }
-    return null
+    return undefined
+  }
+
+  pushContext(context) {
+    this.contexts.push(context)
+    this.contextIndex += 1
+  }
+
+  popContext() {
+    this.contextIndex -= 1
+    return this.contexts.pop()
   }
 
   output(str) {
@@ -65,36 +83,30 @@ class Compiler {
     const handler = this.handlers[input.type]
 
     if (handler) {
+      this.context.parser = handler
       return handler.parse(input)
     }
     this.output(`/* ${input.type} ignored */`)
   }
 
-  beginParse(input) {
-    const context = {}
-    this.contextIndex += 1
-    this.contexts.push(context)
-    this.context = input
+  beginParse(parser, input) {
+    const context = new CompilerContext(parser, input)
+    this.context.children.push(context)
+    this.context.currentIndex += 1
+    this.pushContext(context)
   }
 
   endParse() {
-    this.contextIndex -= 1
-    this.contexts.pop()
+    this.popContext()
   }
 
-  parseInputs(inputs) {
-    const scope = {}
-
-    this.scopeIndex += 1
-    this.scopes.push(scope)
-    const results = inputs.map((input) => {
+  parseChilren(children) {
+    const results = children.map((input) => {
       this.beginParse(input)
       const result = this.parse(input)
       this.endParse()
       return result
     })
-    this.scopeIndex -= 1
-    this.scopes.pop()
     return results
   }
 
@@ -102,7 +114,11 @@ class Compiler {
     const parser = acorn.Parser.extend(require("acorn-jsx")())
     const input = parser.parse(code, { sourceType: 'module' })
 
-    this.parseInputs(input.body)
+    this.pushContext(new CompilerContext(this, input))
+    this.beginParse(this, input)
+    this.parseChilren(input.body)
+    this.endParse()
+    this.popContext()
     return this.outputs.join(this.eol)
   }
 

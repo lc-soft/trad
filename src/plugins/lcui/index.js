@@ -63,6 +63,7 @@ function install(Compiler) {
     parseJSXElement(input) {
       let name
       let ref = ''
+      let widget = null
       const node = input.openingElement
       const proto = this.findObject(node.name.name)
       const type = getWidgetType(node, proto)
@@ -88,9 +89,14 @@ function install(Compiler) {
       })
       if (ref) {
         name = `_this->refs.${ref}`
+        if (proto instanceof CLCUIWidget) {
+          widget = new proto(name)
+        } else {
+          widget = new CLCUIWidget(name)
+        }
       } else {
         name = this.getWidgetObjectName(node, proto)
-        const widget = new CLCUIWidget(name)
+        widget = new CLCUIWidget(name)
         this.setObjectInBlock(name, widget)
         cBlock.push(widget)
       }
@@ -103,9 +109,9 @@ function install(Compiler) {
         if (!child) {
           return
         }
-        cBlock.pushCode(`Widget_Append(${name}, ${child});`)
+        cBlock.pushCode(`Widget_Append(${name}, ${child.name});`)
       })
-      return name
+      return widget
     }
 
     parse(input) {

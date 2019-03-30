@@ -3,13 +3,20 @@ const { Parser } = require('./parser')
 
 class ReturnStatementParser extends Parser {
   parse(input) {
-    const block = this.findContextData(ctypes.block)
+    const func = this.findContextData(ctypes.function)
     const result = this.compiler.parse(input.argument)
 
-    if (typeof result !== 'string') {
-      block.pushCode(`return;`)  
+    if (result instanceof ctypes.type) {
+      func.pushCode(`return ${result.name};`)
+      if (result instanceof ctypes.class) {
+        func.funcReturnType = result.className
+      } else {
+        func.funcReturnType = result.type
+      }
+    } else if (typeof result !== 'string') {
+      func.pushCode(`return;`)  
     } else {
-      block.pushCode(`return ${result};`)
+      func.pushCode(`return ${result};`)
     }
   }
 }

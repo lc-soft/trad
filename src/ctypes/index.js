@@ -21,6 +21,10 @@ class CType {
     return `${this.type};`
   }
 
+  declareObject() {
+    return `${this.type} ${this.name};`
+  }
+
   define() {
     return ''
   }
@@ -162,6 +166,9 @@ class CClass extends CStruct {
       ''
     ]
   }
+  declareObject() {
+    return `${this.className} ${this.name};`
+  }
 
   addMethod(func) {
     this.classMethods.push(func)
@@ -220,7 +227,12 @@ class CFunction extends CBlock {
       output.push('void')
     }
     output.push(this.funcRealName)
-    return output.join(' ') + '();'
+    return [
+      output.join(' '),
+      '(', 
+      this.args.map(arg => arg.declareObject().replace(';', '')).join(', '), 
+      ');'
+    ].join('')
   }
 
   export() {

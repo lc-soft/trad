@@ -1,8 +1,10 @@
 const acorn = require('acorn')
 const ctypes = require('../ctypes')
+const { IdentifierParser } = require('./identifier')
 const { ImportParser } = require('./import')
+const { ExportDefaultParser, ExportNamedParser } = require('./export')
 const { ClassParser, MethodParser } = require('./class')
-const { FunctionExpressionParser } = require('./function')
+const { FunctionParser, FunctionExpressionParser } = require('./function')
 const { BlockStatmentParser, ReturnStatementParser } = require('./statement')
 
 class CompilerContext {
@@ -26,11 +28,15 @@ class Compiler {
     this.contextIndex = -1
     this.program = new ctypes.program()
     this.handlers = {
+      Identifier: new IdentifierParser(this),
       ImportDeclaration: new ImportParser(this),
       ClassDeclaration: new ClassParser(this),
       MethodDefinition: new MethodParser(this),
+      FunctionDeclaration: new FunctionParser(this),
       FunctionExpression: new FunctionExpressionParser(this),
       BlockStatement: new BlockStatmentParser(this),
+      ExportDefaultDeclaration: new ExportDefaultParser(this),
+      ExportNamedDeclaration: new ExportNamedParser(this),
       ReturnStatement: new ReturnStatementParser(this)
     }
   }
@@ -158,7 +164,7 @@ class Compiler {
   }
 
   getHeaderFileData() {
-
+    return this.process(this.program.declare()).join(this.eol)
   }
 
   static extend(...plugins) {

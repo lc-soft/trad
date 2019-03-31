@@ -3,10 +3,18 @@ class CType {
     this.type = type
     this.name = name
     this.value = []
+    this.isStatic = true
   }
 
   push() {
     this.value.push('/* Unknown */')
+  }
+
+  export() {
+    if (this.isStatic) {
+      return ''
+    }
+    return this.declare()
   }
 
   declare() {
@@ -90,14 +98,33 @@ class CStruct extends CType {
     this.value.push(data)
   }
 
-  define() {
-    const declaration = super.declare()
+  export() {
+    if (this.isStatic) {
+      return ''
+    }
+    return this.define()
+  }
 
+  declare() {
+    if (this.isStatic) {
+      return this.define()
+    }
+    return ''
+  }
+
+  body() {
     return [
-      declaration.substr(0, declaration.length - 1),
+      this.type,
       this.value.define(),
       this.name + ';'
     ]
+  }
+
+  define() {
+    if (!this.isStatic) {
+      return ''
+    }
+    return this.body()
   }
 }
 
@@ -111,30 +138,49 @@ class CTypedef {
     return `typedef ${this.type} ${this.newType};`
   }
 }
-
+ 
 class CClass extends CStruct {
   constructor(className, name) {
     super(`${className}Rec_`, name)
 
+    this.exportable = false
     this.className = className
+    this.classMethods = []
     this.typedef = new CTypedef(`struct ${this.structName}`, `${className}Rec`)
     this.typedefPointer = new CTypedef(`struct ${this.structName}*`, className)
+  }
+
+  export() {
+    return this.typedefPointer.define()
   }
 
   define() {
     return [
       this.typedef.define(),
-      this.typedefPointer.define(),
       '',
-      super.define(),
+      this.body(),
       ''
     ]
+  }
+
+  addMethod(func) {
+    this.classMethods.push(func)
+  }
+
+  makePublicMethods() {
+    this.classMethods.forEach((func) => {
+      func.isStatic = false
+    })
   }
 }
 
 class CObject extends CClass {
   constructor(type, name) {
     super(type, name)
+  }
+
+  export() {
+    return ''
   }
 
   define() {
@@ -147,17 +193,25 @@ class CFunction extends CBlock {
     super(name)
 
     this.args = args
-    this.export = false
     this.namespace = null
     this.funcName = name
     this.funcReturnType = type
   }
 
-  declare() {
-    let output = []
+  get funcRealName() {
     let name = this.funcName
 
-    if (!this.export) {
+    if (this.namespace instanceof CClass) {
+      name = name.substr(0, 1).toUpperCase() + name.substr(1)
+      name = `${this.namespace.name}_${name}`
+    }
+    return name
+  }
+
+  declare() {
+    let output = []
+
+    if (this.isStatic) {
       output.push('static')
     }
     if (this.funcReturnType) {
@@ -165,12 +219,15 @@ class CFunction extends CBlock {
     } else {
       output.push('void')
     }
-    if (this.namespace instanceof CClass) {
-      name = name.substr(0, 1).toUpperCase() + name.substr(1)
-      name = `${this.namespace.name}_${name}`
-    }
-    output.push(name)
+    output.push(this.funcRealName)
     return output.join(' ') + '();'
+  }
+
+  export() {
+    if (this.isStatic) {
+      return ''
+    }
+    return this.declare()
   }
 
   define() {
@@ -197,7 +254,11 @@ class CInclude extends CCompilerCommand {
 }
 
 function mapDefinitions(list) {
-  return list.map(item => item.define())
+  return list.map(item => item.define()).filter(item => !!item)
+}
+
+function mapExports(list) {
+  return list.map(item => item.export()).filter(item => !!item)
 }
 
 class CProgram extends CBlock {
@@ -233,13 +294,18 @@ class CProgram extends CBlock {
       mapDefinitions(this.statements),
       '',
       mapDefinitions(this.functions),
-      '',
       mapDefinitions(this.value)
     ]
   }
 
   declare() {
-    return []
+    return [
+      mapExports(this.types),
+      '',
+      mapExports(this.statements),
+      '',
+      mapExports(this.functions)
+    ]
   }
 }
 

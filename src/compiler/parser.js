@@ -9,6 +9,10 @@ class Parser {
     return this.compiler.findContextData(type)
   }
 
+  findObject(name) {
+    return this.compiler.findObject(name)
+  }
+
   parse() {}
 }
 

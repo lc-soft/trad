@@ -76,12 +76,9 @@ class CBlock extends CType {
     this.push(new CStatement(code))
   }
 
-  define() {
+  define(scope) {
     return ['{', this.value.map(item => {
-      if (item.define().indexOf('undefined') >= 0) {
-        console.log(item.define())
-      }
-      return item.define()
+      return item.define(scope)
     }), '}']
   }
 }
@@ -116,15 +113,18 @@ class CStruct extends CType {
     return ''
   }
 
-  body() {
+  body(name) {
     return [
       this.type,
-      this.value.define(),
-      this.name + ';'
+      this.value.define(this),
+      !!name ? name + ';' : ';'
     ]
   }
 
-  define() {
+  define(scope) {
+    if (!this.structName || scope instanceof CStruct) {
+      return this.body(this.name)
+    }
     if (!this.isStatic) {
       return ''
     }

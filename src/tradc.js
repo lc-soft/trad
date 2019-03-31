@@ -12,7 +12,7 @@ function compile(file) {
       throw new Error(err)
     }
     compiler = new (Compiler.extend(LCUI))({ ports })
-    compiler.compile(data)
+    compiler.compile(data, file)
     console.log(`output ${sourceFile}`)
     fs.writeFile(sourceFile, compiler.getSourceFileData(), (err) => {
       if (err) {

@@ -120,10 +120,11 @@ class Compiler {
     return results
   }
 
-  compile(code) {
+  compile(code, file = 'output.trad') {
     const parser = acorn.Parser.extend(require("acorn-jsx")())
     const input = parser.parse(code, { sourceType: 'module' })
 
+    this.program.file = file
     this.pushContext(new CompilerContext(input, this.program))
     this.beginParse(this, input)
     this.parseChilren(input.body)

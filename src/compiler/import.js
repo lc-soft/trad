@@ -6,17 +6,7 @@ function mapIncludes(files) {
 }
 
 class ImportParser extends Parser {
-  constructor(compiler) {
-    super(compiler)
-
-    this.excludes = {}
-  }
-
   include(inc) {
-    if (this.excludes[inc.value]) {
-      return
-    }
-    this.excludes[inc.value] = true
     this.program.push(inc)
   }
 

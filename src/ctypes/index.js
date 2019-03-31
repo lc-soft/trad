@@ -322,6 +322,7 @@ class CInclude extends CCompilerCommand {
     } else {
       this.value = `"${file}"`
     }
+    this.inStandardDirectory = inStandardDirectory
   }
 }
 
@@ -334,20 +335,35 @@ function mapExports(list) {
 }
 
 class CProgram extends CBlock {
-  constructor() {
+  constructor(file) {
     super('program')
-    
+  
+    this.file = file
     this.includes = []
     this.types = []
     this.statements = []
     this.functions = []
   }
 
+  pushInclude(data) {
+    if (this.includes.some((inc) => inc.value === data.value)) {
+      return
+    }
+    for (let i = 0; i < this.includes.length; ++i) {
+      const inc = this.includes[i]
+      if (data.inStandardDirectory && !inc.inStandardDirectory) {
+        this.includes.splice(i, 0, data)
+        return
+      }
+    }
+    this.includes.push(data)
+  }
+
   push(data) {
     if (data instanceof CFunction) {
       this.functions.push(data)
     } else if (data instanceof CInclude) {
-      this.includes.push(data)
+      this.pushInclude(data)
     } else if (data instanceof CStruct) {
       this.types.push(data)
     } else if (data instanceof CStatement) {

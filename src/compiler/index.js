@@ -165,7 +165,25 @@ class Compiler {
   }
 
   getHeaderFileData() {
-    return this.process(this.program.declare()).join(this.eol)
+    const body = this.process(this.program.declare())
+    const header = [
+      '#ifdef __cplusplus',
+      'extern "C" {',
+      '#endif',
+      ''
+    ]
+    const footer = [
+      '',
+      '#ifdef __cplusplus',
+      '}',
+      '#endif',
+      ''
+    ]
+    return [
+      header.join(this.eol),
+      body.join(this.eol),
+      footer.join(this.eol)
+    ].join(this.eol)
   }
 
   static extend(...plugins) {

@@ -12,6 +12,14 @@ class ImportParser extends Parser {
     this.excludes = {}
   }
 
+  include(inc) {
+    if (this.excludes[inc.value]) {
+      return
+    }
+    this.excludes[inc.value] = true
+    this.program.push(inc)
+  }
+
   parse(input) {
     let includes = []
     const source = input.source.value
@@ -49,13 +57,7 @@ class ImportParser extends Parser {
         includes = includes.concat(mapIncludes(binding.includes))
       }
     })
-    includes.forEach((inc) => {
-      if (this.excludes[inc.value]) {
-        return
-      }
-      this.excludes[inc.value] = true
-      this.program.push(inc)
-    })
+    includes.forEach(inc => this.include(inc))
   }
 }
 

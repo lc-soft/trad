@@ -171,12 +171,66 @@ class CClass extends CStruct {
   }
 
   addMethod(func) {
+    func.namespace = this
+    func.args.splice(0, 0, new CObject(this.className, '_this'))
     this.classMethods.push(func)
+    return func
+  }
+
+  getMethod(name) {
+    for (let i = 0; i < this.classMethods.length; ++i) {
+      if (this.classMethods[i].name === name) {
+        return this.classMethods[i]
+      }
+    }
+    return undefined
+  }
+
+  createNewMethod() {
+    const obj = new CObject(this.className, '_this')
+    const func = new CFunction(this.className, 'new')
+    const constructor = this.getMethod('constructor')
+    const lines = [
+      obj.declareObject(),
+      '',
+      `_this = malloc(sizeof(${this.type}));`,
+      'if (_this == NULL)',
+      '{',
+      'return NULL;',
+      '}'
+    ]
+
+    lines.forEach((line) => {
+      func.pushCode(line)
+    })
+    if (constructor) {
+      func.pushCode(`${constructor.funcRealName}(_this);`)
+    }
+    func.pushCode('return _this;')
+    this.addMethod(func)
+    return func
+  }
+
+  createDeleteMethod() {
+    const func = new CFunction(this.className, 'delete')
+    const destructor = this.getMethod('destructor')
+
+    if (destructor) {
+      func.pushCode(`${destructor.funcRealName}(_this);`)
+    }
+    func.pushCode('free(_this);')
+    this.addMethod(func)
+    return func
   }
 
   makePublicMethods() {
     this.classMethods.forEach((func) => {
-      func.isStatic = false
+      // constructor and destructor must be static
+      if (['constructor', 'destructor'].indexOf(func.name) >= 0) {
+        func.isStatic = true
+      } else {
+        func.isStatic = false
+      }
     })
   }
 }
@@ -217,7 +271,13 @@ class CFunction extends CBlock {
 
   declare() {
     let output = []
+    let args =this.args.map(arg => arg.declareObject().replace(';', ''))
 
+    // Remove first argument
+    if (this.name === 'new' && this.namespace instanceof CClass) {
+      args.splice(0, 1)
+    }
+    
     if (this.isStatic) {
       output.push('static')
     }
@@ -230,7 +290,7 @@ class CFunction extends CBlock {
     return [
       output.join(' '),
       '(', 
-      this.args.map(arg => arg.declareObject().replace(';', '')).join(', '), 
+      args.join(', '),
       ');'
     ].join('')
   }

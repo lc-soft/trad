@@ -5,7 +5,17 @@ const { ImportParser } = require('./import')
 const { ExportDefaultParser, ExportNamedParser } = require('./export')
 const { ClassParser, MethodParser } = require('./class')
 const { FunctionParser, FunctionExpressionParser } = require('./function')
-const { BlockStatmentParser, ReturnStatementParser } = require('./statement')
+const {
+  BlockStatmentParser,
+  ReturnStatementParser,
+  ExpressionStatementParser
+} = require('./statement')
+const {
+ThisExpressionParser,
+AssignmentExpressionParser,
+MemberExpressionParser,
+ObjectExpressionParser
+} = require('./expression')
 
 class CompilerContext {
   constructor(node, data = {}) {
@@ -37,7 +47,12 @@ class Compiler {
       BlockStatement: new BlockStatmentParser(this),
       ExportDefaultDeclaration: new ExportDefaultParser(this),
       ExportNamedDeclaration: new ExportNamedParser(this),
-      ReturnStatement: new ReturnStatementParser(this)
+      ReturnStatement: new ReturnStatementParser(this),
+      ExpressionStatement: new ExpressionStatementParser(this),
+      ThisExpression: new ThisExpressionParser(this),
+      AssignmentExpression: new AssignmentExpressionParser(this),
+      MemberExpression: new MemberExpressionParser(this),
+      ObjectExpression: new ObjectExpressionParser(this)
     }
   }
 
@@ -120,16 +135,27 @@ class Compiler {
     return results
   }
 
-  compile(code, file = 'output.trad') {
-    const parser = acorn.Parser.extend(require("acorn-jsx")())
-    const input = parser.parse(code, { sourceType: 'module' })
-
+  parseProgram(input, file) {
+    const types = {
+      String: ctypes.string,
+      Number: ctypes.number
+    }
     this.program.file = file
     this.pushContext(new CompilerContext(input, this.program))
+    Object.keys(types).forEach((key) => {
+      this.global[key] = types[key]
+    })
     this.beginParse(this, input)
     this.parseChilren(input.body)
     this.endParse()
     this.popContext()
+  }
+
+  compile(code, file = 'output.trad') {
+    const parser = acorn.Parser.extend(require("acorn-jsx")())
+    const input = parser.parse(code, { sourceType: 'module' })
+
+    this.parseProgram(input, file)
   }
 
   flat(inputs, outputs = []) {

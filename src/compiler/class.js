@@ -34,7 +34,6 @@ class ClassParser extends Parser {
     this.compiler.global[name] = cClass
     this.context = this.compiler.context
     this.context.data = cClass
-    this.program.push(cClass)
 
     // malloc() and free() is declared in <stdlib.h>
     importer.include(new ctypes.include('stdlib.h', true))
@@ -43,6 +42,7 @@ class ClassParser extends Parser {
     // Add new and delete methods after parsing all methods
     this.defineFunction(cClass.createNewMethod())
     this.defineFunction(cClass.createDeleteMethod())
+    this.program.push(cClass)
     return cClass
   }
 }

@@ -1,9 +1,20 @@
+function capitalize(str) {
+  return str.substr(0, 1).toUpperCase() + str.substr(1)
+}
+
 class CType {
   constructor(type = 'void', name = 'unknown') {
     this.type = type
     this.name = name
     this.value = []
     this.isStatic = true
+  }
+
+  getValue() {
+    return this.value
+  }
+
+  setValue() {
   }
 
   push() {
@@ -122,8 +133,11 @@ class CStruct extends CType {
   }
 
   define(scope) {
-    if (!this.structName || scope instanceof CStruct) {
+    if (!this.structName) {
       return this.body(this.name)
+    }
+    if (scope instanceof CStruct) {
+      return this.declareObject()
     }
     if (!this.isStatic) {
       return ''
@@ -142,10 +156,10 @@ class CTypedef {
     return `typedef ${this.type} ${this.newType};`
   }
 }
- 
+
 class CClass extends CStruct {
   constructor(className, name) {
-    super(`${className}Rec_`, name)
+    super(className ? `${className}Rec_` : '', name)
 
     this.exportable = false
     this.className = className
@@ -155,19 +169,30 @@ class CClass extends CStruct {
   }
 
   export() {
-    return this.typedefPointer.define()
+    if (!this.isStatic) {
+      return this.typedefPointer.define()
+    }
   }
 
-  define() {
+  define(scope) {
+    if (scope instanceof CStruct) {
+      return this.declareObject()
+    }
     return [
+      this.isStatic ? this.typedefPointer.define() : '',
       this.typedef.define(),
       '',
       this.body(),
       ''
     ]
   }
+
   declareObject() {
     return `${this.className} ${this.name};`
+  }
+
+  selectProperty(name) {
+    return new CClassProperty(this, name)
   }
 
   addMethod(func) {
@@ -235,6 +260,49 @@ class CClass extends CStruct {
   }
 }
 
+class CClassProperty extends CClass {
+  constructor(owner, name) {
+    super(owner.className + capitalize(name), name)
+
+    this.ownerClass = owner
+  }
+
+  getEntity() {
+    const props = this.ownerClass.value
+
+    for (let i = 0; i < props.length; ++i) {
+      const prop = props[i]
+
+      if (prop instanceof CType && prop.name === this.name) {
+        return prop
+      }
+    }
+    return undefined
+  }
+
+  getValue() {
+    const prop = this.getEntity()
+
+    if (prop) {
+      return prop.value
+    }
+    return undefined
+  }
+  
+  setValue(value) {
+    let prop = this.getEntity()
+
+    if (prop) {
+      prop.value = value
+      return prop
+    }
+    prop = new CClass(this.className, this.name)
+    prop.value = value.value
+    this.ownerClass.push(prop)
+    return prop
+  }
+}
+
 class CObject extends CClass {
   constructor(type, name) {
     super(type, name)
@@ -246,6 +314,17 @@ class CObject extends CClass {
 
   define() {
     return `${this.className} ${this.name};`
+  }
+}
+
+class CNumber extends CObject {
+  constructor(name) {
+    super('number', name)
+  }
+}
+class CString extends CObject {
+  constructor(name) {
+    super('string', name)
   }
 }
 
@@ -263,8 +342,7 @@ class CFunction extends CBlock {
     let name = this.funcName
 
     if (this.namespace instanceof CClass) {
-      name = name.substr(0, 1).toUpperCase() + name.substr(1)
-      name = `${this.namespace.name}_${name}`
+      name = `${this.namespace.name}_${capitalize(name)}`
     }
     return name
   }
@@ -366,6 +444,8 @@ class CProgram extends CBlock {
       this.pushInclude(data)
     } else if (data instanceof CStruct) {
       this.types.push(data)
+    } else if (data instanceof CTypedef) {
+      this.types.push(data)
     } else if (data instanceof CStatement) {
       this.statements.push(data)
     } else {
@@ -405,6 +485,8 @@ class CModule extends CType {
 
 module.exports = {
   type: CType,
+  number: CNumber,
+  string: CString,
   statement: CStatement,
   struct: CStruct,
   class: CClass,

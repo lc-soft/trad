@@ -36,4 +36,14 @@ class BlockStatmentParser extends Parser {
   }
 }
 
-module.exports = { BlockStatmentParser, ReturnStatementParser }
+class ExpressionStatementParser extends Parser {
+  parse(input) {
+    return this.compiler.parse(input.expression)
+  }
+}
+
+module.exports = {
+  BlockStatmentParser,
+  ReturnStatementParser,
+  ExpressionStatementParser
+}

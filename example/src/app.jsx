@@ -1,11 +1,10 @@
-import ctypes from 'trad'
-import LCUI from 'trad/lcui'
+import LCUI from 'lcui'
 import {
   Widget,
   Button,
   TextView,
   TextEdit
-} from 'trad/lcui/widget'
+} from 'lcui/widget'
 import Progress from './components/progress'
 
 class MyApp extends LCUI.App {
@@ -14,10 +13,10 @@ class MyApp extends LCUI.App {
   
     // Define internal state data
     this.state = {
-      text: ctypes.string,
-      input: ctypes.string,
-      value: ctypes.unsigned,
-      total: ctypes.unsigned
+      text: String,
+      input: String,
+      value: Number,
+      total: Number
     }
   }
 
@@ -29,21 +28,16 @@ class MyApp extends LCUI.App {
     this.state.total = 100
   }
 
-  render() {
+  template() {
     return (<Widget>
-      <TextView>{state.text}</TextView>
-      <TextEdit value={state.input} />
-      <Button onClick={changeText}>Change</Button>
+      <TextView ref="test">{this.state.text}</TextView>
+      <TextEdit test="asd" value={this.state.input} />
+      <Button onClick={this.changeText}>Change</Button>
       <TextView>Please click button to test progress</TextView>
-      <Progress value={state.value} total={state.total} />
-      <Button onClick={onBtnMinusClick}>-</Button>
-      <Button onClick={onBtnPlusClick}>>+</Button>
+      <Progress value={this.state.value} total={this.state.total} />
+      <Button onClick={this.onBtnMinusClick}>-</Button>
+      <Button onClick={this.onBtnPlusClick}>>+</Button>
     </Widget>)
-  }
-
-  created() {
-    this.state.total = 100
-    this.state.value = 50
   }
 
   onBtnChangeClick() {

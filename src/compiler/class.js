@@ -38,6 +38,20 @@ class ClassParser extends Parser {
     // malloc() and free() is declared in <stdlib.h>
     importer.include(new ctypes.include('stdlib.h', true))
     this.compiler.parseChilren(input.body.body)
+ 
+    let constructor = cClass.getMethod('constructor')
+    let destructor = cClass.getMethod('destructor')
+
+    if (!constructor) {
+      constructor = new ctypes.function(cClass.className, 'constructor')
+      cClass.addMethod(constructor)
+      this.defineFunction(constructor)
+    }
+    if (!destructor) {
+      destructor = new ctypes.function(cClass.className, 'destructor')
+      cClass.addMethod(destructor)
+      this.defineFunction(destructor)
+    }
 
     // Add new and delete methods after parsing all methods
     this.defineFunction(cClass.createNewMethod())

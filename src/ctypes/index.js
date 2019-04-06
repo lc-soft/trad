@@ -1,13 +1,21 @@
+const assert = require('assert')
+
 function capitalize(str) {
   return str.substr(0, 1).toUpperCase() + str.substr(1)
 }
 
 class CType {
   constructor(type = 'void', name = 'unknown') {
+    this.id = name
     this.type = type
     this.name = name
     this.value = []
     this.isStatic = true
+    this.isPointer = false
+  }
+
+  getEntity() {
+    return this
   }
 
   getValue() {
@@ -132,12 +140,9 @@ class CStruct extends CType {
     ]
   }
 
-  define(scope) {
+  define() {
     if (!this.structName) {
       return this.body(this.name)
-    }
-    if (scope instanceof CStruct) {
-      return this.declareObject()
     }
     if (!this.isStatic) {
       return ''
@@ -174,10 +179,7 @@ class CClass extends CStruct {
     }
   }
 
-  define(scope) {
-    if (scope instanceof CStruct) {
-      return this.declareObject()
-    }
+  define() {
     return [
       this.isStatic ? this.typedefPointer.define() : '',
       this.typedef.define(),
@@ -185,14 +187,6 @@ class CClass extends CStruct {
       this.body(),
       ''
     ]
-  }
-
-  declareObject() {
-    return `${this.className} ${this.name};`
-  }
-
-  selectProperty(name) {
-    return new CClassProperty(this, name)
   }
 
   addMethod(func) {
@@ -216,7 +210,7 @@ class CClass extends CStruct {
     const func = new CFunction(this.className, 'new')
     const constructor = this.getMethod('constructor')
     const lines = [
-      obj.declareObject(),
+      obj.define(),
       '',
       `_this = malloc(sizeof(${this.type}));`,
       'if (_this == NULL)',
@@ -238,11 +232,10 @@ class CClass extends CStruct {
 
   createDeleteMethod() {
     const func = new CFunction(this.className, 'delete')
-    const destructor = this.getMethod('destructor')
+    let destructor = this.getMethod('destructor')
 
-    if (destructor) {
-      func.pushCode(`${destructor.funcRealName}(_this);`)
-    }
+    assert(destructor, 'destructor() must be defined')
+    func.pushCode(`${destructor.funcRealName}(_this);`)
     func.pushCode('free(_this);')
     this.addMethod(func)
     return func
@@ -260,24 +253,111 @@ class CClass extends CStruct {
   }
 }
 
-class CClassProperty extends CClass {
-  constructor(owner, name) {
-    super(owner.className + capitalize(name), name)
+class CObject extends CType {
+  constructor(type, name, isPointer = false) {
+    let className = type
+    if (type instanceof CStruct) {
+      className = type.className || type.type
+      isPointer = type.isPointer || isPointer
+    } else if (type instanceof CObject) {
+      className = type.className
+    } else {
+      assert(typeof type === 'string')
+    }
 
-    this.ownerClass = owner
+    super(className, name)
+
+    this.id = name
+    this.isPointer = isPointer
+    this.className = className
+    this.classDeclaration = null
+    this.value = {}
+
+    if (type instanceof CStruct) {
+      this.classDeclaration = type
+      if (type.value instanceof CBlock) {
+        type.value.value.forEach((prop) => {
+          if (prop instanceof CObject) {
+            if (prop.classDeclaration) {
+              this.value[prop.name] = new CObject(
+                prop.classDeclaration, prop.name, false
+              )
+            } else {
+              this.value[prop.name] = new CObject(
+                prop.className, prop.name, prop.isPointer
+              )
+            }
+            return
+          }
+          this.value[prop.name] = new CObject(prop, prop.name)
+          this.value[prop.name].classDeclaration = prop
+        })
+      }
+    }
+  }
+
+  getProperty(name) {
+    const prop = this.value[name]
+
+    if (prop instanceof CObject) {
+      return prop
+    }
+    return undefined
+  }
+
+  setProperty(name, value) {
+    this.value[name] = value
+  }
+
+  selectProperty(name) {
+    return new CObjectProperty(this, name)
+  }
+
+  export() {
+    return ''
+  }
+
+  declare() {
+    return ''
+  }
+
+  define() {
+    if (this.classDeclaration && !this.classDeclaration.isPointer) {
+      return `${this.className}Rec ${this.name};`  
+    }
+    return `${this.type} ${this.name};`
+  }
+}
+
+class CObjectProperty extends CObject {
+  constructor(owner, name) {
+    super(owner.type + capitalize(name), name)
+
+    if (owner.isPointer) {
+      this.id = `${owner.id}->${name}`
+    } else {
+      this.id = `${owner.id}.${name}`
+    }
+    if (owner instanceof CObjectProperty) {
+      this.owner = owner.getEntity()
+    } else {
+      this.owner = owner
+    }
   }
 
   getEntity() {
-    const props = this.ownerClass.value
+    let prop = this.owner.getProperty(this.name)
 
-    for (let i = 0; i < props.length; ++i) {
-      const prop = props[i]
-
-      if (prop instanceof CType && prop.name === this.name) {
-        return prop
-      }
+    if (!prop) {
+      return prop
     }
-    return undefined
+    if (prop.classDeclaration) {
+      prop = new CObject(prop.classDeclaration, prop.name)
+    } else if (prop.className) {
+      prop = new CObject(prop.className, prop.name, prop.isPointer)
+    }
+    prop.id = this.id
+    return prop
   }
 
   getValue() {
@@ -288,43 +368,47 @@ class CClassProperty extends CClass {
     }
     return undefined
   }
-  
+
   setValue(value) {
     let prop = this.getEntity()
 
     if (prop) {
-      prop.value = value
-      return prop
+      assert(prop.__proto__ === value.__proto__)
+      prop.value = value.value
+      return this
     }
-    prop = new CClass(this.className, this.name)
-    prop.value = value.value
-    this.ownerClass.push(prop)
+
+    if (value instanceof CObject) {
+      prop = new CObject(value.className, this.name)
+      this.owner.classDeclaration.push(prop)
+      this.owner.setProperty(this.name, prop)
+      return this
+    }
+
+    const propDeclaration = new CClass(this.type, this.name)
+
+    propDeclaration.value = value.value
+    propDeclaration.isPointer = false
+    prop = new CObject(propDeclaration, this.name)
+    this.owner.classDeclaration.push(prop)
+    this.owner.setProperty(this.name, prop)
     return prop
   }
 }
 
-class CObject extends CClass {
-  constructor(type, name) {
-    super(type, name)
-  }
-
-  export() {
-    return ''
-  }
-
-  define() {
-    return `${this.className} ${this.name};`
-  }
-}
-
 class CNumber extends CObject {
-  constructor(name) {
+  constructor(name, value = 0) {
     super('number', name)
+
+    this.value = value
   }
 }
+
 class CString extends CObject {
-  constructor(name) {
+  constructor(name, value = '') {
     super('string', name)
+
+    this.value = value
   }
 }
 

@@ -1,5 +1,6 @@
 const acorn = require('acorn')
 const ctypes = require('../ctypes')
+const { LiteralParser } = require('./literal')
 const { IdentifierParser } = require('./identifier')
 const { ImportParser } = require('./import')
 const { ExportDefaultParser, ExportNamedParser } = require('./export')
@@ -38,6 +39,7 @@ class Compiler {
     this.contextIndex = -1
     this.program = new ctypes.program()
     this.handlers = {
+      Literal: new LiteralParser(this),
       Identifier: new IdentifierParser(this),
       ImportDeclaration: new ImportParser(this),
       ClassDeclaration: new ClassParser(this),

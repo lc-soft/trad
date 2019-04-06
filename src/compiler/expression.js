@@ -9,7 +9,7 @@ class ThisExpressionParser extends Parser {
     )
     
     assert(ctx, 'the "this" expression must be in the class method')
-    return ctx.data
+    return new ctypes.object(ctx.data, '_this', true)
   }
 }
 
@@ -47,6 +47,7 @@ class ObjectExpressionParser extends Parser {
 
 class AssignmentExpressionParser extends Parser {
   parse(input) {
+    let obj
     const left = this.compiler.parse(input.left)
     const right = this.compiler.parse(input.right)
     
@@ -55,11 +56,14 @@ class AssignmentExpressionParser extends Parser {
     }
     if (input.right.type === 'ObjectExpression') {
       assert(typeof left.getValue() === 'undefined', 'object-to-object assignment is not supported')
-      const cClass = left.setValue(right)
-      this.program.push(cClass)
-      return cClass
     }
-    return left.setValue(right)
+    obj = left.setValue(right)
+    // If this assignment will define a new object
+    if (obj !== left) {
+      // Declare the type of this object
+      this.program.push(obj.typeDeclartion)
+    }
+    return obj
   }
 }
 

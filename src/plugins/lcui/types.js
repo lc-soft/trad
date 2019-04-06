@@ -1,3 +1,4 @@
+const assert = require('assert')
 const ctypes = require('../../ctypes')
 
 class CLCUIString extends ctypes.class {
@@ -24,8 +25,25 @@ class CLCUIWidget extends ctypes.class {
   }
 }
 
-module.exports = {
+class CLCUIObject extends ctypes.object {
+  constructor(type, name, isPointer = false) {
+    if (typeof type === 'string') {
+      type = declarations[type]
+      assert(typeof type !== 'undefined')
+    }
+    super(type, name, isPointer)
+  }
+}
+
+const declarations = {
   widget: new CLCUIWidget(),
   string: new CLCUIString(),
   number: new CLCUINumber()
+}
+
+module.exports = {
+  object: CLCUIObject,
+  widget: CLCUIWidget,
+  string: CLCUIString,
+  number: CLCUINumber
 }

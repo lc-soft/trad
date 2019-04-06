@@ -20,9 +20,9 @@ function replaceDefaultType(obj) {
     let item = items[i]
 
     if (item instanceof ctypes.string) {
-      items[i] = new ctypes.object(types.string, item.name, null, false)
+      items[i] = new types.object('string', item.name)
     } else if (item instanceof ctypes.number) {
-      items[i] = new ctypes.object(types.number, item.name, null, false)
+      items[i] = new types.object('number', item.name)
     }
   }
 }
@@ -206,19 +206,8 @@ function install(Compiler) {
       return this.parse(input.expression)
     }
 
-    parseJSXElement(input) {
+    parseJSXElementRef(that, node) {
       let ref = null
-      let refName = ''
-      let widget = null
-      const node = input.openingElement
-      const proto = this.findObject(node.name.name)
-      const type = getWidgetType(node, proto)
-      const cBlock = this.findContextData(ctypes.block)
-      const cClass = this.findContextData(ctypes.class)
-
-      assert(cClass, 'JSX code must be in class method function')
-
-      const that = new ctypes.object(cClass, '_this', true)
       let refs = that.selectProperty('refs')
 
       node.attributes.some((attr) => {
@@ -226,17 +215,29 @@ function install(Compiler) {
           return false
         }
 
+        const value = attr.value.value
+
         if (!refs.getEntity()) {
-          refs = refs.setValue(new ctypes.struct('', 'refs'))
-          this.program.push(refs.classDeclaration)
+          const obj = refs.setValue(new ctypes.struct('', 'refs'))
+          this.program.push(obj.classDeclaration)
         }
-        refName = attr.value.value
-        ref = refs.selectProperty(refName)
-        assert(ref, `${refName} reference already exists`)
-        ref.setValue(new ctypes.object(types.widget, refName))
-        widget = new ctypes.object(types.widget, ref.id)
+        ref = refs.selectProperty(value)
+        assert(ref, `${value} reference already exists`)
+        ref.setValue(new types.object('widget', value))
         return true
       })
+      return ref
+    }
+
+    parseJSXElementAttributes(that, node, ref) {
+      let widget = null
+      let refs = that.selectProperty('refs')
+      const proto = this.findObject(node.name.name)
+      const cBlock = this.findContextData(ctypes.block)
+
+      if (ref) {
+        widget = new types.object('widget', ref.id)
+      }
       node.attributes.forEach((attr) => {
         const value = this.parse(attr.value)
         const attrName = attr.name.name
@@ -244,34 +245,57 @@ function install(Compiler) {
         if (attrName === 'ref' || attrName.indexOf('on') == 0) {
           return
         }
+        if (!refs.getEntity()) {
+          refs = refs.setValue(new ctypes.struct('', 'refs'))
+          this.program.push(refs.classDeclaration)
+        }
+        if (!widget) {
+          const name = '_' + this.getWidgetObjectName(node, proto)
+
+          ref = refs.selectProperty(name)
+          assert(ref, `${name} reference already exists`)
+          ref.setValue(new types.object('widget', name))
+          widget = new types.object('widget', ref.id)
+        }
         if (value instanceof ctypes.object && value.type === 'string') {
           cBlock.pushCode(
             functions.Widget_SetAttribute(ref, attr.name.name, value.value)
           )
           return
         }
+        if (value instanceof ctypes.function) {
+          cBlock.pushCode(functions.Widget_BindEvent(widget, attr.name.name, value))
+        }
 
-        const func = getDataBindingFunction(cClass, value)
+        const func = getDataBindingFunction(that.classDeclaration, value)
 
         assert(func, `${value.id} is not defined`)
 
-        if (!refs.getEntity()) {
-          refs = refs.setValue(new ctypes.struct('', 'refs'))
-          this.program.push(refs.classDeclaration)
-        }
-        if (!widget) {
-          refName = '_' + this.getWidgetObjectName(node, proto)
-          ref = refs.selectProperty(refName)
-          assert(ref, `${refName} reference already exists`)
-          ref.setValue(new ctypes.object(types.widget, refName))
-          widget = new ctypes.object(types.widget, ref.id)
-        }
         func.pushCode(functions.Widget_SetAttributeEx(widget, attr.name.name, value))
       })
-      if (!widget) {
-        const name = this.getWidgetObjectName(node, proto)
+      return ref
+    }
 
-        widget = new ctypes.object(types.widget, name)
+    parseJSXElement(input) {
+      let ref
+      let widget
+      const node = input.openingElement
+      const proto = this.findObject(node.name.name)
+      const type = getWidgetType(node, proto)
+      const name = this.getWidgetObjectName(node, proto)
+      const cClass = this.findContextData(ctypes.class)
+      const cBlock = this.findContextData(ctypes.block)
+
+      assert(cClass, 'JSX code must be in class method function')
+
+      const that = new ctypes.object(cClass, '_this', true)
+
+      ref = this.parseJSXElementRef(that, node)
+      ref = this.parseJSXElementAttributes(that, node, ref)
+      if (ref) {
+        widget = new types.object('widget', ref.id)
+      } else {
+        widget = new types.object('widget', name)
         this.setObjectInBlock(name, widget)
         cBlock.push(widget)
       }
@@ -281,10 +305,9 @@ function install(Compiler) {
         cBlock.pushCode(`${widget.id} = LCUIWidget_New("${type}");`)
       }
       this.parseChilren(input.children).forEach((child) => {
-        if (!child) {
-          return
+        if (child instanceof types.widget) {
+          cBlock.pushCode(`Widget_Append(${widget.id}, ${child.id});`)
         }
-        cBlock.pushCode(`Widget_Append(${widget.id}, ${child.id});`)
       })
       return widget
     }

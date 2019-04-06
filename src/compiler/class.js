@@ -4,17 +4,13 @@ const { FunctionParser } = require('./function')
 
 class MethodParser extends FunctionParser {
   parse(input) {
-    let name = input.key.name
-    const func = new ctypes.function(null, name)
     const ctx = this.compiler.findContext(
       c => c.node.type === 'ClassDeclaration'
     )
+    const func = ctx.data.getMethod(input.key.name)
 
-    ctx.data.addMethod(func)
-    this.compiler.global[func.funcRealName] = func
     this.context = this.compiler.context
     this.context.data = func
-    this.program.push(func)
     this.compiler.parseChilren([input.value])
     return func
   }
@@ -26,18 +22,13 @@ class ClassParser extends Parser {
     this.program.push(func)
   }
 
-  parse(input) {
-    const name = input.id.name
-    const cClass = new ctypes.class(name, name)
-    const importer = this.compiler.handlers.ImportDeclaration
+  parseMethods(cClass, body) {
+    body.forEach((input) => {
+      const func = new ctypes.function(null, input.key.name)
 
-    this.compiler.global[name] = cClass
-    this.context = this.compiler.context
-    this.context.data = cClass
-
-    // malloc() and free() is declared in <stdlib.h>
-    importer.include(new ctypes.include('stdlib.h', true))
-    this.compiler.parseChilren(input.body.body)
+      cClass.addMethod(func)
+      this.defineFunction(func)
+    })
  
     let constructor = cClass.getMethod('constructor')
     let destructor = cClass.getMethod('destructor')
@@ -56,6 +47,26 @@ class ClassParser extends Parser {
     // Add new and delete methods after parsing all methods
     this.defineFunction(cClass.createNewMethod())
     this.defineFunction(cClass.createDeleteMethod())
+
+    const importer = this.compiler.handlers.ImportDeclaration
+
+    // malloc() and free() is declared in <stdlib.h>
+    importer.include(new ctypes.include('stdlib.h', true))
+  }
+
+  parse(input) {
+    const name = input.id.name
+    const cClass = new ctypes.class(name, name)
+
+    this.compiler.global[name] = cClass
+    this.context = this.compiler.context
+    this.context.data = cClass
+
+    // Preload all class methods
+    this.parseMethods(cClass, input.body.body)
+    // Parse the body of each class method
+    this.compiler.parseChilren(input.body.body)
+    // Output processed class declaration
     this.program.push(cClass)
     return cClass
   }

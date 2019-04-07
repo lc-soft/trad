@@ -174,16 +174,11 @@ class CClass extends CStruct {
   }
 
   export() {
-    if (!this.isStatic) {
-      return this.typedefPointer.define()
-    }
+    return ''
   }
 
   define() {
     return [
-      this.isStatic ? this.typedefPointer.define() : '',
-      this.typedef.define(),
-      '',
       this.body(),
       ''
     ]
@@ -434,9 +429,14 @@ class CFunction extends CBlock {
     return name
   }
 
-  declare() {
+  declare(withArgName = true) {
     let output = []
-    let args =this.args.map(arg => arg.declareObject().replace(';', ''))
+    let args = this.args.map((arg) => {
+      if (withArgName) {
+        return arg.declareObject().replace(';', '')
+      }
+      return arg.type
+    })
 
     // Remove first argument
     if (this.name === 'new' && this.namespace instanceof CClass) {
@@ -541,11 +541,33 @@ class CProgram extends CBlock {
   }
 
   define() {
+    const typedefs = []
+    const staticFunctions = []
+    const types = this.types.filter((t) => {
+      if (t instanceof CTypedef) {
+        typedefs.push(t.define())
+        return false
+      } else if (t instanceof CClass) {
+        if (t.isStatic) {
+          typedefs.push(t.typedefPointer.define())
+        }
+        typedefs.push(t.typedef.define())
+      }
+      return true
+    })
+    this.functions.forEach((f) => {
+      if (f.isStatic) {
+        staticFunctions.push(f.declare(false))
+      }
+    })
+
     return [
       mapDefinitions(this.includes),
       '',
-      mapDefinitions(this.types),
+      typedefs,
       '',
+      mapDefinitions(types),
+      staticFunctions,
       mapDefinitions(this.statements),
       '',
       mapDefinitions(this.functions),
@@ -554,7 +576,17 @@ class CProgram extends CBlock {
   }
 
   declare() {
+    const typedefs = []
+
+    this.types.forEach((t) => {
+      if (t instanceof CClass && !t.isStatic) {
+        typedefs.push(t.typedefPointer.define())
+      }
+    })
+
     return [
+      typedefs,
+      '',
       mapExports(this.types),
       '',
       mapExports(this.statements),

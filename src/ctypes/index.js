@@ -191,7 +191,10 @@ class CClass extends CStruct {
 
   addMethod(func) {
     func.namespace = this
+    // Insert the _this object as the first argument to this function
     func.args.splice(0, 0, new CObject(this.className, '_this'))
+    // The value of isStatic is inherited from its class
+    func.isStatic = null
     this.classMethods.push(func)
     return func
   }
@@ -246,7 +249,7 @@ class CClass extends CStruct {
       // constructor and destructor must be static
       if (['constructor', 'destructor'].indexOf(func.name) >= 0) {
         func.isStatic = true
-      } else {
+      } else if (func.isStatic === null) {
         func.isStatic = false
       }
     })

@@ -30,6 +30,8 @@ class CLCUIObject extends ctypes.object {
     if (typeof type === 'string') {
       type = declarations[type]
       assert(typeof type !== 'undefined')
+    } else if (!type) {
+      type = 'LCUI_Object'
     }
     super(type, name, isPointer)
   }

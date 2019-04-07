@@ -39,7 +39,7 @@ class ClassParser extends Parser {
       this.defineFunction(constructor)
     }
     if (!destructor) {
-      destructor = new ctypes.function(cClass.className, 'destructor')
+      destructor = new ctypes.function('void', 'destructor')
       cClass.addMethod(destructor)
       this.defineFunction(destructor)
     }

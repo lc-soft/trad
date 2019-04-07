@@ -151,14 +151,25 @@ class CStruct extends CType {
   }
 }
 
-class CTypedef {
-  constructor(type, newType) {
-    this.type = type
-    this.newType = newType
+class CTypedef extends CType {
+  constructor(type, name) {
+    super(name, name)
+
+    this.name = name
+    this.type = name
+    this.originType = type
   }
 
   define() {
-    return `typedef ${this.type} ${this.newType};`
+    if (this.originType instanceof CFunction) {
+      const func = this.originType
+      let str = func.declare(false)
+  
+      str = str.replace(func.funcRealName, `(*${this.name})`)
+      str = str.replace('static ', '')
+      return `typedef ${str}`
+    }
+    return `typedef ${this.originType} ${this.name};`
   }
 }
 
@@ -204,7 +215,7 @@ class CClass extends CStruct {
   }
 
   createNewMethod() {
-    const obj = new CObject(this.className, '_this')
+    const obj = new CObject(this.className, '_this', true)
     const func = new CFunction(this.className, 'new')
     const constructor = this.getMethod('constructor')
     const lines = [
@@ -229,7 +240,7 @@ class CClass extends CStruct {
   }
 
   createDeleteMethod() {
-    const func = new CFunction(this.className, 'delete')
+    const func = new CFunction('void', 'delete')
     let destructor = this.getMethod('destructor')
 
     assert(destructor, 'destructor() must be defined')
@@ -377,7 +388,7 @@ class CObjectProperty extends CObject {
     }
 
     if (value instanceof CObject) {
-      prop = new CObject(value.className, this.name)
+      prop = new CObject(value.className, this.name, value.isPointer)
       this.owner.classDeclaration.push(prop)
       this.owner.setProperty(this.name, prop)
       return this
@@ -604,6 +615,7 @@ class CModule extends CType {
 
 module.exports = {
   type: CType,
+  typedef: CTypedef,
   number: CNumber,
   string: CString,
   statement: CStatement,

@@ -78,6 +78,20 @@ function addDataBindingFunction(cClass, target) {
   return func
 }
 
+class WidgetParserContext {
+  constructor(compiler, node) {
+    this.ref = null
+    this.widget = null
+    this.node = node
+    this.proto = compiler.findObject(node.name.name)
+    this.type = getWidgetType(node, this.proto)
+    this.name = compiler.allocWidgetObjectName(node, this.proto)
+    this.cClass = compiler.findContextData(ctypes.class)
+    this.cBlock = compiler.findContextData(ctypes.block)
+    this.that = new ctypes.object(this.cClass, '_this', true)
+  }
+}
+
 function install(Compiler) {
   return class LCUIParser extends Compiler {
     getObjectInBlock(name) {
@@ -95,14 +109,17 @@ function install(Compiler) {
       return ctx.scope[name] = value
     }
 
-    getWidgetObjectName(node, proto) {
-      const name = getWidgetType(node, proto).replace(/-/g, '_')
+    allocObjectName(name) {
       let realname = name
   
       for(let i = 1; this.getObjectInBlock(realname); ++i) {
         realname = `${name}_${i}`
       }
       return realname
+    }
+
+    allocWidgetObjectName(node, proto, prefix = '') {
+      return this.allocObjectName(prefix + getWidgetType(node, proto).replace(/-/g, '_'))
     }
 
     parseAssignmentExpression(input) {
@@ -184,6 +201,49 @@ function install(Compiler) {
       return true
     }
 
+    selectEventWrapperClass(ctx) {
+      const name = `${ctx.cClass.className}EventWrapper`
+      let wrapperClass = this.global[name]
+    
+      if (wrapperClass) {
+        assert(wrapperClass instanceof ctypes.class)
+        return wrapperClass
+      }
+    
+      const func = new ctypes.function('void', 'dispathWidgetEvent')
+      const that = new ctypes.object(ctx.cClass, '_this', true)
+    
+      ctx.cClass.addMethod(func)
+    
+      wrapperClass = new ctypes.class(name, 'wrapper')
+      wrapperClass.push(that)
+      wrapperClass.push(new ctypes.object('void*', 'data', true))
+      wrapperClass.push(new ctypes.object('LCUI_WidgetEventFunc', 'handler', true))
+      wrapperClass.isPointer = true
+
+      const wrapper = new ctypes.object(wrapperClass, 'wrapper')
+
+      func.args = [
+        new types.object('widget', 'widget'),
+        new ctypes.object('LCUI_WidgetEvent', 'e', true),
+        new ctypes.object('void*', 'arg', true)
+      ]
+      func.pushCode(that.define())
+      func.pushCode(wrapper.define())
+      func.pushCode('')
+      func.pushCode(`${wrapper.id} = e->data;`)
+      func.pushCode(`${that.id} = ${wrapper.id}->_this;`)
+      func.pushCode(`e->data = ${wrapper.id}->data;`)
+      func.pushCode(`wrapper->handler(${that.id}, e);`)
+      func.pushCode(`e->data = ${wrapper.id};`)
+
+      this.global[name] = wrapperClass
+      this.global[func.funcRealName] = func
+      this.program.push(wrapperClass)
+      this.program.push(func)
+      return wrapperClass
+    }
+
     parseMethodDefinition(input) {
       const func = super.parse(input)
 
@@ -206,11 +266,10 @@ function install(Compiler) {
       return this.parse(input.expression)
     }
 
-    parseJSXElementRef(that, node) {
-      let ref = null
-      let refs = that.selectProperty('refs')
+    parseJSXElementRef(ctx) {
+      let refs = ctx.that.selectProperty('refs')
 
-      node.attributes.some((attr) => {
+      ctx.node.attributes.some((attr) => {
         if (attr.name.name !== 'ref' || !attr.value.value) {
           return false
         }
@@ -221,95 +280,109 @@ function install(Compiler) {
           const obj = refs.setValue(new ctypes.struct('', 'refs'))
           this.program.push(obj.classDeclaration)
         }
-        ref = refs.selectProperty(value)
-        assert(ref, `${value} reference already exists`)
-        ref.setValue(new types.object('widget', value))
+        ctx.ref = refs.selectProperty(value)
+        assert(ctx.ref, `${value} reference already exists`)
+        ctx.ref.setValue(new types.object('widget', value))
         return true
       })
-      return ref
     }
 
-    parseJSXElementAttributes(that, node, ref) {
-      let widget = null
-      let refs = that.selectProperty('refs')
-      const proto = this.findObject(node.name.name)
-      const cBlock = this.findContextData(ctypes.block)
+    parseJSXElementEventBinding(ctx, attrName, func) {
+      const cBlock = ctx.cBlock
+      const widget = ctx.widget
+      const wrapperClass = this.selectEventWrapperClass(ctx)
+      const wrapperName = this.allocObjectName('_event_wrapper')
+      const wrapper = new ctypes.object(wrapperClass, wrapperName)
+      const eventName = attrName.substr(2).toLowerCase()
 
-      if (ref) {
-        widget = new types.object('widget', ref.id)
+      cBlock.pushCode('')
+      cBlock.pushCode(wrapper.define())
+      cBlock.pushCode('')
+      cBlock.pushCode(`${wrapper.id} = malloc(sizeof(${wrapperClass.type}));`)
+      cBlock.pushCode(`${wrapper.id}->_this = _this;`)
+      cBlock.pushCode(`${wrapper.id}->data = NULL;`)
+      cBlock.pushCode(`${wrapper.id}->handler = ${func.funcRealName};`)
+      cBlock.pushCode(functions.Widget_BindEvent(
+        ctx.widget, eventName, func, wrapper, new ctypes.function('void', 'free')
+      ))
+      cBlock.pushCode('')
+      this.setObjectInBlock(wrapperName, wrapper)
+    }
+
+    parseJSXElementAttributes(ctx) {
+      let refs = ctx.that.selectProperty('refs')
+
+      if (ctx.ref) {
+        ctx.widget = new types.object('widget', ctx.ref.id)
       }
-      node.attributes.forEach((attr) => {
-        const value = this.parse(attr.value)
+      ctx.node.attributes.forEach((attr) => {
+        let value = this.parse(attr.value)
         const attrName = attr.name.name
 
-        if (attrName === 'ref' || attrName.indexOf('on') == 0) {
+        if (attrName === 'ref') {
           return
         }
         if (!refs.getEntity()) {
           refs = refs.setValue(new ctypes.struct('', 'refs'))
           this.program.push(refs.classDeclaration)
         }
-        if (!widget) {
-          const name = '_' + this.getWidgetObjectName(node, proto)
+        if (!ctx.widget) {
+          const name = this.allocWidgetObjectName(ctx.node, ctx.proto, '_')
 
-          ref = refs.selectProperty(name)
-          assert(ref, `${name} reference already exists`)
-          ref.setValue(new types.object('widget', name))
-          widget = new types.object('widget', ref.id)
+          ctx.ref = refs.selectProperty(name)
+          assert(ctx.ref, `${name} reference already exists`)
+          ctx.ref.setValue(new types.object('widget', name))
+          ctx.widget = new types.object('widget', ctx.ref.id)
+          this.setObjectInBlock(name, ctx.widget)
         }
         if (value instanceof ctypes.object && value.type === 'string') {
-          cBlock.pushCode(
-            functions.Widget_SetAttribute(ref, attr.name.name, value.value)
+          ctx.cBlock.pushCode(
+            functions.Widget_SetAttribute(ctx.ref, attrName, value.value)
           )
           return
         }
-        if (value instanceof ctypes.function) {
-          cBlock.pushCode(functions.Widget_BindEvent(widget, attr.name.name, value))
+
+        let func = value.getEntity()
+
+        if (func instanceof ctypes.function) {
+          assert(attrName.indexOf('on') === 0, `${value.name} can only be member event handler`)
+          this.parseJSXElementEventBinding(ctx, attrName, func)
+          return
         }
 
-        const func = getDataBindingFunction(that.classDeclaration, value)
+        func = getDataBindingFunction(ctx.that.classDeclaration, value)
 
         assert(func, `${value.id} is not defined`)
 
-        func.pushCode(functions.Widget_SetAttributeEx(widget, attr.name.name, value))
+        func.pushCode(functions.Widget_SetAttributeEx(ctx.widget, attrName, value))
       })
-      return ref
     }
 
     parseJSXElement(input) {
-      let ref
-      let widget
-      const node = input.openingElement
-      const proto = this.findObject(node.name.name)
-      const type = getWidgetType(node, proto)
-      const name = this.getWidgetObjectName(node, proto)
-      const cClass = this.findContextData(ctypes.class)
-      const cBlock = this.findContextData(ctypes.block)
+      const ctx = new WidgetParserContext(this, input.openingElement)
 
-      assert(cClass, 'JSX code must be in class method function')
+      assert(ctx.cClass, 'JSX code must be in class method function')
 
-      const that = new ctypes.object(cClass, '_this', true)
-
-      ref = this.parseJSXElementRef(that, node)
-      ref = this.parseJSXElementAttributes(that, node, ref)
-      if (ref) {
-        widget = new types.object('widget', ref.id)
+      this.parseJSXElementRef(ctx)
+      this.parseJSXElementAttributes(ctx)
+      if (ctx.ref) {
+        ctx.widget = new types.object('widget', ctx.ref.id)
       } else {
-        widget = new types.object('widget', name)
-        this.setObjectInBlock(name, widget)
-        cBlock.push(widget)
+        ctx.widget = new types.object('widget', ctx.name)
+        this.setObjectInBlock(ctx.name, ctx.widget)
+        ctx.cBlock.push(ctx.widget)
       }
-      if (type === 'widget') {
-        cBlock.pushCode(`${widget.id} = LCUIWidget_New(NULL);`)
+      if (ctx.type === 'widget') {
+        ctx.cBlock.pushCode(`${ctx.widget.id} = LCUIWidget_New(NULL);`)
       } else {
-        cBlock.pushCode(`${widget.id} = LCUIWidget_New("${type}");`)
+        ctx.cBlock.pushCode(`${ctx.widget.id} = LCUIWidget_New("${ctx.type}");`)
       }
       this.parseChilren(input.children).forEach((child) => {
-        if (child instanceof types.widget) {
-          cBlock.pushCode(`Widget_Append(${widget.id}, ${child.id});`)
+        if (child && child.classDeclaration instanceof types.widget) {
+          ctx.cBlock.pushCode(`Widget_Append(${ctx.widget.id}, ${child.id});`)
         }
       })
-      return widget
+      return ctx.widget
     }
 
     parse(input) {

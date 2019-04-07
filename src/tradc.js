@@ -1,6 +1,6 @@
 const fs = require('fs')
 const ports = require('./ports')
-const LCUI = require('./plugins/LCUI')
+const LCUI = require('./plugins/lcui')
 const { Compiler } = require('./compiler')
 
 function compile(file) {

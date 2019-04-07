@@ -20,7 +20,7 @@ class Func {
         return 'NULL'
       }
       if (typeof arg === 'string') {
-        return `"${arg}"`
+        return JSON.stringify(arg)
       }
       if (typeof arg === 'number') {
         return `${arg}`
@@ -87,6 +87,12 @@ module.exports = {
       'String_SetValue',
       [new Arg(), new Arg()]
     ).call(left, right)
+  },
+  Widget_BindEvent(widget, eventName, data, dataDestructor) {
+    return new Func(
+      'Widget_BindEvent',
+      [new Arg(), new Arg(), new Arg(), new Arg()]
+    ).call(widget, eventName, data, dataDestructor)
   },
   Widget_SetAttribute(widget, name, value) {
     return new Func(

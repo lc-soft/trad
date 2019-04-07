@@ -275,6 +275,11 @@ class CObject extends CType {
 
     if (type instanceof CStruct) {
       this.classDeclaration = type
+      if (type.classMethods) {
+        type.classMethods.forEach((method) => {
+          this.value[method.name] = method
+        })
+      }
       if (type.value instanceof CBlock) {
         type.value.value.forEach((prop) => {
           if (prop instanceof CObject) {
@@ -297,12 +302,7 @@ class CObject extends CType {
   }
 
   getProperty(name) {
-    const prop = this.value[name]
-
-    if (prop instanceof CObject) {
-      return prop
-    }
-    return undefined
+    return this.value[name]
   }
 
   setProperty(name, value) {
@@ -322,10 +322,10 @@ class CObject extends CType {
   }
 
   define() {
-    if (this.classDeclaration && !this.classDeclaration.isPointer) {
-      return `${this.className}Rec ${this.name};`  
+    if (this.isPointer || (this.classDeclaration && this.classDeclaration.isPointer)) {
+      return `${this.type} ${this.name};`
     }
-    return `${this.type} ${this.name};`
+    return `${this.className}Rec ${this.name};`
   }
 }
 

@@ -12,10 +12,10 @@ const {
   ExpressionStatementParser
 } = require('./statement')
 const {
-ThisExpressionParser,
-AssignmentExpressionParser,
-MemberExpressionParser,
-ObjectExpressionParser
+  ThisExpressionParser,
+  AssignmentExpressionParser,
+  MemberExpressionParser,
+  ObjectExpressionParser
 } = require('./expression')
 
 class CompilerContext {
@@ -102,6 +102,30 @@ class Compiler {
     const ctx = this.findContext(c => c.data instanceof type)
 
     return ctx ? ctx.data : undefined
+  }
+
+  getObjectInBlock(name) {
+    const ctx = this.findContext(c => c.data instanceof ctypes.block)
+
+    if (ctx) {
+      return ctx.scope[name]
+    }
+    return undefined
+  }
+
+  setObjectInBlock(name, value) {
+    const ctx = this.findContext(c => c.data instanceof ctypes.block)
+
+    return ctx.scope[name] = value
+  }
+
+  allocObjectName(name) {
+    let realname = name
+
+    for(let i = 1; this.getObjectInBlock(realname); ++i) {
+      realname = `${name}_${i}`
+    }
+    return realname
   }
 
   parse(input) {

@@ -30,9 +30,9 @@ class MyApp extends LCUI.App {
 
   template() {
     return (<Widget>
-      <TextView ref="test">{this.state.text}</TextView>
-      <TextEdit test="asd" value={this.state.input} />
-      <Button onClick={this.changeText}>Change</Button>
+      <TextView>{this.state.text}</TextView>
+      <TextEdit value={this.state.input} />
+      <Button onClick={this.onBtnChangeClick}>Change</Button>
       <TextView>Please click button to test progress</TextView>
       <Progress value={this.state.value} total={this.state.total} />
       <Button onClick={this.onBtnMinusClick}>-</Button>

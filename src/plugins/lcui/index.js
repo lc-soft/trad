@@ -2,11 +2,11 @@ const assert = require('assert')
 const types = require('./types')
 const functions = require('./functions')
 const ctypes = require('../../ctypes')
-const { capitalize } = require('../../lib')
 const { getWidgetType } = require('./lib')
-const JSXParser = require('./jsx')
-const StateBindingParser = require('./state')
-const EventBindingParser = require('./event')
+const LCUIJSXParser = require('./jsx')
+const LCUIClassParser = require('./class')
+const LCUIStateBindingParser = require('./state')
+const LCUIEventBindingParser = require('./event')
 
 function replaceDefaultType(obj) {
   const items = obj.classDeclaration.value.value
@@ -88,9 +88,10 @@ function mixin(base, ...plugins) {
 function install(Compiler) {
   return mixin(
     Compiler,
-    EventBindingParser,
-    StateBindingParser,
-    JSXParser,
+    LCUIEventBindingParser,
+    LCUIStateBindingParser,
+    LCUIClassParser,
+    LCUIJSXParser,
     { install: installLCUIParser }
   )
 }

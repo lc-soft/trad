@@ -4,7 +4,7 @@ const functions = require('./functions')
 const ctypes = require('../../ctypes')
 const { capitalize } = require('../../lib')
 
-function getDataBindingFunctionName(target) {
+function getBindingFunctionName(target) {
   let obj = target
   let name = capitalize(target.name)
 
@@ -15,12 +15,12 @@ function getDataBindingFunctionName(target) {
   return `on${name}Changed`
 }
 
-function getDataBindingFunction(cClass, target) {
-  return cClass.getMethod(getDataBindingFunctionName(target))
+function getBindingFunction(cClass, target) {
+  return cClass.getMethod(getBindingFunctionName(target))
 }
 
-function addDataBindingFunction(cClass, target) {
-  const name = getDataBindingFunctionName(target)
+function addBindingFunction(cClass, target) {
+  const name = getBindingFunctionName(target)
   let func = cClass.getMethod(name)
 
   if (func) {
@@ -49,14 +49,14 @@ function install(Compiler) {
       const constructor = cClass.getMethod('constructor')
       const destructor = cClass.getMethod('destructor')
 
-      if (!state) {
+      if (!state.getValue()) {
         return false
       }
       assert(state instanceof ctypes.object, 'state must be a object')
       Object.keys(state.getValue()).map((name) => {
         const prop = state.selectProperty(name)
         const propClass = prop.getEntity().classDeclaration
-        const func = addDataBindingFunction(cClass, prop)
+        const func = addBindingFunction(cClass, prop)
 
         if (propClass instanceof types.string) {
           constructor.pushCode(functions.String_Init(prop))
@@ -64,29 +64,11 @@ function install(Compiler) {
           assert(propClass instanceof types.number, `type ${propClass.type} is not supported`)
           constructor.pushCode(functions.Number_Init(prop))
         } 
+        destructor.pushCode(functions.Object_Destroy(prop))
         this.program.push(func)
         return { prop, func }
       }).forEach(({ prop, func }) => {
         constructor.pushCode(functions.Object_Watch(prop, func, that))
-      })
-      return true
-    }
-
-    initStateDestructors(cClass) {
-      const that = new ctypes.object(cClass, '_this', true)
-      const state = that.selectProperty('state')
-      const destructor = cClass.getMethod('destructor')
-
-      if (!state) {
-        return false
-      }
-      assert(state instanceof ctypes.object, 'state must be a object')
-      Object.keys(state.getValue()).map((name) => {
-        const prop = state.selectProperty(name)
-        const func = getDataBindingFunction(cClass, prop)
-
-        destructor.pushCode(functions.Object_Destroy(prop))
-        return { prop, func }
       })
       return true
     }
@@ -102,17 +84,10 @@ function install(Compiler) {
       return func
     }
 
-    parseClassDeclaration(input) {
-      const cClass = super.parse(input)
-
-      this.initStateDestructors(cClass)
-      return cClass
-    }
-
     parseJSXElementAttribute(attr, ctx) {
       const attrName = attr.name.name
       let value = this.parse(attr.value)
-      const func = getDataBindingFunction(ctx.that.classDeclaration, value)
+      const func = getBindingFunction(ctx.that.classDeclaration, value)
 
       if (!(func instanceof ctypes.function)) {
         return super.parseJSXElementAttribute(attr, ctx)

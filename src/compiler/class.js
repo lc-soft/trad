@@ -54,14 +54,18 @@ class ClassParser extends Parser {
     importer.include(new ctypes.include('stdlib.h', true))
   }
 
-  parse(input) {
+  parseDeclaration(input) {
     const name = input.id.name
     const cClass = new ctypes.class(name, name)
 
     this.compiler.global[name] = cClass
     this.context = this.compiler.context
     this.context.data = cClass
+    return cClass
+  }
 
+  parse(input) {
+    this.parseDeclaration(input)
     // Preload all class methods
     this.parseMethods(cClass, input.body.body)
     // Parse the body of each class method

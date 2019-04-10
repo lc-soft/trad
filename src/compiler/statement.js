@@ -32,7 +32,7 @@ class BlockStatmentParser extends Parser {
       this.context.data = block
       parent.push(block)
     }
-    c.parseChilren(input.body)
+    c.parseChildren(input.body)
   }
 }
 

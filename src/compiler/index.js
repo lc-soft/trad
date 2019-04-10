@@ -151,7 +151,7 @@ class Compiler {
     this.popContext()
   }
 
-  parseChilren(children) {
+  parseChildren(children) {
     const results = children.map((input) => {
       this.beginParse(input)
       const result = this.parse(input)
@@ -172,7 +172,7 @@ class Compiler {
       this.global[key] = types[key]
     })
     this.beginParse(this, input)
-    this.parseChilren(input.body)
+    this.parseChildren(input.body)
     this.endParse()
     this.popContext()
   }

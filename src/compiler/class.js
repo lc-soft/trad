@@ -11,7 +11,7 @@ class MethodParser extends FunctionParser {
 
     this.context = this.compiler.context
     this.context.data = func
-    this.compiler.parseChilren([input.value])
+    this.compiler.parseChildren([input.value])
     return func
   }
 }
@@ -65,7 +65,7 @@ class ClassParser extends Parser {
     // Preload all class methods
     this.parseMethods(cClass, input.body.body)
     // Parse the body of each class method
-    this.compiler.parseChilren(input.body.body)
+    this.compiler.parseChildren(input.body.body)
     // Output processed class declaration
     this.program.push(cClass)
     return cClass

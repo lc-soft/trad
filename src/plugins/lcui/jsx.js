@@ -95,7 +95,7 @@ function install(Compiler) {
         ctx.cBlock.pushCode(`${ctx.widget.id} = LCUIWidget_New("${ctx.type}");`)
       }
       ctx.node.attributes.forEach(attr => this.parseJSXElementAttribute(attr, ctx))
-      this.parseChilren(input.children).forEach((child) => {
+      this.parseChildren(input.children).forEach((child) => {
         if (child && child.classDeclaration instanceof types.widget) {
           ctx.cBlock.pushCode(`Widget_Append(${ctx.widget.id}, ${child.id});`)
         }

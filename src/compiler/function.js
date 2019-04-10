@@ -9,7 +9,7 @@ class FunctionExpressionParser extends Parser {
     assert(func instanceof ctypes.function, `${input.type} must be in a function`)
 
     this.compiler.global[func.funcRealName] = func
-    this.compiler.parseChilren([input.body])
+    this.compiler.parseChildren([input.body])
     return func
   }
 }
@@ -26,7 +26,7 @@ class FunctionParser extends Parser {
     this.context = this.compiler.context
     this.context.data = func
     this.program.push(func)
-    this.compiler.parseChilren([input.body])
+    this.compiler.parseChildren([input.body])
     return func
   }
 }

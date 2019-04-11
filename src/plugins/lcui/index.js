@@ -3,21 +3,21 @@ const types = require('./types')
 const functions = require('./functions')
 const ctypes = require('../../ctypes')
 const { getWidgetType } = require('./lib')
-const LCUIJSXParser = require('./jsx')
-const LCUIClassParser = require('./class')
-const LCUIStateBindingParser = require('./state')
-const LCUIEventBindingParser = require('./event')
+const JSXParser = require('./jsx')
+const ClassParser = require('./class')
+const StateBindingParser = require('./state')
+const EventBindingParser = require('./event')
 
-function replaceDefaultType(obj) {
+function replaceDefaultType(obj, isPointer) {
   const items = obj.classDeclaration.value.value
 
   for (let i = 0; i < items.length; ++i) {
     let item = items[i]
 
     if (item instanceof ctypes.string) {
-      items[i] = new types.object('string', item.name)
+      items[i] = new types.object('string', item.name, isPointer)
     } else if (item instanceof ctypes.number) {
-      items[i] = new types.object('number', item.name)
+      items[i] = new types.object('number', item.name, isPointer)
     }
   }
 }
@@ -39,7 +39,7 @@ function installLCUIParser(Compiler) {
         const obj = left.setValue(right)
 
         if (obj !== left) {
-          replaceDefaultType(obj)
+          replaceDefaultType(obj, left.name !== 'state')
           this.program.push(obj.classDeclaration)
         }
         return obj
@@ -47,7 +47,7 @@ function installLCUIParser(Compiler) {
 
       const actualLeft = left.getEntity()
 
-      if (actualLeft.className === 'LCUI_Object') {
+      if (actualLeft && actualLeft.className === 'LCUI_Object') {
         if (right.id) {
           const actualRight = right.getEntity()
 
@@ -66,10 +66,10 @@ function installLCUIParser(Compiler) {
     }
 
     parse(input) {
-      const parse = this['parse' + input.type]
+      const method = 'parse' + input.type
 
-      if (parse) {
-        return parse.call(this, input)
+      if (LCUIParser.prototype.hasOwnProperty(method)) {
+        return LCUIParser.prototype[method].call(this, input)
       }
       return super.parse(input)
     }
@@ -88,10 +88,10 @@ function mixin(base, ...plugins) {
 function install(Compiler) {
   return mixin(
     Compiler,
-    LCUIEventBindingParser,
-    LCUIStateBindingParser,
-    LCUIClassParser,
-    LCUIJSXParser,
+    JSXParser,
+    ClassParser,
+    EventBindingParser,
+    StateBindingParser,
     { install: installLCUIParser }
   )
 }

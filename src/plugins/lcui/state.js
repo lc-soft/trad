@@ -84,18 +84,28 @@ function install(Compiler) {
       return func
     }
 
-    parseJSXElementAttribute(attr, ctx) {
+    parseJSXElementAttribute(input) {
+      const { attr, ctx } = input
       const attrName = attr.name.name
       let value = this.parse(attr.value)
       const func = getBindingFunction(ctx.that.classDeclaration, value)
 
       if (!(func instanceof ctypes.function)) {
-        return super.parseJSXElementAttribute(attr, ctx)
+        return super.parse(input)
       }
       func.pushCode(
         functions.Widget_SetAttributeEx(ctx.widget, attrName, func.args[0])
       )
       return true
+    }
+
+    parse(input) {
+      const method = 'parse' + input.type
+
+      if (StateBindingParser.prototype.hasOwnProperty(method)) {
+        return StateBindingParser.prototype[method].call(this, input)
+      }
+      return super.parse(input)
     }
   }
 }

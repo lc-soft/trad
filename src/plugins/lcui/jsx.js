@@ -55,7 +55,8 @@ function install(Compiler) {
       this.setObjectInBlock(refName, ctx.widget)
     }
 
-    parseJSXElementAttribute(attr, ctx) {
+    parseJSXElementAttribute(input) {
+      const { attr, ctx } = input
       let value = this.parse(attr.value)
       const attrName = attr.name.name
 
@@ -69,7 +70,7 @@ function install(Compiler) {
         return true
       }
 
-      return super.parseJSXElementAttribute(attr, ctx)
+      return super.parse(input)
     }
 
     parseJSXExpressionContainer(input) {
@@ -94,13 +95,22 @@ function install(Compiler) {
       } else {
         ctx.cBlock.pushCode(`${ctx.widget.id} = LCUIWidget_New("${ctx.type}");`)
       }
-      ctx.node.attributes.forEach(attr => this.parseJSXElementAttribute(attr, ctx))
+      ctx.node.attributes.forEach(attr => this.parse({ type: 'JSXElementAttribute', attr, ctx }))
       this.parseChildren(input.children).forEach((child) => {
         if (child && child.classDeclaration instanceof types.widget) {
           ctx.cBlock.pushCode(`Widget_Append(${ctx.widget.id}, ${child.id});`)
         }
       })
       return ctx.widget
+    }
+
+    parse(input) {
+      const method = 'parse' + input.type
+
+      if (JSXParser.prototype.hasOwnProperty(method)) {
+        return JSXParser.prototype[method].call(this, input)
+      }
+      return super.parse(input)
     }
   }
 }

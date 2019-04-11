@@ -102,7 +102,8 @@ function install(Compiler) {
       this.setObjectInBlock(wrapperName, wrapper)
     }
 
-    parseJSXElementAttribute(attr, ctx) {
+    parseJSXElementAttribute(input) {
+      const { attr, ctx } = input
       const attrName = attr.name.name
       let value = this.parse(attr.value)
       const func = value.getEntity()
@@ -115,7 +116,16 @@ function install(Compiler) {
         this.parseJSXElementEventBinding(ctx, attrName, func)
         return true
       }
-      return super.parseJSXElementAttribute(attr, ctx)
+      return super.parse(input)
+    }
+
+    parse(input) {
+      const method = 'parse' + input.type
+
+      if (EventBindingParser.prototype.hasOwnProperty(method)) {
+        return EventBindingParser.prototype[method].call(this, input)
+      }
+      return super.parse(input)
     }
   }
 }

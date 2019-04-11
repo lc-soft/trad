@@ -11,7 +11,7 @@ function getMethodOrder(method) {
 }
 
 function install(Compiler) {
-  return class LCUIClassParser extends Compiler {
+  return class ClassParser extends Compiler {
     parseClassDeclaration(input) {
       const parser = this.handlers.ClassDeclaration
       const cClass = parser.parseDeclaration(input)
@@ -23,6 +23,15 @@ function install(Compiler) {
       this.parseChildren(methods)
       this.program.push(cClass)
       return cClass
+    }
+
+    parse(input) {
+      const method = 'parse' + input.type
+
+      if (ClassParser.prototype.hasOwnProperty(method)) {
+        return ClassParser.prototype[method].call(this, input)
+      }
+      return super.parse(input)
     }
   }
 }

@@ -72,7 +72,6 @@ function install(Compiler) {
 
     parseJSXElementEventBinding(ctx, attrName, func) {
       const cBlock = ctx.cBlock
-      const widget = ctx.widget
       const wrapperClass = this.selectEventWrapperClass(ctx)
       const wrapperName = this.allocObjectName('_event_wrapper')
       const wrapper = new ctypes.object(wrapperClass, wrapperName)

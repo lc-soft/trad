@@ -65,7 +65,7 @@ class ClassParser extends Parser {
   }
 
   parse(input) {
-    this.parseDeclaration(input)
+    const cClass = this.parseDeclaration(input)
     // Preload all class methods
     this.parseMethods(cClass, input.body.body)
     // Parse the body of each class method

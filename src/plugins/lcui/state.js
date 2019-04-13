@@ -41,6 +41,20 @@ function addBindingFunction(cClass, target) {
   return func
 }
 
+function replaceDefaultType(obj) {
+  const items = obj.classDeclaration.value.value
+
+  for (let i = 0; i < items.length; ++i) {
+    let item = items[i]
+
+    if (item instanceof ctypes.string) {
+      items[i] = new types.object('string', item.name)
+    } else if (item instanceof ctypes.number) {
+      items[i] = new types.object('number', item.name)
+    }
+  }
+}
+
 function install(Compiler) {
   return class StateBindingParser extends Compiler {
     initStateBindings(cClass) {
@@ -55,15 +69,9 @@ function install(Compiler) {
       assert(state instanceof ctypes.object, 'state must be a object')
       Object.keys(state.getValue()).map((name) => {
         const prop = state.selectProperty(name)
-        const propClass = prop.getEntity().classDeclaration
         const func = addBindingFunction(cClass, prop)
 
-        if (propClass instanceof types.string) {
-          constructor.pushCode(functions.String_Init(prop))
-        } else {
-          assert(propClass instanceof types.number, `type ${propClass.type} is not supported`)
-          constructor.pushCode(functions.Number_Init(prop))
-        } 
+        constructor.pushCode(functions.Object_Init(prop))
         destructor.pushCode(functions.Object_Destroy(prop))
         this.program.push(func)
         return { prop, func }
@@ -71,6 +79,26 @@ function install(Compiler) {
         constructor.pushCode(functions.Object_Watch(prop, func, that))
       })
       return true
+    }
+
+    parseAssignmentExpression(input) {
+      const left = this.parse(input.left)
+
+      if (input.right.type !== 'ObjectExpression' || left.name !== 'state') {
+        return super.parse(input)
+      }
+
+      const right = this.parse(input.right)
+
+      assert(typeof left.getValue() === 'undefined', 'object-to-object assignment is not supported')
+
+      const obj = left.setValue(right)
+
+      if (obj !== left) {
+        replaceDefaultType(obj)
+        this.program.push(obj.classDeclaration)
+      }
+      return obj
     }
 
     parseMethodDefinition(input) {

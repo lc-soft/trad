@@ -61,7 +61,7 @@ class AssignmentExpressionParser extends Parser {
     // If this assignment will define a new object
     if (obj !== left) {
       // Declare the type of this object
-      this.program.push(obj.typeDeclartion)
+      this.program.push(obj.classDeclaration)
     }
     return obj
   }

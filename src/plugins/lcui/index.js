@@ -6,21 +6,8 @@ const { getWidgetType } = require('./lib')
 const JSXParser = require('./jsx')
 const ClassParser = require('./class')
 const StateBindingParser = require('./state')
+const PropsBindingParser = require('./props')
 const EventBindingParser = require('./event')
-
-function replaceDefaultType(obj, isPointer) {
-  const items = obj.classDeclaration.value.value
-
-  for (let i = 0; i < items.length; ++i) {
-    let item = items[i]
-
-    if (item instanceof ctypes.string) {
-      items[i] = new types.object('string', item.name, isPointer)
-    } else if (item instanceof ctypes.number) {
-      items[i] = new types.object('number', item.name, isPointer)
-    }
-  }
-}
 
 function installLCUIParser(Compiler) {
   return class LCUIParser extends Compiler {
@@ -32,18 +19,6 @@ function installLCUIParser(Compiler) {
       const left = this.parse(input.left)
       const right = this.parse(input.right)
       const block = this.findContextData(ctypes.block)
-
-      if (input.right.type === 'ObjectExpression') {
-        assert(typeof left.getValue() === 'undefined', 'object-to-object assignment is not supported')
-
-        const obj = left.setValue(right)
-
-        if (obj !== left) {
-          replaceDefaultType(obj, left.name !== 'state')
-          this.program.push(obj.classDeclaration)
-        }
-        return obj
-      }
 
       const actualLeft = left.getEntity()
 
@@ -88,11 +63,12 @@ function mixin(base, ...plugins) {
 function install(Compiler) {
   return mixin(
     Compiler,
+    { install: installLCUIParser },
     JSXParser,
     ClassParser,
     EventBindingParser,
     StateBindingParser,
-    { install: installLCUIParser }
+    PropsBindingParser
   )
 }
 

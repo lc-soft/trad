@@ -1,9 +1,26 @@
 const ctypes = require('../../ctypes')
+const types = require('./types')
 
 class Arg {
   constructor(isPointer = true) {
     this.isPointer = isPointer
   }
+}
+
+function rvalue(value) {
+  if (typeof value === 'undefined' || value === null) {
+    return 'NULL'
+  }
+  if (typeof value === 'string') {
+    return JSON.stringify(value)
+  }
+  if (typeof value === 'number') {
+    return value
+  }
+  if (value instanceof ctypes.function) {
+    return value.funcRealName
+  }
+  return undefined
 }
 
 class Func {
@@ -15,18 +32,10 @@ class Func {
   call(...args) {
     const argsStr = this.argsDeclaration.map((declaration, i) => {
       const arg = args[i]
+      const val = rvalue(arg)
 
-      if (typeof arg === 'undefined' || arg === null) {
-        return 'NULL'
-      }
-      if (typeof arg === 'string') {
-        return JSON.stringify(arg)
-      }
-      if (typeof arg === 'number') {
-        return `${arg}`
-      }
-      if (arg instanceof ctypes.function) {
-        return arg.funcRealName
+      if (typeof val !== 'undefined') {
+        return val
       }
       if (declaration.isPointer) {
         if (!arg.isPointer) {
@@ -42,80 +51,126 @@ class Func {
   }
 }
 
-module.exports = {
-  assign(left, right) {
-    if (left.isPointer === right.isPointer) {
-      return `${left.id} = ${right.id};`
-    }
-    if (left.isPointer) {
-      return `${left.id} = &${right.id};`
-    }
-    return `${left.id} = *${right.id};`
-  },
-  Object_Init(obj, type) {
-    return new Func(
-      'Object_Init',
-      [new Arg(), new Arg()]
-    ).call(obj, type)
-  },
-  String_Init(obj, value = null) {
-    return new Func(
-      'String_Init',
-      [new Arg(), new Arg()]
-    ).call(obj, value)
-  },
-  Number_Init(obj, value = 0) {
-    return new Func(
-      'Number_Init',
-      [new Arg(), new Arg(false)]
-    ).call(obj, value)
-  },
-  Object_Destroy(obj) {
-    return new Func(
-      'Object_Destroy',
-      [new Arg()]
-    ).call(obj)
-  },
-  Object_Watch(obj, func, data) {
-    return new Func(
-      'Object_Watch',
-      [new Arg(), new Arg(), new Arg()]
-    ).call(obj, func, data)
-  },
-  Object_Operate(left, operatorStr, right) {
-    return new Func(
-      'Object_Operate',
-      [new Arg(), new Arg(), new Arg()]
-    ).call(left, operatorStr, right)
-  },
-  Number_SetValue(left, right) {
-    return new Func(
-      'Number_SetValue',
-      [new Arg(), new Arg(false)]
-    ).call(left, right)
-  },
-  String_SetValue(left, right) {
-    return new Func(
-      'String_SetValue',
-      [new Arg(), new Arg()]
-    ).call(left, right)
-  },
-  Widget_BindEvent(widget, eventName, func, data = null, dataDestructor = null) {
-    return new Func(
-      'Widget_BindEvent',
-      [new Arg(), new Arg(), new Arg(), new Arg(), new Arg()]
-    ).call(widget, eventName, func, data, dataDestructor)
-  },
-  Widget_SetAttribute(widget, name, value) {
-    return new Func(
-      'Widget_SetAttribute',
-      [new Arg(), new Arg(), new Arg()]
-    ).call(widget, name, value)
-  },
-  Widget_SetAttributeEx(widget, name, value) {
-    return new Func(
-      'Widget_SetAttributeEx',
-      [new Arg(), new Arg(), new Arg(), new Arg(false), new Arg()]
-    ).call(widget, name, value, 0, null)
+function assign(left, right) {
+  const value = rvalue(right)
+
+  if (typeof value !== 'undefined') {
+    return `${left.id} = ${value};`
   }
+  if (left.isPointer === right.isPointer) {
+    return `${left.id} = ${right.id};`
+  }
+  if (left.isPointer) {
+    return `${left.id} = &${right.id};`
+  }
+  return `${left.id} = *${right.id};`
+}
+
+function Object_Init(ref, type) {
+  if (typeof type === 'undefined') {
+    const obj = ref.getEntity()
+
+    if (obj.classDeclaration instanceof types.string) {
+      return String_Init(obj, null)
+    } else if (obj.classDeclaration instanceof types.number) {
+      return Number_Init(obj, 0)
+    }
+  }
+  return new Func(
+    'Object_Init',
+    [new Arg(), new Arg()]
+  ).call(ref, type)
+}
+
+function String_Init(obj, value = null) {
+  return new Func(
+    'String_Init',
+    [new Arg(), new Arg()]
+  ).call(obj, value)
+}
+
+function Number_Init(obj, value = 0) {
+  return new Func(
+    'Number_Init',
+    [new Arg(), new Arg(false)]
+  ).call(obj, value)
+}
+
+function Object_Destroy(obj) {
+  return new Func(
+    'Object_Destroy',
+    [new Arg()]
+  ).call(obj)
+}
+
+function Object_Watch(obj, func, data) {
+  return new Func(
+    'Object_Watch',
+    [new Arg(), new Arg(), new Arg()]
+  ).call(obj, func, data)
+}
+
+function Object_Notify(obj) {
+  return new Func(
+    'Object_Notify',
+    [new Arg()]
+  ).call(obj)
+}
+
+function Object_Operate(left, operatorStr, right) {
+  return new Func(
+    'Object_Operate',
+    [new Arg(), new Arg(), new Arg()]
+  ).call(left, operatorStr, right)
+}
+
+function Number_SetValue(left, right) {
+  return new Func(
+    'Number_SetValue',
+    [new Arg(), new Arg(false)]
+  ).call(left, right)
+}
+
+function String_SetValue(left, right) {
+  return new Func(
+    'String_SetValue',
+    [new Arg(), new Arg()]
+  ).call(left, right)
+}
+
+function Widget_BindEvent(widget, eventName, func, data = null, dataDestructor = null) {
+  return new Func(
+    'Widget_BindEvent',
+    [new Arg(), new Arg(), new Arg(), new Arg(), new Arg()]
+  ).call(widget, eventName, func, data, dataDestructor)
+}
+
+function Widget_SetAttribute(widget, name, value) {
+  return new Func(
+    'Widget_SetAttribute',
+    [new Arg(), new Arg(), new Arg()]
+  ).call(widget, name, value)
+}
+
+function Widget_SetAttributeEx(widget, name, value) {
+  return new Func(
+    'Widget_SetAttributeEx',
+    [new Arg(), new Arg(), new Arg(), new Arg(false), new Arg()]
+  ).call(widget, name, value, 0, null)
+}
+
+module.exports = {
+  assign,
+  Object_Init,
+  String_Init,
+  Number_Init,
+  Object_Destroy,
+  Object_Watch,
+  Object_Operate,
+  Object_Notify,
+  Number_SetValue,
+  String_SetValue,
+  Widget_BindEvent,
+  Widget_SetAttribute,
+  Widget_SetAttributeEx
 }

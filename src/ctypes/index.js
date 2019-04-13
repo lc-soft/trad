@@ -349,8 +349,15 @@ class CObjectProperty extends CObject {
     }
     if (owner instanceof CObjectProperty) {
       this.owner = owner.getEntity()
+      assert(
+        typeof this.owner !== 'undefined',
+        `cannot read property '${name}' of undefined, ${owner.id} is undefined`
+      )
     } else {
       this.owner = owner
+    }
+    if (typeof this.owner.value[name] !== 'undefined') {
+      this.isPointer = this.owner.value[name].isPointer
     }
   }
 

@@ -1,7 +1,7 @@
 const fs = require('fs')
-const ports = require('./ports')
-const LCUI = require('./plugins/lcui')
-const { Compiler } = require('./compiler')
+const ports = require('../trad-ports')
+const LCUI = require('../trad-lcui')
+const { Compiler } = require('../trad-compiler')
 
 function compile(file) {
   const sourceFile = file + '.c'

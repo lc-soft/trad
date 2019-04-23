@@ -1,18 +1,14 @@
-const ctypes = require('../ctypes')
 const { Parser } = require('./parser')
 
 class LiteralParser extends Parser {
   parse(input) {
-    let obj = null
-
     if (typeof input.value === 'string') {
-      obj = new ctypes.object('string', '')
+      return this.block.createObject('String', null, { value: input.value, isHidden: true })
     }
     if (typeof input.value === 'number') {
-      obj = new ctypes.object('number', '')
+      return this.block.createObject('Number', null, { value: input.value, isHidden: true })
     }
-    obj.value = input.value
-    return obj
+    return null
   }
 }
 

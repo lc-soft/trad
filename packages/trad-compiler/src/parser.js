@@ -5,12 +5,8 @@ class Parser {
     this.program = compiler.program
   }
 
-  findContextData(type) {
-    return this.compiler.findContextData(type)
-  }
-
-  findObject(name) {
-    return this.compiler.findObject(name)
+  get block() {
+    return this.compiler.block
   }
 
   parse() {}

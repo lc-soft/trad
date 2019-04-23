@@ -21,12 +21,12 @@ function install(Compiler) {
 
       parser.parseMethods(cClass, methods)
       this.parseChildren(methods)
-      this.program.push(cClass)
+      this.block.append(cClass)
       return cClass
     }
 
     parse(input) {
-      const method = 'parse' + input.type
+      const method = `parse${input.type}`
 
       if (ClassParser.prototype.hasOwnProperty(method)) {
         return ClassParser.prototype[method].call(this, input)

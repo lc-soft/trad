@@ -1,16 +1,16 @@
-import LCUI from 'lcui'
 import {
+  App,
   Widget,
   Button,
   TextView,
   TextEdit
-} from 'lcui/widget'
-import Progress from './components/progress'
+} from 'lcui'
+//import Progress from './components/progress'
 
-class MyApp extends LCUI.App {
+class MyApp extends App {
   constructor() {
     super()
-  
+
     // Define internal state data
     this.state = {
       text: String,
@@ -34,7 +34,6 @@ class MyApp extends LCUI.App {
       <TextEdit value={this.state.input} />
       <Button onClick={this.onBtnChangeClick}>Change</Button>
       <TextView>Please click button to test progress</TextView>
-      <Progress value={this.state.value} total={this.state.total} />
       <Button onClick={this.onBtnMinusClick}>-</Button>
       <Button onClick={this.onBtnPlusClick}>>+</Button>
     </Widget>)

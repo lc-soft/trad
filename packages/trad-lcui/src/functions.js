@@ -1,5 +1,5 @@
-const ctypes = require('../../ctypes')
 const types = require('./types')
+const { CFunction } = require('../../trad')
 
 class Arg {
   constructor(isPointer = true) {
@@ -17,7 +17,7 @@ function rvalue(value) {
   if (typeof value === 'number') {
     return value
   }
-  if (value instanceof ctypes.function) {
+  if (value instanceof CFunction) {
     return value.funcRealName
   }
   return undefined
@@ -66,20 +66,18 @@ function assign(left, right) {
   return `${left.id} = *${right.id};`
 }
 
-function Object_Init(ref, type) {
+function Object_Init(obj, type) {
   if (typeof type === 'undefined') {
-    const obj = ref.getEntity()
-
-    if (obj.classDeclaration instanceof types.string) {
+    if (obj.typeDeclaration instanceof types.String) {
       return String_Init(obj, null)
-    } else if (obj.classDeclaration instanceof types.number) {
+    } else if (obj.typeDeclaration instanceof types.Number) {
       return Number_Init(obj, 0)
     }
   }
   return new Func(
     'Object_Init',
     [new Arg(), new Arg()]
-  ).call(ref, type)
+  ).call(obj, type)
 }
 
 function String_Init(obj, value = null) {

@@ -1,7 +1,13 @@
 const assert = require('assert')
-const ctypes = require('../../ctypes')
 const types = require('./types')
 const functions = require('./functions')
+const {
+  CClass,
+  CStruct,
+  CObject,
+  CTypedef,
+  CIdentifier
+} = require('../../trad')
 const { getWidgetType } = require('./lib')
 
 class JSXParserContext {
@@ -9,12 +15,38 @@ class JSXParserContext {
     this.ref = null
     this.widget = null
     this.node = node
-    this.proto = compiler.findObject(node.name.name)
+    this.proto = compiler.block.getObject(node.name.name)
     this.type = getWidgetType(node, this.proto)
-    this.cClass = compiler.findContextData(ctypes.class)
-    this.cBlock = compiler.findContextData(ctypes.block)
-    this.that = new ctypes.object(this.cClass, '_this', true)
+    this.cClass = compiler.findContextData(CClass)
+    this.that = compiler.block.getObject('_this')
   }
+
+  createRefs() {
+    const refsStructName = `${this.cClass.className}RefsRec`
+    const refsStruct = new CStruct(`${refsStructName}_`)
+    const refsType = new CTypedef(refsStruct, refsStructName)
+
+    this.cClass.parent.append([refsType, refsStruct])
+    this.cClass.addMember(new CObject(refsType, 'refs'))
+    return this.that.selectProperty('refs')
+  }
+}
+
+function allocObjectName(scope, baseName) {
+  let i = 1
+  let name = baseName
+
+  scope.forEach((stat) => {
+    if (stat instanceof CIdentifier && stat.name === name) {
+      name = `${baseName}_${i}`
+      i += 1
+    }
+  })
+  return name
+}
+
+function allocWidgetObjectName(scope, node, proto, prefix = '') {
+  return allocObjectName(scope, prefix + getWidgetType(node, proto).replace(/-/g, '_'))
 }
 
 function install(Compiler) {
@@ -34,37 +66,39 @@ function install(Compiler) {
         ctx.node.attributes.some((attr) => {
           const value = this.parse(attr.value)
 
-          if (value instanceof ctypes.object && value.type === 'string') {
+          if (value instanceof CObject && value.type === 'String') {
             return false
           }
-          refName = this.allocWidgetObjectName(ctx.node, ctx.proto, '_')
+          if (!refs) {
+            refs = ctx.createRefs()
+          }
+          refName = allocWidgetObjectName(refs.typeDeclaration, ctx.node, ctx.proto, '_')
           return true
         })
         if (!refName) {
           return
         }
       }
-      if (!refs.getEntity()) {
-        const obj = refs.setValue(new ctypes.struct('', 'refs'))
-        this.program.push(obj.classDeclaration)
+      if (!refs) {
+        refs = ctx.createRefs()
       }
+
       ctx.ref = refs.selectProperty(refName)
-      assert(!ctx.ref.getEntity(), `"${refName}" reference already exists`)
-      ctx.ref.setValue(new types.object('widget', refName))
-      ctx.widget = new types.object('widget', ctx.ref.id)
-      this.setObjectInBlock(refName, ctx.widget)
+      assert(!ctx.ref, `"${refName}" reference already exists`)
+      ctx.ref = refs.addProperty(new types.Object('Widget', refName))
+      ctx.widget = new types.Object('Widget', ctx.ref.id)
     }
 
     parseJSXElementAttribute(input) {
       const { attr, ctx } = input
-      let value = this.parse(attr.value)
+      const value = this.parse(attr.value)
       const attrName = attr.name.name
 
       if (attrName === 'ref') {
         return true
       }
-      if (value instanceof ctypes.object && value.type === 'string') {
-        ctx.cBlock.pushCode(
+      if (value instanceof CObject && value.type === 'String') {
+        this.block.append(
           functions.Widget_SetAttribute(ctx.widget, attrName, value.value)
         )
         return true
@@ -84,28 +118,27 @@ function install(Compiler) {
 
       this.parseJSXElementRef(ctx)
       if (!ctx.widget) {
-        const name = this.allocWidgetObjectName(ctx.node, ctx.proto)
+        const name = allocWidgetObjectName(this.block, ctx.node, ctx.proto)
 
-        ctx.widget = new types.object('widget', name)
-        this.setObjectInBlock(name, ctx.widget)
-        ctx.cBlock.push(ctx.widget)
+        ctx.widget = new types.Object('Widget', name)
+        this.block.append(ctx.widget)
       }
       if (ctx.type === 'widget') {
-        ctx.cBlock.pushCode(`${ctx.widget.id} = LCUIWidget_New(NULL);`)
+        this.block.append(`${ctx.widget.id} = LCUIWidget_New(NULL);`)
       } else {
-        ctx.cBlock.pushCode(`${ctx.widget.id} = LCUIWidget_New("${ctx.type}");`)
+        this.block.append(`${ctx.widget.id} = LCUIWidget_New("${ctx.type}");`)
       }
       ctx.node.attributes.forEach(attr => this.parse({ type: 'JSXElementAttribute', attr, ctx }))
       this.parseChildren(input.children).forEach((child) => {
-        if (child && child.classDeclaration instanceof types.widget) {
-          ctx.cBlock.pushCode(`Widget_Append(${ctx.widget.id}, ${child.id});`)
+        if (child && child.type === 'LCUI_Widget') {
+          this.block.append(`Widget_Append(${ctx.widget.id}, ${child.id});`)
         }
       })
       return ctx.widget
     }
 
     parse(input) {
-      const method = 'parse' + input.type
+      const method = `parse${input.type}`
 
       if (JSXParser.prototype.hasOwnProperty(method)) {
         return JSXParser.prototype[method].call(this, input)

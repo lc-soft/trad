@@ -1,4 +1,4 @@
-const ctypes = require('../../ctypes')
+const { CClass } = require('../../trad')
 
 const widgetTypeDict = {
   TextView: 'textview',
@@ -9,7 +9,7 @@ const widgetTypeDict = {
 function getWidgetType(node, proto) {
   let name = node.name.name
 
-  if (proto && proto.port.source === 'LCUI' && proto.type === ctypes.class) {
+  if (proto && proto.module.name === 'LCUI') {
     const type = widgetTypeDict[proto.name]
 
     if (type) {

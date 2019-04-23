@@ -1,19 +1,14 @@
 const path = require('path')
-const assert = require('assert')
-const ctypes = require('../ctypes')
 const { Parser } = require('./parser')
+const { CInclude } = require('../../trad')
 
 function exportObject(obj) {
   const file = path.basename(this.program.file)
 
-  assert(obj instanceof ctypes.type, `${obj.name} is undefined`)
-
-  obj.isStatic = false
-  this.program.push(new ctypes.include(`${file}.h`))
-  // Make class methods public
-  if (obj instanceof ctypes.class) {
-    obj.makePublicMethods()
+  if (!obj.isStatic) {
+    obj.isExported = true
   }
+  this.program.append(new CInclude(`${file}.h`))
 }
 
 class ExportDefaultParser extends Parser {

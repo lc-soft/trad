@@ -1,0 +1,31 @@
+{
+  "namespace": "LCUI",
+  "includes": [
+    "LCUI_Build.h",
+    "LCUI/LCUI.h"
+  ],
+  "exports": {
+    "App": {
+      "type": "class"
+    },
+    "Widget": {
+      "type": "class",
+      "includes": ["LCUI/gui/widget.h"]
+    },
+    "Button": {
+      "type": "class",
+      "superClass": "Widget",
+      "includes": ["LCUI/gui/widget/button.h"]
+    },
+    "TextView": {
+      "type": "class",
+      "superClass": "Widget",
+      "includes": ["LCUI/gui/widget/textview.h"]
+    },
+    "TextEdit": {
+      "type": "class",
+      "superClass": "Widget",
+      "includes": ["LCUI/gui/widget/textedit.h"]
+    }
+  }
+}

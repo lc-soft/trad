@@ -1,28 +1,29 @@
 const acorn = require('acorn')
-const ctypes = require('../ctypes')
-const { LiteralParser } = require('./literal')
-const { IdentifierParser } = require('./identifier')
-const { ImportParser } = require('./import')
-const { ExportDefaultParser, ExportNamedParser } = require('./export')
-const { ClassParser, MethodParser } = require('./class')
-const { FunctionParser, FunctionExpressionParser } = require('./function')
+const acornJSX = require('acorn-jsx')
+const { CBlock, CProgram } = require('../trad')
+const { LiteralParser } = require('./src/literal')
+const { IdentifierParser } = require('./src/identifier')
+const { ImportParser } = require('./src/import')
+const { ExportDefaultParser, ExportNamedParser } = require('./src/export')
+const { ClassParser, MethodParser } = require('./src/class')
+const { FunctionParser, FunctionExpressionParser } = require('./src/function')
 const {
   BlockStatmentParser,
   ReturnStatementParser,
   ExpressionStatementParser
-} = require('./statement')
+} = require('./src/statement')
 const {
   ThisExpressionParser,
   AssignmentExpressionParser,
   MemberExpressionParser,
   ObjectExpressionParser
-} = require('./expression')
+} = require('./src/expression')
 
 class CompilerContext {
-  constructor(node, data = {}) {
+  constructor(node) {
     this.node = node
-    this.data = data
-    this.scope = {}
+    this.data = null
+    this.parent = null
     this.parser = null
     this.children = []
     this.currentIndex = -1
@@ -37,46 +38,16 @@ class Compiler {
     // Parser context stack
     this.contexts = []
     this.contextIndex = -1
-    this.program = new ctypes.program()
-    this.handlers = {
-      Literal: new LiteralParser(this),
-      Identifier: new IdentifierParser(this),
-      ImportDeclaration: new ImportParser(this),
-      ClassDeclaration: new ClassParser(this),
-      MethodDefinition: new MethodParser(this),
-      FunctionDeclaration: new FunctionParser(this),
-      FunctionExpression: new FunctionExpressionParser(this),
-      BlockStatement: new BlockStatmentParser(this),
-      ExportDefaultDeclaration: new ExportDefaultParser(this),
-      ExportNamedDeclaration: new ExportNamedParser(this),
-      ReturnStatement: new ReturnStatementParser(this),
-      ExpressionStatement: new ExpressionStatementParser(this),
-      ThisExpression: new ThisExpressionParser(this),
-      AssignmentExpression: new AssignmentExpressionParser(this),
-      MemberExpression: new MemberExpressionParser(this),
-      ObjectExpression: new ObjectExpressionParser(this)
-    }
-  }
-
-  get scope() {
-    return this.context.scope
-  }
-
-  get global() {
-    return this.contexts[0].scope
+    this.program = null
+    this.handlers = null
   }
 
   get context() {
     return this.contexts[this.contextIndex]
   }
 
-  findObject(name) {
-    const context = this.findContext(ctx => typeof ctx.scope[name] !== 'undefined')
-
-    if (context) {
-      return context.scope[name]
-    }
-    return undefined
+  get block() {
+    return this.findContextData(CBlock)
   }
 
   findContext(callback) {
@@ -104,30 +75,6 @@ class Compiler {
     return ctx ? ctx.data : undefined
   }
 
-  getObjectInBlock(name) {
-    const ctx = this.findContext(c => c.data instanceof ctypes.block)
-
-    if (ctx) {
-      return ctx.scope[name]
-    }
-    return undefined
-  }
-
-  setObjectInBlock(name, value) {
-    const ctx = this.findContext(c => c.data instanceof ctypes.block)
-
-    return ctx.scope[name] = value
-  }
-
-  allocObjectName(name) {
-    let realname = name
-
-    for(let i = 1; this.getObjectInBlock(realname); ++i) {
-      realname = `${name}_${i}`
-    }
-    return realname
-  }
-
   parse(input) {
     const handler = this.handlers[input.type]
 
@@ -135,13 +82,14 @@ class Compiler {
       this.context.parser = handler
       return handler.parse(input)
     }
-    const block = this.findContextData(ctypes.block)
-    block.pushCode(`/* ${input.type} ignored */`)
+    this.block.append(`/* ${input.type} ignored */`)
+    return ''
   }
 
   beginParse(input) {
     const context = new CompilerContext(input)
 
+    context.parent = this.context
     this.context.children.push(context)
     this.context.currentIndex += 1
     this.pushContext(context)
@@ -162,15 +110,29 @@ class Compiler {
   }
 
   parseProgram(input, file) {
-    const types = {
-      String: ctypes.string,
-      Number: ctypes.number
+    const context = new CompilerContext(input)
+
+    this.program = new CProgram(file)
+    this.handlers = {
+      Literal: new LiteralParser(this),
+      Identifier: new IdentifierParser(this),
+      ImportDeclaration: new ImportParser(this),
+      ClassDeclaration: new ClassParser(this),
+      MethodDefinition: new MethodParser(this),
+      FunctionDeclaration: new FunctionParser(this),
+      FunctionExpression: new FunctionExpressionParser(this),
+      BlockStatement: new BlockStatmentParser(this),
+      ExportDefaultDeclaration: new ExportDefaultParser(this),
+      ExportNamedDeclaration: new ExportNamedParser(this),
+      ReturnStatement: new ReturnStatementParser(this),
+      ExpressionStatement: new ExpressionStatementParser(this),
+      ThisExpression: new ThisExpressionParser(this),
+      AssignmentExpression: new AssignmentExpressionParser(this),
+      MemberExpression: new MemberExpressionParser(this),
+      ObjectExpression: new ObjectExpressionParser(this)
     }
-    this.program.file = file
-    this.pushContext(new CompilerContext(input, this.program))
-    Object.keys(types).forEach((key) => {
-      this.global[key] = types[key]
-    })
+    context.data = this.program
+    this.pushContext(context)
     this.beginParse(this, input)
     this.parseChildren(input.body)
     this.endParse()
@@ -178,7 +140,7 @@ class Compiler {
   }
 
   compile(code, file = 'output.trad') {
-    const parser = acorn.Parser.extend(require("acorn-jsx")())
+    const parser = acorn.Parser.extend(acornJSX())
     const input = parser.parse(code, { sourceType: 'module' })
 
     this.parseProgram(input, file)
@@ -198,7 +160,7 @@ class Compiler {
   process(inputs) {
     let indent = 0
 
-    return this.flat(inputs).map((input, i) => {
+    return this.flat(inputs).map((input) => {
       if (input === '}' && indent > 0) {
         indent -= 1
       }

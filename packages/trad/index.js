@@ -254,10 +254,17 @@ class CStruct extends CType {
   }
 
   getStructDefinition() {
+    const outputs = []
+
+    this.body.forEach((member) => {
+      if (member instanceof CObject) {
+        outputs.push(member.define())
+      }
+    })
     return [
       `${this.name}`,
       '{',
-      ...this.body.map(member => member.define()),
+      outputs,
       '}',
       ';'
     ]
@@ -427,12 +434,14 @@ class CClass extends CStruct {
     if (!this.isImported) {
       return this.exportMethods()
     }
+    return ''
   }
 
   define() {
     if (!this.isImported) {
       return this.getStructDefinition()
     }
+    return ''
   }
 
   exportMethods() {

@@ -5,10 +5,9 @@ const { CInclude } = require('../../trad')
 function exportObject(obj) {
   const file = path.basename(this.program.file)
 
-  if (!obj.isStatic) {
-    obj.isExported = true
-  }
-  this.program.append(new CInclude(`${file}.h`))
+  // eslint-disable-next-line no-param-reassign
+  obj.isExported = true
+  this.program.addInclude(new CInclude(`${file}.h`))
 }
 
 class ExportDefaultParser extends Parser {

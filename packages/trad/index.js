@@ -298,7 +298,7 @@ class CTypedef extends CType {
     this.originType = typeDeclaration
   }
 
-  canExport() {
+  get canExport() {
     return this.isExported === null ? this.originType.isExported : this.isExported
   }
 
@@ -340,7 +340,7 @@ class CTypedef extends CType {
   }
 
   define() {
-    return this.canExport() ? '' : this.getTypeDefinition()
+    return this.canExport ? '' : this.getTypeDefinition()
   }
 
   getTypeDefinition() {

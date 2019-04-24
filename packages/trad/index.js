@@ -488,20 +488,19 @@ class CClass extends CStruct {
     const func = this.createMethod('new')
     const that = new CObject(this, '_this', true)
     const constructor = this.getMethod('constructor')
-    const lines = [
+
+    assert(constructor, 'constructor() must be defined')
+    func.block.append([
       that.define(),
       '',
       `_this = malloc(sizeof(${this.name}));`,
       'if (_this == NULL)',
       '{',
       'return NULL;',
-      '}'
-    ]
-
-    assert(constructor, 'constructor() must be defined')
-    lines.forEach(line => func.append(line))
-    func.append(`${constructor.funcName}(_this);`)
-    func.append('return _this;')
+      '}',
+      `${constructor.funcName}(_this);`,
+      'return _this;'
+    ])
     func.funcArgs.splice(0, 1)
     return func
   }
@@ -511,8 +510,10 @@ class CClass extends CStruct {
     const destructor = this.getMethod('destructor')
 
     assert(destructor, 'destructor() must be defined')
-    func.append(`${destructor.funcName}(_this);`)
-    func.append('free(_this);')
+    func.block.append([
+      `${destructor.funcName}(_this);`,
+      'free(_this);'
+    ])
     return func
   }
 }

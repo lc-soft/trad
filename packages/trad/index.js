@@ -580,13 +580,21 @@ class CBlock extends CDeclaration {
       return true
     })
 
-    return [
+    const declaration = [
       mapDefinitions(typedefs),
       mapDefinitions(types),
       staticFunctions,
       classMethods,
       mapDefinitions(body)
     ]
+    if (this.parent) {
+      return [
+        '{',
+        declaration,
+        '}'
+      ]
+    }
+    return declaration
   }
 
   getObjectCount() {

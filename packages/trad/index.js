@@ -290,12 +290,16 @@ class CStruct extends CType {
 }
 
 class CTypedef extends CType {
-  constructor(typeDeclaration, name, isPointer = false, isExported = false) {
+  constructor(typeDeclaration, name, isPointer = false, isExported = null) {
     super(name)
 
     this.isExported = isExported
     this.isPointer = isPointer
     this.originType = typeDeclaration
+  }
+
+  canExport() {
+    return this.isExported === null ? this.originType.isExported : this.isExported
   }
 
   get body() {
@@ -327,10 +331,7 @@ class CTypedef extends CType {
   }
 
   export() {
-    if (this.originType.isExported) {
-      return this.getTypeDefinition()
-    }
-    return ''
+    return this.canExport ? this.getTypeDefinition() : ''
   }
 
   // eslint-disable-next-line class-methods-use-this
@@ -339,10 +340,7 @@ class CTypedef extends CType {
   }
 
   define() {
-    if (this.originType.isExported) {
-      return ''
-    }
-    return this.getTypeDefinition()
+    return this.canExport() ? '' : this.getTypeDefinition()
   }
 
   getTypeDefinition() {
@@ -354,7 +352,7 @@ class CTypedef extends CType {
       str = str.replace('static ', '')
       return `typedef ${str}`
     }
-    return `typedef ${this.originType.name} ${this.name};`
+    return `typedef ${this.originType.name}${this.isPointer ? '*' : ''} ${this.name};`
   }
 }
 
@@ -425,7 +423,6 @@ class CClass extends CStruct {
   constructor(name, superClass) {
     super(`${name}Rec_`)
 
-    this.name = name
     this.className = name
     this.superClass = superClass
   }

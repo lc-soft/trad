@@ -37,8 +37,8 @@ class ClassParser extends Parser {
 
     this.context = this.compiler.context
     this.context.data = cClass
-    this.block.append(new CTypedef(cClass, name, true, false))
-    this.block.append(new CTypedef(cClass, `${name}Rec`, true))
+    this.block.append(new CTypedef(cClass, name, true))
+    this.block.append(new CTypedef(cClass, `${name}Rec`, false, false))
     this.block.append(cClass)
     return cClass
   }

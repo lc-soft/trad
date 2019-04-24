@@ -375,6 +375,10 @@ class CObject extends CIdentifier {
     return this.typeDeclaration ? this.typeDeclaration.name : 'void'
   }
 
+  get className() {
+    return this.typeDeclaration instanceof CClass ? this.typeDeclaration.className : null
+  }
+
   declare() {
     if (this.isHidden) {
       return ''

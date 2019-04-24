@@ -80,9 +80,9 @@ function install(Compiler) {
       const that = this.block.getObject('_this')
       const cClass = this.findContextData(CClass)
       const stateStruct = this.parse(input.right)
-      const stateType = new CTypedef(stateStruct, `${left.type}State`)
+      const stateType = new CTypedef(stateStruct, `${left.className}StateRec`)
 
-      stateStruct.setStructName(`${left.type}StateRec`)
+      stateStruct.setStructName(`${left.className}StateRec_`)
       stateStruct.forEach((member) => {
         if (member.type === 'String') {
           stateStruct.addMember(new types.Object('String', member.name))

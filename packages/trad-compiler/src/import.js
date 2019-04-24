@@ -23,6 +23,7 @@ class ImportParser extends Parser {
       } else {
         obj = new CClass(name)
       }
+      obj.isImported = true
     } else {
       assert(0, `unsupport import object type ${obj.type}`)
     }

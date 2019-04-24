@@ -240,14 +240,14 @@ class CStruct extends CType {
   }
 
   export() {
-    if (this.isExported) {
+    if (this.isExported && !this.isImported) {
       return this.getStructDefinition()
     }
     return ''
   }
 
   define() {
-    if (this.isExported) {
+    if (this.isExported || this.isImported) {
       return ''
     }
     return this.getStructDefinition()
@@ -424,11 +424,15 @@ class CClass extends CStruct {
   }
 
   export() {
-    return this.exportMethods()
+    if (!this.isImported) {
+      return this.exportMethods()
+    }
   }
 
   define() {
-    return this.getStructDefinition()
+    if (!this.isImported) {
+      return this.getStructDefinition()
+    }
   }
 
   exportMethods() {

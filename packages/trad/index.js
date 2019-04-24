@@ -240,14 +240,14 @@ class CStruct extends CType {
   }
 
   export() {
-    if (this.isExported && !this.isImported) {
+    if (this.isExported && !this.isImported && !this.isHidden) {
       return this.getStructDefinition()
     }
     return ''
   }
 
   define() {
-    if (this.isExported || this.isImported) {
+    if (this.isExported || this.isImported || this.isHidden) {
       return ''
     }
     return this.getStructDefinition()

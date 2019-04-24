@@ -80,7 +80,7 @@ function install(Compiler) {
       const that = this.block.getObject('_this')
       const cClass = this.findContextData(CClass)
       const stateStruct = this.parse(input.right)
-      const stateType = new CTypedef(stateStruct, `${left.className}StateRec`)
+      const stateType = new CTypedef(stateStruct, `${left.className}StateRec`, false, false)
 
       stateStruct.setStructName(`${left.className}StateRec_`)
       stateStruct.forEach((member) => {

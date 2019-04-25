@@ -37,8 +37,6 @@ class ClassParser extends Parser {
 
     this.context = this.compiler.context
     this.context.data = cClass
-    this.block.append(cClass.typedef)
-    this.block.append(cClass.typedefPointer)
     this.block.append(cClass)
     return cClass
   }

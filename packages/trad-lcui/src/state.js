@@ -1,18 +1,16 @@
 const assert = require('assert')
 const types = require('./types')
 const functions = require('./functions')
-const { CClass, CStruct, CFunction, CObject, CTypedef } = require('../../trad')
 const { capitalize } = require('../../trad-utils')
+const {
+  CClass,
+  CFunction,
+  CObject,
+  CTypedef
+} = require('../../trad')
 
 function getBindingFunctionName(target) {
-  let obj = target
-  let name = capitalize(target.name)
-
-  while(obj.owner instanceof CObject) {
-    name = capitalize(obj.owner.name) + name
-    obj = obj.owner
-  }
-  return `on${name}Changed`
+  return `onState${capitalize(target.name)}Changed`
 }
 
 function getBindingFunction(cClass, target) {
@@ -110,11 +108,15 @@ function install(Compiler) {
       const { attr, ctx } = input
       const attrName = attr.name.name
       const value = this.parse(attr.value)
-      const func = getBindingFunction(ctx.that.typeDeclaration, value)
 
-      if (!(func instanceof CFunction)) {
+      // If this object is Literal
+      if (!value.id) {
         return super.parse(input)
       }
+
+      const func = getBindingFunction(ctx.that.typeDeclaration, value)
+
+      assert(func instanceof CFunction, `${value.name} is undefined`)
       func.block.append(
         functions.Widget_SetAttributeEx(ctx.widget, attrName, func.funcArgs[0])
       )

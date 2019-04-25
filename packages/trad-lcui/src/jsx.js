@@ -15,7 +15,7 @@ class JSXParserContext {
     this.ref = null
     this.widget = null
     this.node = node
-    this.proto = compiler.block.getObject(node.name.name)
+    this.proto = compiler.block.get(node.name.name)
     this.type = getWidgetType(node, this.proto)
     this.cClass = compiler.findContextData(CClass)
     this.that = compiler.block.getObject('_this')

@@ -71,7 +71,7 @@ function isNumber(obj) {
 }
 
 module.exports = {
-  isString: isString,
-  isNUmber: isNumber,
+  isString,
+  isNumber,
   Object: CLCUIObject
 }

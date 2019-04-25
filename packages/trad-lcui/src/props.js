@@ -1,18 +1,16 @@
 const assert = require('assert')
 const types = require('./types')
 const functions = require('./functions')
-const { CClass, CObject, CTypedef, CFunction } = require('../../trad')
 const { capitalize } = require('../../trad-utils')
+const {
+  CClass,
+  CObject,
+  CTypedef,
+  CFunction
+} = require('../../trad')
 
 function getBindingFunctionName(target) {
-  let obj = target
-  let name = capitalize(target.name)
-
-  while (obj.owner instanceof CObject) {
-    name = capitalize(obj.owner.name) + name
-    obj = obj.owner
-  }
-  return `on${name}Changed`
+  return `onProp${capitalize(target.name)}Changed`
 }
 
 function getBindingFunction(cClass, target) {
@@ -42,33 +40,33 @@ function addBindingFunction(that, cClass, target) {
   return func
 }
 
+function createWidgetAtrributeSetter(cClass, props) {
+  const func = cClass.createMethod('bindProperty')
+  const that = func.block.getObject('_this')
+
+  func.funcArgs = [
+    new types.Object('Widget', 'widget'),
+    new CObject('const char', 'name', { isPointer: true }),
+    new types.Object(null, 'value')
+  ]
+  func.block.append(['', `${that.id} = Widget_GetData(widget);`])
+  props.typeDeclaration.keys().forEach((name, i) => {
+    const prop = props.selectProperty(name)
+    const watcher = addBindingFunction(that, cClass, prop)
+
+    func.block.append([
+      `${i > 0 ? 'else ' : ''}if (strcmp(name, "${name}") == 0)`,
+      '{',
+      `${prop.id} = value;`,
+      `Object_Watch(value, ${watcher.funcRealName}, ${that.id});`,
+      `${watcher.funcRealName}(value, ${that.id});`,
+      '}'
+    ])
+  })
+}
+
 function install(Compiler) {
   return class PropsBindingParser extends Compiler {
-    createWidgetAtrributeSetter(cClass, props) {
-      const func = cClass.createMethod('bindProperty')
-      const that = func.block.getObject('_this')
-
-      func.funcArgs = [
-        new types.Object('Widget', 'widget'),
-        new CObject('const char', 'name', { isPointer: true }),
-        new types.Object(null, 'value')
-      ]
-      func.block.append(['', `${that.id} = Widget_GetData(widget);`])
-      props.typeDeclaration.keys().forEach((name, i) => {
-        const prop = props.selectProperty(name)
-        const watcher = addBindingFunction(that, cClass, prop)
-
-        func.block.append([
-          `${i > 0 ? 'else ' : ''}if (strcmp(name, "${name}") == 0)`,
-          '{',
-          `${prop.id} = value;`,
-          `Object_Watch(value, ${watcher.funcRealName}, ${that.id});`,
-          `${watcher.funcRealName}(value, ${that.id});`,
-          '}'
-        ])
-      })
-    }
-
     initPropsBindings() {
       const cClass = this.findContextData(CClass)
       const that = new CObject(this.block.getType(cClass.className), '_that')
@@ -91,7 +89,7 @@ function install(Compiler) {
       }).forEach(({ prop, defaultProp }) => {
         constructor.block.append(functions.assign(prop, defaultProp))
       })
-      this.createWidgetAtrributeSetter(cClass, props, defaultProps)
+      createWidgetAtrributeSetter(cClass, props, defaultProps)
       return true
     }
 
@@ -145,11 +143,15 @@ function install(Compiler) {
       const { attr, ctx } = input
       const attrName = attr.name.name
       const value = this.parse(attr.value)
-      const func = getBindingFunction(ctx.that.typeDeclaration, value)
 
-      if (!(func instanceof CFunction)) {
+      // If this object is Literal
+      if (!value.id) {
         return super.parse(input)
       }
+
+      const func = getBindingFunction(ctx.that.typeDeclaration, value)
+
+      assert(func instanceof CFunction, `${value.name} is undefined`)
       this.block.append(
         functions.Widget_SetAttributeEx(ctx.widget, attrName, func.funcArgs[0])
       )

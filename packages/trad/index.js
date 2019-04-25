@@ -323,6 +323,10 @@ class CTypedef extends CType {
     return this.originType.map(callback)
   }
 
+  keys() {
+    return this.originType.keys()
+  }
+
   forEach(callback) {
     this.originType.forEach(callback)
   }
@@ -389,7 +393,15 @@ class CObject extends CIdentifier {
   }
 
   get className() {
-    return this.typeDeclaration instanceof CClass ? this.typeDeclaration.className : null
+    let classDeclaration = this.typeDeclaration
+
+    if (classDeclaration instanceof CTypedef) {
+      classDeclaration = classDeclaration.originType
+    }
+    if (classDeclaration instanceof CClass) {
+      return classDeclaration.className
+    }
+    return null
   }
 
   declare() {

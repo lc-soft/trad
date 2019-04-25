@@ -19,7 +19,7 @@ function getBindingFunction(cClass, target) {
   return cClass.getMethod(getBindingFunctionName(target))
 }
 
-function addBindingFunction(cClass, target) {
+function addBindingFunction(that, cClass, target) {
   const name = getBindingFunctionName(target)
   let func = cClass.getMethod(name)
 
@@ -28,16 +28,17 @@ function addBindingFunction(cClass, target) {
   }
 
   const arg = new CObject('void', 'arg', { isPointer: true })
-  const that = new CObject(this.getType(cClass.className), '_this')
   const tmp = new types.Object(null, target.name)
 
   func = cClass.createMethod(name)
   // Reset function arguments for Object_Watch()
   func.funcArgs = [tmp, arg]
   func.isStatic = true
-  func.block.append(that.define())
-  func.block.append('')
-  func.block.append(functions.assign(that, arg))
+  func.block.append([
+    that.define(),
+    '',
+    functions.assign(that, arg)
+  ])
   return func
 }
 
@@ -45,17 +46,17 @@ function install(Compiler) {
   return class PropsBindingParser extends Compiler {
     createWidgetAtrributeSetter(cClass, props) {
       const func = cClass.createMethod('bindProperty')
-      const that = func.block.createObject('_this')
+      const that = func.block.getObject('_this')
 
       func.funcArgs = [
-        new types.Object('Widget', 'widget', true),
+        new types.Object('Widget', 'widget'),
         new CObject('const char', 'name', { isPointer: true }),
-        new types.Object(null, 'value', true)
+        new types.Object(null, 'value')
       ]
       func.block.append(['', `${that.id} = Widget_GetData(widget);`])
-      Object.keys(props.getValue()).forEach((name, i) => {
+      props.typeDeclaration.keys().forEach((name, i) => {
         const prop = props.selectProperty(name)
-        const watcher = addBindingFunction(cClass, prop)
+        const watcher = addBindingFunction(that, cClass, prop)
 
         func.block.append([
           `${i > 0 ? 'else ' : ''}if (strcmp(name, "${name}") == 0)`,
@@ -66,14 +67,13 @@ function install(Compiler) {
           '}'
         ])
       })
-      this.program.push(func)
     }
 
     initPropsBindings() {
       const cClass = this.findContextData(CClass)
-      const that = new CObject(cClass, '_that', { isPointer: true })
+      const that = new CObject(this.block.getType(cClass.className), '_that')
       const props = that.selectProperty('props')
-      const defaultProps = that.selectProperty('defaultProps')
+      const defaultProps = that.selectProperty('default_props')
       const constructor = cClass.getMethod('constructor')
       const destructor = cClass.getMethod('destructor')
 
@@ -81,15 +81,15 @@ function install(Compiler) {
         return false
       }
       assert(props instanceof CObject, 'props must be a object')
-      props.keys().map((name) => {
-        const prop = props.selectProperty(name)
-        const defaultProp = defaultProps.selectProperty(name)
+      props.typeDeclaration.keys().map((key) => {
+        const prop = props.selectProperty(key)
+        const defaultProp = defaultProps.selectProperty(key)
 
-        constructor.add(functions.Object_Init(defaultProp))
-        destructor.add(functions.assign(prop, null))
+        constructor.block.append(functions.Object_Init(defaultProp))
+        destructor.block.append(functions.assign(prop, null))
         return { prop, defaultProp }
       }).forEach(({ prop, defaultProp }) => {
-        constructor.add(functions.assign(prop, defaultProp))
+        constructor.block.append(functions.assign(prop, defaultProp))
       })
       this.createWidgetAtrributeSetter(cClass, props, defaultProps)
       return true
@@ -101,9 +101,9 @@ function install(Compiler) {
       const cClass = this.findContextData(CClass)
       const left = this.parse(input.left.object)
       const propsStruct = this.parse(input.right)
-      const propsType = new CTypedef(propsStruct, left.type + structName)
+      const propsType = new CTypedef(propsStruct, `${left.className}${structName}`)
 
-      propsStruct.setStructName(left.type + structName)
+      propsStruct.setStructName(`${left.className}${structName}_`)
       propsStruct.keys().forEach((key) => {
         const member = propsStruct.getMember(key)
 
@@ -113,8 +113,8 @@ function install(Compiler) {
           propsStruct.addMember(new types.Object(`Number${suffix}`, key))
         }
       })
-      cClass.owner.add(propsType)
-      cClass.owner.add(propsStruct)
+      cClass.parent.append(propsType)
+      cClass.parent.append(propsStruct)
       return that.addProperty(new CObject(propsType, name))
     }
 

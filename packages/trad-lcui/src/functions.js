@@ -68,9 +68,9 @@ function assign(left, right) {
 
 function Object_Init(obj, type) {
   if (typeof type === 'undefined') {
-    if (obj.typeDeclaration instanceof types.String) {
+    if (types.isString(obj)) {
       return String_Init(obj, null)
-    } else if (obj.typeDeclaration instanceof types.Number) {
+    } else if (types.isNumber(obj)) {
       return Number_Init(obj, 0)
     }
   }

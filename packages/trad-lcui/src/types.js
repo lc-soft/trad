@@ -56,6 +56,22 @@ const declarations = {
   NumberRec: new CLCUINumberRec()
 }
 
+function isString(obj) {
+  return (
+    obj.typeDeclaration === declarations.String
+    || obj.typeDeclaration === declarations.StringRec
+  )
+}
+
+function isNumber(obj) {
+  return (
+    obj.typeDeclaration === declarations.Number
+    || obj.typeDeclaration === declarations.NumberRec
+  )
+}
+
 module.exports = {
+  isString: isString,
+  isNUmber: isNumber,
   Object: CLCUIObject
 }

@@ -64,7 +64,7 @@ function install(Compiler) {
   return class PropsBindingParser extends Compiler {
     initPropsBindings() {
       const cClass = this.findContextData(CClass)
-      const that = new CObject(this.block.getType(cClass.className), '_that')
+      const that = new CObject(this.block.getType(cClass.className), '_this')
       const props = that.selectProperty('props')
       const defaultProps = that.selectProperty('default_props')
       const constructor = cClass.getMethod('constructor')

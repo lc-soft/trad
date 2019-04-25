@@ -113,7 +113,11 @@ class CDeclaration extends CStatment {
   }
 }
 
-class CIdentifier extends CDeclaration {}
+class CIdentifier extends CDeclaration {
+  get pointerLevel() {
+    return this.isPointer ? 1 : 0
+  }
+}
 
 class CType extends CIdentifier {
   constructor(name) {
@@ -177,6 +181,7 @@ class CFunction extends CIdentifier {
     this.funcArgs = args
     this.funcReturnType = returnType
     this.block = new CBlock()
+    this.isPointer = true
     this.append(this.block)
   }
 
@@ -188,7 +193,7 @@ class CFunction extends CIdentifier {
     const output = []
     const args = this.funcArgs.map((arg) => {
       if (withArgName) {
-        return arg.define().replace(';', '')
+        return arg.define({ force: true }).replace(';', '')
       }
       return arg.type
     })
@@ -321,6 +326,12 @@ class CTypedef extends CType {
     return this.originType.body
   }
 
+  get pointerLevel() {
+    const level = this.isPointer ? 1 : 0
+
+    return level + this.originType.pointerLevel
+  }
+
   map(callback) {
     return this.originType.map(callback)
   }
@@ -390,8 +401,12 @@ class CObject extends CIdentifier {
     this.isHidden = isHidden
   }
 
-  get type() {
+  get baseType() {
     return this.typeDeclaration ? this.typeDeclaration.name : 'void'
+  }
+
+  get type() {
+    return `${this.baseType}${this.isPointer ? '*' : ''}`
   }
 
   get className() {
@@ -406,6 +421,12 @@ class CObject extends CIdentifier {
     return null
   }
 
+  get pointerLevel() {
+    const level = this.isPointer ? 1 : 0
+
+    return level + this.typeDeclaration.pointerLevel
+  }
+
   declare() {
     if (this.isHidden) {
       return ''
@@ -413,11 +434,11 @@ class CObject extends CIdentifier {
     return `extern ${this.define()}`
   }
 
-  define() {
-    if (this.isHidden) {
+  define({ force = false } = {}) {
+    if (!force && this.isHidden) {
       return ''
     }
-    return `${this.type} ${this.isPointer ? '*' : ''}${this.name};`
+    return `${this.baseType} ${this.isPointer ? '*' : ''}${this.name};`
   }
 
   addProperty(prop) {
@@ -463,7 +484,7 @@ class CClass extends CStruct {
 
   export() {
     if (!this.isImported) {
-      return this.exportMethods()
+      return this.publicMethods.map(method => method.export())
     }
     return ''
   }
@@ -475,21 +496,24 @@ class CClass extends CStruct {
     return ''
   }
 
-  exportMethods() {
-    return this.body.filter((stat) => {
-      // constructor and destructor must be static
-      if (['constructor', 'destructor'].indexOf(stat.name) >= 0) {
-        return false
-      }
-      return (
-        stat instanceof CMethod
-        && (stat.isExported === null || stat.isExported === false)
-      )
-    }).map(stat => stat.export())
+  isPublicMethod(method) {
+    // constructor and destructor must be static
+    if (['constructor', 'destructor'].indexOf(method.methodName) >= 0) {
+      return false
+    }
+    return this.isExported && (method.isExported === null || method.isExported)
   }
 
-  defineMethods() {
-    return this.body.filter(stat => stat instanceof CMethod).map(stat => stat.define())
+  get methods() {
+    return this.body.filter(stat => stat instanceof CMethod)
+  }
+
+  get publicMethods() {
+    return this.methods.filter(method => this.isPublicMethod(method))
+  }
+
+  get privateMethods() {
+    return this.methods.filter(method => !this.isPublicMethod(method))
   }
 
   getMethod(name) {
@@ -505,7 +529,7 @@ class CClass extends CStruct {
   createMethod(name) {
     const func = new CMethod(name)
 
-    func.block.createObject(this, '_this', { isPointer: true, isHidden: true })
+    func.block.createObject(this.typedefPointer, '_this', { isHidden: true })
     // Insert the _this object as the first argument to this function
     func.funcArgs.splice(0, 0, func.block.getObject('_this'))
     // The value of isExported is inherited from its class
@@ -516,14 +540,14 @@ class CClass extends CStruct {
 
   createNewMethod() {
     const func = this.createMethod('new')
-    const that = new CObject(this, '_this', true)
+    const that = new CObject(this.typedefPointer, '_this')
     const constructor = this.getMethod('constructor')
 
     assert(constructor, 'constructor() must be defined')
     func.block.append([
       that.define(),
       '',
-      `_this = malloc(sizeof(${this.name}));`,
+      `_this = malloc(sizeof(${this.typedef.name}));`,
       'if (_this == NULL)',
       '{',
       'return NULL;',
@@ -532,6 +556,7 @@ class CClass extends CStruct {
       'return _this;'
     ])
     func.funcArgs.splice(0, 1)
+    func.funcReturnType = this.className
     return func
   }
 
@@ -602,12 +627,13 @@ class CBlock extends CDeclaration {
           types.push(stat)
         }
         if (stat instanceof CClass) {
-          classMethods.push(...stat.defineMethods())
+          classMethods.push(...stat.methods)
+          staticFunctions.push(...stat.privateMethods)
         }
         return false
       }
       if (stat instanceof CFunction && !stat.isExported) {
-        staticFunctions.push(stat.declare(false))
+        staticFunctions.push(stat)
       }
       return true
     })
@@ -615,8 +641,8 @@ class CBlock extends CDeclaration {
     const declaration = [
       mapDefinitions(typedefs),
       mapDefinitions(types),
-      staticFunctions,
-      classMethods,
+      staticFunctions.map(func => func.declare(false)),
+      mapDefinitions(classMethods),
       mapDefinitions(body)
     ]
     if (this.parent) {

@@ -42,7 +42,7 @@ function install(Compiler) {
   return class StateBindingParser extends Compiler {
     initStateBindings() {
       const cClass = this.findContextData(CClass)
-      const that = new CObject(this.block.getType(cClass.className), '_that')
+      const that = new CObject(this.block.getType(cClass.className), '_this')
       const state = that.selectProperty('state')
       const constructor = cClass.getMethod('constructor')
       const destructor = cClass.getMethod('destructor')
@@ -51,7 +51,8 @@ function install(Compiler) {
         return false
       }
       assert(state instanceof CObject, 'state must be a object')
-      state.typeDeclaration.map((prop) => {
+      state.typeDeclaration.keys().map((name) => {
+        const prop = state.selectProperty(name)
         const func = addBindingFunction(that, cClass, prop)
 
         constructor.block.append(functions.Object_Init(prop))
@@ -83,9 +84,9 @@ function install(Compiler) {
         const member = stateStruct.getMember(key)
 
         if (member.type === 'String') {
-          stateStruct.addMember(new types.Object('String', member.name))
+          stateStruct.addMember(new types.Object('StringRec', member.name))
         } else if (member.type === 'Number') {
-          stateStruct.addMember(new types.Object('Number', member.name))
+          stateStruct.addMember(new types.Object('NumberRec', member.name))
         }
       })
       cClass.parent.append(stateType)

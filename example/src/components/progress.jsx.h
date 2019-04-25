@@ -2,7 +2,8 @@
 extern "C" {
 #endif
 
-typedef struct MyAppRec_* MyApp;
+typedef struct ProgressRec_* Progress;
+/* Export: LCUI */
 
 #ifdef __cplusplus
 }

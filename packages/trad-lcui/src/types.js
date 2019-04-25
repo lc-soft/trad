@@ -9,7 +9,7 @@ class CLCUIObjectType extends CType {
 }
 class CLCUIObjectRecType extends CType {
   constructor() {
-    super('LCUI_Object')
+    super('LCUI_ObjectRec')
   }
 }
 

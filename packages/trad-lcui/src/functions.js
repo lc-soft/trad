@@ -1,8 +1,11 @@
+/* eslint-disable camelcase */
 const types = require('./types')
-const { CFunction } = require('../../trad')
+const { CFunction, CIdentifier } = require('../../trad')
 
-class Arg {
+class Arg extends CIdentifier {
   constructor(isPointer = true) {
+    super()
+
     this.isPointer = isPointer
   }
 }
@@ -18,7 +21,7 @@ function rvalue(value) {
     return value
   }
   if (value instanceof CFunction) {
-    return value.funcRealName
+    return value.funcName
   }
   return undefined
 }
@@ -37,14 +40,14 @@ class Func {
       if (typeof val !== 'undefined') {
         return val
       }
-      if (declaration.isPointer) {
-        if (!arg.isPointer) {
-          return '&' + arg.id
-        }
-      } else if (arg.isPointer) {
-        return '*' + arg.id
+
+      if (declaration.pointerLevel === arg.pointerLevel) {
+        return arg.id
       }
-      return arg.id
+      if (declaration.pointerLevel < arg.pointerLevel) {
+        return `*${arg.id}`
+      }
+      return `&${arg.id}`
     }).join(', ')
 
     return `${this.name}(${argsStr});`
@@ -57,27 +60,13 @@ function assign(left, right) {
   if (typeof value !== 'undefined') {
     return `${left.id} = ${value};`
   }
-  if (left.isPointer === right.isPointer) {
+  if (left.pointerLevel === right.pointerLevel) {
     return `${left.id} = ${right.id};`
   }
-  if (left.isPointer) {
+  if (left.pointerLevel < right.pointerLevel) {
     return `${left.id} = &${right.id};`
   }
   return `${left.id} = *${right.id};`
-}
-
-function Object_Init(obj, type) {
-  if (typeof type === 'undefined') {
-    if (types.isString(obj)) {
-      return String_Init(obj, null)
-    } else if (types.isNumber(obj)) {
-      return Number_Init(obj, 0)
-    }
-  }
-  return new Func(
-    'Object_Init',
-    [new Arg(), new Arg()]
-  ).call(obj, type)
 }
 
 function String_Init(obj, value = null) {
@@ -92,6 +81,21 @@ function Number_Init(obj, value = 0) {
     'Number_Init',
     [new Arg(), new Arg(false)]
   ).call(obj, value)
+}
+
+function Object_Init(obj, type) {
+  if (typeof type === 'undefined') {
+    if (types.isString(obj)) {
+      return String_Init(obj, null)
+    }
+    if (types.isNumber(obj)) {
+      return Number_Init(obj, 0)
+    }
+  }
+  return new Func(
+    'Object_Init',
+    [new Arg(), new Arg()]
+  ).call(obj, type)
 }
 
 function Object_Destroy(obj) {

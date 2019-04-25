@@ -1,6 +1,6 @@
-import { Widget } from 'lcui/widgets'
+import LCUI from 'lcui'
 
-class Progress extends Widget {
+class Progress extends LCUI.Widget {
   constructor() {
     super()
 
@@ -8,12 +8,6 @@ class Progress extends Widget {
       total: Number,
       value: Number
     }
-  }
-
-  update() {
-    const percentage = this.props.value * 100 / this.props.total
-
-    this.refs.bar.style.width = percentage + '%'
   }
 
   template() {

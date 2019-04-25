@@ -454,6 +454,8 @@ class CClass extends CStruct {
 
     this.className = name
     this.superClass = superClass
+    this.typedefPointer = new CTypedef(this, name, true)
+    this.typedef = new CTypedef(this, `${name}Rec`, false, false)
   }
 
   export() {

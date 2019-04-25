@@ -23,11 +23,21 @@ class ImportParser extends Parser {
       } else {
         obj = new CClass(name)
       }
+      obj.module = mod
       obj.isImported = true
+      obj.typedef.module = mod
+      obj.typedef.isImported = true
+      obj.typedefPointer.module = mod
+      obj.typedefPointer.isImported = true
+      mod.append(obj.typedef)
+      mod.append(obj.typedefPointer)
+      this.program.append(obj.typedef)
+      this.program.append(obj.typedefPointer)
     } else {
       assert(0, `unsupport import object type ${obj.type}`)
     }
     mod.append(obj)
+    this.program.append(obj)
     return obj
   }
 
@@ -41,7 +51,7 @@ class ImportParser extends Parser {
     Object.keys(port.exports).forEach((k) => {
       this.importObject(k, mod, port)
     })
-    this.program.append(mod)
+    this.program.addModule(mod)
     return mod
   }
 

@@ -174,11 +174,14 @@ class CFunction extends CIdentifier {
   constructor(name, args = [], returnType = 'void') {
     super(name)
 
-    this.funcName = name
     this.funcArgs = args
     this.funcReturnType = returnType
     this.block = new CBlock()
     this.append(this.block)
+  }
+
+  get funcName() {
+    return this.name
   }
 
   declare(withArgName = true) {
@@ -232,9 +235,8 @@ class CMethod extends CFunction {
     this.methodName = name
   }
 
-  declare(withArgName = true) {
-    this.funcName = `${this.parent.className}_${capitalize(this.methodName)}`
-    return super.declare(withArgName)
+  get funcName() {
+    return `${this.parent.className}_${capitalize(this.methodName)}`
   }
 }
 
@@ -444,6 +446,7 @@ class CObject extends CIdentifier {
     } else {
       prop.id = `${this.id}.${name}`
     }
+    prop.node.parent = this.node
     return prop
   }
 }

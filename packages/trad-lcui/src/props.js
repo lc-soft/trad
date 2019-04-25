@@ -5,16 +5,11 @@ const { capitalize } = require('../../trad-utils')
 const {
   CClass,
   CObject,
-  CTypedef,
-  CFunction
+  CTypedef
 } = require('../../trad')
 
 function getBindingFunctionName(target) {
   return `onProp${capitalize(target.name)}Changed`
-}
-
-function getBindingFunction(cClass, target) {
-  return cClass.getMethod(getBindingFunctionName(target))
 }
 
 function addBindingFunction(that, cClass, target) {
@@ -144,14 +139,15 @@ function install(Compiler) {
       const attrName = attr.name.name
       const value = this.parse(attr.value)
 
-      // If this object is Literal
-      if (!value.id) {
+      // If this object is Literal, or not a member of props
+      if (!value.id || !value.parent || value.parent.name !== 'props') {
         return super.parse(input)
       }
 
-      const func = getBindingFunction(ctx.that.typeDeclaration, value)
+      const funcName = getBindingFunctionName(value)
+      const func = ctx.cClass.getMethod(funcName)
 
-      assert(func instanceof CFunction, `${value.name} is undefined`)
+      assert(typeof func !== 'undefined', `${funcName} is undefined`)
       this.block.append(
         functions.Widget_SetAttributeEx(ctx.widget, attrName, func.funcArgs[0])
       )

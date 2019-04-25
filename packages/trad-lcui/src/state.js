@@ -17,7 +17,7 @@ function getBindingFunction(cClass, target) {
   return cClass.getMethod(getBindingFunctionName(target))
 }
 
-function addBindingFunction(cClass, target) {
+function addBindingFunction(that, cClass, target) {
   const name = getBindingFunctionName(target)
   let func = cClass.getMethod(name)
 
@@ -26,7 +26,6 @@ function addBindingFunction(cClass, target) {
   }
 
   const arg = new CObject('void', 'arg', { isPointer: true })
-  const that = new CObject(this.getType(cClass.className), '_this')
   const tmp = new types.Object(null, target.name)
 
   func = cClass.createMethod(name)
@@ -43,7 +42,7 @@ function install(Compiler) {
   return class StateBindingParser extends Compiler {
     initStateBindings() {
       const cClass = this.findContextData(CClass)
-      const that = new CObject(cClass, '_that', { isPointer: true })
+      const that = new CObject(this.block.getType(cClass.className), '_that')
       const state = that.selectProperty('state')
       const constructor = cClass.getMethod('constructor')
       const destructor = cClass.getMethod('destructor')
@@ -52,15 +51,14 @@ function install(Compiler) {
         return false
       }
       assert(state instanceof CObject, 'state must be a object')
-      state.map((name) => {
-        const prop = state.selectProperty(name)
-        const func = addBindingFunction(cClass, prop)
+      state.typeDeclaration.map((prop) => {
+        const func = addBindingFunction(that, cClass, prop)
 
-        constructor.add(functions.Object_Init(prop))
-        destructor.add(functions.Object_Destroy(prop))
+        constructor.block.append(functions.Object_Init(prop))
+        destructor.block.append(functions.Object_Destroy(prop))
         return { prop, func }
       }).forEach(({ prop, func }) => {
-        constructor.add(functions.Object_Watch(prop, func, that))
+        constructor.block.append(functions.Object_Watch(prop, func, that))
       })
       return true
     }
@@ -109,14 +107,15 @@ function install(Compiler) {
       const attrName = attr.name.name
       const value = this.parse(attr.value)
 
-      // If this object is Literal
-      if (!value.id) {
+      // If this object is Literal, or not a member of state
+      if (!value.id || !value.parent || value.parent.name !== 'state') {
         return super.parse(input)
       }
 
-      const func = getBindingFunction(ctx.that.typeDeclaration, value)
+      const funcName = getBindingFunctionName(value)
+      const func = ctx.cClass.getMethod(funcName)
 
-      assert(func instanceof CFunction, `${value.name} is undefined`)
+      assert(typeof func !== 'undefined', `${funcName} is undefined`)
       func.block.append(
         functions.Widget_SetAttributeEx(ctx.widget, attrName, func.funcArgs[0])
       )

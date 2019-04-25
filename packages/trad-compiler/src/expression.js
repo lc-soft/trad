@@ -37,7 +37,6 @@ class ObjectExpressionParser extends Parser {
 
       cStruct.addMember(new CObject(value, item.key.name))
     })
-    cStruct.isHidden = true
     this.block.append(cStruct)
     return cStruct
   }

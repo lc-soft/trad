@@ -71,6 +71,17 @@ class CDeclaration extends CStatment {
     return this.node.parent ? this.node.parent.data : undefined
   }
 
+  keys() {
+    const keys = []
+
+    this.node.children.forEach((child) => {
+      if (child instanceof CNode && child.data instanceof CIdentifier) {
+        keys.push(child.data.name)
+      }
+    })
+    return keys
+  }
+
   forEach(callback) {
     this.node.children.forEach(child => (child instanceof CNode ? callback(child.data) : 0))
   }
@@ -227,8 +238,10 @@ class CMethod extends CFunction {
   }
 }
 
+let structCount = 0
+
 class CStruct extends CType {
-  constructor(name = '_unnamed') {
+  constructor(name = `_unnamed${++structCount}`) {
     super(`struct ${name}`)
 
     this.structName = name

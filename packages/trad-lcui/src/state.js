@@ -1,7 +1,7 @@
 const assert = require('assert')
 const types = require('./types')
 const functions = require('./functions')
-const { CClass, CFunction, CObject, CTypedef } = require('../../trad')
+const { CClass, CStruct, CFunction, CObject, CTypedef } = require('../../trad')
 const { capitalize } = require('../../trad-utils')
 
 function getBindingFunctionName(target) {
@@ -83,7 +83,9 @@ function install(Compiler) {
       const stateType = new CTypedef(stateStruct, `${left.className}StateRec`, false, false)
 
       stateStruct.setStructName(`${left.className}StateRec_`)
-      stateStruct.forEach((member) => {
+      stateStruct.keys().forEach((key) => {
+        const member = stateStruct.getMember(key)
+
         if (member.type === 'String') {
           stateStruct.addMember(new types.Object('String', member.name))
         } else if (member.type === 'Number') {

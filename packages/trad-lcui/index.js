@@ -10,9 +10,10 @@ function installLCUIParser(Compiler) {
   return class LCUIParser extends Compiler {
     parseAssignmentExpression(input) {
       const left = this.parse(input.left)
-      const right = this.parse(input.right)
 
       if (left && left.type === 'LCUI_Object') {
+        const right = this.parse(input.right)
+
         if (right.id) {
           this.block.append(functions.Object_Operate(left, '=', right))
         } else if (typeof right.value === 'string') {

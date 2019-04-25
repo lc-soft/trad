@@ -657,6 +657,14 @@ class CBlock extends CDeclaration {
     return id
   }
 
+  append(stat) {
+    if (stat instanceof CClass) {
+      super.append(stat.typedef)
+      super.append(stat.typedefPointer)
+    }
+    super.append(stat)
+  }
+
   createObject(
     type,
     name = `_unnamed_object_${this.getObjectCount()}`,

@@ -31,13 +31,10 @@ class ImportParser extends Parser {
       obj.typedefPointer.isImported = true
       mod.append(obj.typedef)
       mod.append(obj.typedefPointer)
-      this.program.append(obj.typedef)
-      this.program.append(obj.typedefPointer)
     } else {
       assert(0, `unsupport import object type ${obj.type}`)
     }
     mod.append(obj)
-    this.program.append(obj)
     return obj
   }
 
@@ -70,11 +67,10 @@ class ImportParser extends Parser {
         if (port.default) {
           this.program.append(port.default)
         } else {
-          this.program.createObject(mod, name)
+          this.program.createObject(mod, name, { isHidden: true })
         }
       } else {
-        const obj = this.importObject(name, mod, port)
-        this.program.append(obj)
+        this.program.append(this.importObject(name, mod, port))
       }
     })
   }

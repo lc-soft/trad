@@ -1,4 +1,5 @@
 const assert = require('assert')
+const types = require('./src/types')
 const JSXParser = require('./src/jsx')
 const functions = require('./src/functions')
 const ClassParser = require('./src/class')
@@ -11,7 +12,7 @@ function installLCUIParser(Compiler) {
     parseAssignmentExpression(input) {
       const left = this.parse(input.left)
 
-      if (left && left.type === 'LCUI_Object') {
+      if (left && types.isObject(left)) {
         const right = this.parse(input.right)
 
         if (right.id) {

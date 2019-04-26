@@ -1,15 +1,17 @@
 const assert = require('assert')
 const { CType, CObject } = require('../../trad')
 
-class CLCUIObjectType extends CType {
-  constructor() {
-    super('LCUI_Object')
-    this.isPointer = true
-  }
-}
 class CLCUIObjectRecType extends CType {
   constructor() {
     super('LCUI_ObjectRec')
+  }
+}
+
+class CLCUIObjectType extends CLCUIObjectRecType {
+  constructor() {
+    super()
+    this.name = 'LCUI_Object'
+    this.isPointer = true
   }
 }
 
@@ -70,7 +72,12 @@ function isNumber(obj) {
   )
 }
 
+function isObject(obj) {
+  return obj.typeDeclaration instanceof CLCUIObjectRecType
+}
+
 module.exports = {
+  isObject,
   isString,
   isNumber,
   Object: CLCUIObject

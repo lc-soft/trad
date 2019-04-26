@@ -94,10 +94,15 @@ static LCUI_Widget MyApp_Template(MyApp _this)
 
 static void MyApp_Created(MyApp _this)
 {
+        String_SetValue(&_this->state.text, "Hello, World!");
+        String_SetValue(&_this->state.input, "Hello, World!");
+        Number_SetValue(&_this->state.value, 50);
+        Number_SetValue(&_this->state.total, 100);
 }
 
 static void MyApp_OnBtnChangeClick(MyApp _this)
 {
+        Object_Operate(&_this->state.text, "=", &_this->state.input);
 }
 
 static void MyApp_OnBtnMinusClick(MyApp _this)

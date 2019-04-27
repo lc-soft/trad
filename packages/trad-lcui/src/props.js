@@ -117,7 +117,7 @@ function install(Compiler) {
 
       assert(typeof left === 'undefined', 'object-to-object assignment is not supported')
 
-      const props = this.createProps(input, 'props', 'PropsRec')
+      const props = this.createProps(input, 'props', 'PropsRec', true)
       this.createProps(input, 'default_props', 'DefaultPropsRec')
       return props
     }

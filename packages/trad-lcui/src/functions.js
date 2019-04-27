@@ -64,9 +64,9 @@ function assign(left, right) {
     return `${left.id} = ${right.id};`
   }
   if (left.pointerLevel < right.pointerLevel) {
-    return `${left.id} = &${right.id};`
+    return `${left.id} = *${right.id};`
   }
-  return `${left.id} = *${right.id};`
+  return `${left.id} = &${right.id};`
 }
 
 function String_Init(obj, value = null) {

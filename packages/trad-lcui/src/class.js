@@ -1,6 +1,8 @@
 const assert = require('assert')
 const types = require('./types')
-const { CClass } = require('../../trad')
+const functions = require('./functions')
+const { toIdentifierName, toWidgetTypeName } = require('./lib')
+const { CClass, CFunction } = require('../../trad')
 
 function getMethodOrder(method) {
   if (method === 'constructor') {
@@ -25,7 +27,7 @@ function isLCUIClassBased(cClass) {
   return false
 }
 
-function replaceWidgetClassMethods(cClass) {
+function beforeParsingWidgetClass(cClass) {
   ['constructor', 'destructor'].forEach((name) => {
     const oldMethod = cClass.getMethod(name)
 
@@ -37,6 +39,29 @@ function replaceWidgetClassMethods(cClass) {
       cClass.addMethod(method)
     }
   })
+
+  const protoClass = new CClass(`${cClass.className}Class`)
+
+  protoClass.addMember(new types.Object('WidgetPrototype', 'proto'))
+  cClass.parent.append(protoClass)
+  cClass.parent.createObject(protoClass.typedef, `${toIdentifierName(cClass.className)}_class`)
+}
+
+function afterParsingWidgetClass(cClass) {
+  const className = toWidgetTypeName(cClass.className)
+  const superClassName = cClass.superClass ? toWidgetTypeName(cClass.superClass.className) : null
+  const proto = `${toIdentifierName(cClass.className)}_class`
+  const func = new CFunction(`LCUIWidget_Add${cClass.className}`)
+  const constructor = cClass.getMethod('constructor')
+  const destructor = cClass.getMethod('destructor')
+
+  func.block.append([
+    `${proto}.proto = ${functions.LCUIWidget_NewPrototype(className, superClassName)}`,
+    `${proto}.proto->init = ${constructor.funcName};`,
+    `${proto}.proto->destroy = ${destructor.funcName};`
+  ])
+  func.isExported = cClass.isExported
+  cClass.parent.append(func)
 }
 
 function install(Compiler) {
@@ -63,11 +88,16 @@ function install(Compiler) {
       if (!isLCUIClassBased(cClass)) {
         return parser.parse(input)
       }
-      if (cClass.superClass.name === 'Widget') {
-        replaceWidgetClassMethods(cClass)
-      }
       this.block.append(cClass)
+      if (cClass.superClass.name === 'Widget') {
+        beforeParsingWidgetClass(cClass)
+      }
       this.parseChildren(input.body.body.slice().sort((a, b) => getMethodOrder(a) - getMethodOrder(b)))
+      if (cClass.superClass.name === 'Widget') {
+        afterParsingWidgetClass(cClass)
+      }
+      // Move Class definition to current position
+      this.block.append(cClass)
       return cClass
     }
 

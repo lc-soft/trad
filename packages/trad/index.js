@@ -352,6 +352,14 @@ class CTypedef extends CType {
     return this.isExported === null ? this.originType.isExported : this.isExported
   }
 
+  get className() {
+    return this.originType.className
+  }
+
+  get superClass() {
+    return this.originType.superClass
+  }
+
   get body() {
     return this.originType.body
   }
@@ -602,6 +610,7 @@ class CBlock extends CDeclaration {
   define() {
     const types = []
     const typedefs = []
+    const objects = []
     const classMethods = []
     const staticFunctions = []
     const body = this.body.filter((stat) => {
@@ -623,6 +632,10 @@ class CBlock extends CDeclaration {
         }
         return false
       }
+      if (stat instanceof CObject) {
+        objects.push(stat)
+        return false
+      }
       if (stat instanceof CFunction && !stat.isExported) {
         staticFunctions.push(stat)
       }
@@ -633,6 +646,7 @@ class CBlock extends CDeclaration {
       mapDefinitions(typedefs),
       mapDefinitions(types),
       staticFunctions.map(func => func.declare(false)),
+      mapDefinitions(objects),
       mapDefinitions(classMethods),
       mapDefinitions(body)
     ]

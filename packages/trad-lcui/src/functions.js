@@ -161,6 +161,13 @@ function Widget_SetAttributeEx(widget, name, value) {
   ).call(widget, name, value, 0, null)
 }
 
+function LCUIWidget_NewPrototype(className, superClassName) {
+  return new Func(
+    'LCUIWidget_NewPrototype',
+    [new Arg(), new Arg()]
+  ).call(className, superClassName)
+}
+
 module.exports = {
   assign,
   Object_Init,
@@ -174,5 +181,6 @@ module.exports = {
   String_SetValue,
   Widget_BindEvent,
   Widget_SetAttribute,
-  Widget_SetAttributeEx
+  Widget_SetAttributeEx,
+  LCUIWidget_NewPrototype
 }

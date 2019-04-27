@@ -4,6 +4,14 @@ const widgetTypeDict = {
   Button: 'button'
 }
 
+function toWidgetTypeName(name) {
+  return name.replace(/([A-Z])/g, '-$1').toLowerCase().substr(1)
+}
+
+function toIdentifierName(name) {
+  return name.replace(/([A-Z])/g, '_$1').toLowerCase().substr(1)
+}
+
 function getWidgetType(node, proto) {
   let { name } = node.name
 
@@ -16,9 +24,11 @@ function getWidgetType(node, proto) {
     // eslint-disable-next-line prefer-destructuring
     name = proto.name
   }
-  return name.replace(/([A-Z])/g, '-$1').toLowerCase().replace(/^-/, '')
+  return toWidgetTypeName(name)
 }
 
 module.exports = {
-  getWidgetType
+  getWidgetType,
+  toWidgetTypeName,
+  toIdentifierName
 }

@@ -1,4 +1,5 @@
 const assert = require('assert')
+const { toIdentifierName } = require('./lib')
 const {
   CType,
   CObject,
@@ -41,6 +42,14 @@ class CLCUIWidgetEvent extends CType {
   }
 }
 
+class CLCUIWidgetPrototype extends CType {
+  constructor() {
+    super('LCUI_WidgetPrototype')
+
+    this.isPointer = true
+  }
+}
+
 class CLCUIObject extends CObject {
   constructor(type, name, isPointer = false) {
     let typeDeclaration = type
@@ -74,23 +83,34 @@ class CLCUIWidgetMethod extends CMethod {
 
   bind(cClass) {
     let that = this.block.getObject('_this')
+    let type = cClass.name
 
     if (that) {
       that.node.remove()
     }
-    if (!this.isStatic) {
-      if (cClass instanceof CTypedef) {
-        that = this.block.createObject(cClass, '_this')
-      } else {
-        that = this.block.createObject(cClass.typedefPointer, '_this')
-      }
-      this.block.append(`${that.id} = Widget_GetData(${this.widget.id});`)
+    if (this.isStatic) {
+      return null
+    }
+    if (cClass instanceof CTypedef) {
+      type = cClass.originType.name
+      that = this.block.createObject(cClass, '_this')
+    } else {
+      that = this.block.createObject(cClass.typedefPointer, '_this')
+    }
+
+    const moduleClass = `${toIdentifierName(cClass.className)}_class`
+
+    if (this.methodName === 'constructor') {
+      this.block.append(`${that.id} = Widget_AddData(${this.widget.id}, ${moduleClass}.proto, sizeof(${type}));`)
+    } else {
+      this.block.append(`${that.id} = Widget_GetData(${this.widget.id},  ${moduleClass}.proto);`)
     }
     return that
   }
 }
 
 const declarations = {
+  WidgetPrototype: new CLCUIWidgetPrototype(),
   WidgetEvent: new CLCUIWidgetEvent(),
   Widget: new CLCUIWidget(),
   StringRec: new CLCUIStringRec(),

@@ -58,9 +58,35 @@ class CDeclaration extends CStatment {
   constructor(name) {
     super(name)
 
-    this.isExported = false
-    this.isImported = false
-    this.isPointer = false
+    this.meta = {
+      isExported: false,
+      isImported: false,
+      isPointer: false
+    }
+  }
+
+  get isExported() {
+    return this.meta.isExported
+  }
+
+  get isImported() {
+    return this.meta.isImported
+  }
+
+  get isPointer() {
+    return this.meta.isPointer
+  }
+
+  set isExported(value) {
+    this.meta.isExported = value
+  }
+
+  set isImported(value) {
+    this.meta.isImported = value
+  }
+
+  set isPointer(value) {
+    this.meta.isPointer = value
   }
 
   get body() {
@@ -343,13 +369,18 @@ class CTypedef extends CType {
   constructor(typeDeclaration, name, isPointer = false, isExported = null) {
     super(name)
 
-    this.isExported = isExported
-    this.isPointer = isPointer
     this.originType = typeDeclaration
+    this.meta.isExported = isExported
+    this.meta.isPointer = isPointer
   }
 
-  get canExport() {
-    return this.isExported === null ? this.originType.isExported : this.isExported
+  set isExported(value) {
+    this.meta.isExported = value
+    this.originType.isExported = value
+  }
+
+  get isExported() {
+    return this.meta.isExported === null ? this.originType.isExported : this.meta.isExported
   }
 
   get className() {
@@ -399,7 +430,7 @@ class CTypedef extends CType {
   }
 
   export() {
-    return this.canExport ? this.getTypeDefinition() : ''
+    return this.isExported ? this.getTypeDefinition() : ''
   }
 
   // eslint-disable-next-line class-methods-use-this
@@ -408,7 +439,7 @@ class CTypedef extends CType {
   }
 
   define() {
-    return this.canExport ? '' : this.getTypeDefinition()
+    return this.isExported ? '' : this.getTypeDefinition()
   }
 
   getTypeDefinition() {
@@ -519,6 +550,22 @@ class CClass extends CStruct {
     this.typedef = new CTypedef(this, `${name}Rec`, false, false)
   }
 
+  set isExported(isExported) {
+    this.methods.forEach((method) => {
+      // constructor and destructor must be static
+      if (['constructor', 'destructor'].indexOf(method.methodName) >= 0) {
+        return
+      }
+      // eslint-disable-next-line no-param-reassign
+      method.isExported = isExported
+    })
+    this.meta.isExported = isExported
+  }
+
+  get isExported() {
+    return this.meta.isExported
+  }
+
   export() {
     if (!this.isImported) {
       return this.publicMethods.map(method => method.export())
@@ -533,24 +580,16 @@ class CClass extends CStruct {
     return ''
   }
 
-  isPublicMethod(method) {
-    // constructor and destructor must be static
-    if (['constructor', 'destructor'].indexOf(method.methodName) >= 0) {
-      return false
-    }
-    return this.isExported && (method.isExported === null || method.isExported)
-  }
-
   get methods() {
     return this.body.filter(stat => stat instanceof CMethod)
   }
 
   get publicMethods() {
-    return this.methods.filter(method => this.isPublicMethod(method))
+    return this.methods.filter(method => method.isExported)
   }
 
   get privateMethods() {
-    return this.methods.filter(method => !this.isPublicMethod(method))
+    return this.methods.filter(method => !method.isExported)
   }
 
   getMethod(name) {

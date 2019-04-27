@@ -27,6 +27,18 @@ function isLCUIClassBased(cClass) {
   return false
 }
 
+class WidgetRegisterFunction extends CFunction {
+  constructor(cClass) {
+    super(`LCUIWidget_Add${cClass.className}`)
+
+    this.widgetClass = cClass
+  }
+
+  get isExported() {
+    return this.widgetClass.isExported
+  }
+}
+
 function beforeParsingWidgetClass(cClass) {
   ['constructor', 'destructor'].forEach((name) => {
     const oldMethod = cClass.getMethod(name)
@@ -51,7 +63,7 @@ function afterParsingWidgetClass(cClass) {
   const className = toWidgetTypeName(cClass.className)
   const superClassName = cClass.superClass ? toWidgetTypeName(cClass.superClass.className) : null
   const proto = `${toIdentifierName(cClass.className)}_class`
-  const func = new CFunction(`LCUIWidget_Add${cClass.className}`)
+  const func = new WidgetRegisterFunction(cClass)
   const constructor = cClass.getMethod('constructor')
   const destructor = cClass.getMethod('destructor')
 
@@ -60,7 +72,6 @@ function afterParsingWidgetClass(cClass) {
     `${proto}.proto->init = ${constructor.funcName};`,
     `${proto}.proto->destroy = ${destructor.funcName};`
   ])
-  func.isExported = cClass.isExported
   cClass.parent.append(func)
 }
 

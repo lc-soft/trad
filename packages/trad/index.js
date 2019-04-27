@@ -189,14 +189,18 @@ class CFunction extends CIdentifier {
     return this.name
   }
 
-  declare(withArgName = true) {
-    const output = []
-    const args = this.funcArgs.map((arg) => {
+  declareArgs(withArgName = true) {
+    return this.funcArgs.map((arg) => {
       if (withArgName) {
         return arg.define({ force: true }).replace(';', '')
       }
       return arg.type
     })
+  }
+
+  declare(withArgName = true) {
+    const output = []
+    const args = this.declareArgs(withArgName)
 
     if (!this.isExported) {
       output.push('static')
@@ -238,10 +242,36 @@ class CMethod extends CFunction {
     super(name)
 
     this.methodName = name
+    // The value of isExported is inherited from its class
+    this.isExported = null
+    this.isStatic = false
   }
 
   get funcName() {
     return `${this.parent.className}_${capitalize(this.methodName)}`
+  }
+
+  declareArgs(withArgName = true) {
+    if (this.isStatic) {
+      return super.declareArgs(withArgName)
+    }
+
+    const that = this.block.getObject('_this')
+
+    // Insert the _this object as the first argument to this function
+    return [withArgName ? that.define({ force: true }).replace(';', '') : that.type, super.declareArgs(withArgName)]
+  }
+
+  bind(cClass) {
+    const that = this.block.getObject('_this')
+
+    if (that) {
+      that.node.remove()
+    }
+    if (cClass instanceof CTypedef) {
+      return this.block.createObject(cClass, '_this', { isHidden: true })
+    }
+    return this.block.createObject(cClass.typedefPointer, '_this', { isHidden: true })
   }
 }
 
@@ -450,9 +480,7 @@ class CObject extends CIdentifier {
   }
 
   selectProperty(name) {
-    if (!(this.typeDeclaration instanceof CType)) {
-      return undefined
-    }
+    assert(this.typeDeclaration.getMember, `${this.type} is not defined getMember() method`)
 
     const ref = this.typeDeclaration.getMember(name)
 
@@ -460,7 +488,7 @@ class CObject extends CIdentifier {
       return undefined
     }
 
-    const prop = new CObject(ref.typeDeclaration, name)
+    const prop = new CObject(ref instanceof CObject ? ref.typeDeclaration : ref, name)
 
     if (this.typeDeclaration.isPointer) {
       prop.id = `${this.id}->${name}`
@@ -477,6 +505,7 @@ class CClass extends CStruct {
     super(`${name}Rec_`)
 
     this.className = name
+    this.methodClass = CMethod
     this.superClass = superClass
     this.typedefPointer = new CTypedef(this, name, true)
     this.typedef = new CTypedef(this, `${name}Rec`, false, false)
@@ -526,50 +555,12 @@ class CClass extends CStruct {
     return member
   }
 
-  createMethod(name) {
-    const func = new CMethod(name)
+  addMethod(method) {
+    assert(method instanceof CMethod, `${method.name} is not CMethod`)
 
-    func.block.createObject(this.typedefPointer, '_this', { isHidden: true })
-    // Insert the _this object as the first argument to this function
-    func.funcArgs.splice(0, 0, func.block.getObject('_this'))
-    // The value of isExported is inherited from its class
-    func.isExported = null
-    this.append(func)
-    return func
-  }
-
-  createNewMethod() {
-    const func = this.createMethod('new')
-    const that = new CObject(this.typedefPointer, '_this')
-    const constructor = this.getMethod('constructor')
-
-    assert(constructor, 'constructor() must be defined')
-    func.block.append([
-      that.define(),
-      '',
-      `_this = malloc(sizeof(${this.typedef.name}));`,
-      'if (_this == NULL)',
-      '{',
-      'return NULL;',
-      '}',
-      `${constructor.funcName}(_this);`,
-      'return _this;'
-    ])
-    func.funcArgs.splice(0, 1)
-    func.funcReturnType = this.className
-    return func
-  }
-
-  createDeleteMethod() {
-    const func = this.createMethod('delete')
-    const destructor = this.getMethod('destructor')
-
-    assert(destructor, 'destructor() must be defined')
-    func.block.append([
-      `${destructor.funcName}(_this);`,
-      'free(_this);'
-    ])
-    return func
+    method.bind(this.typedefPointer, '_this')
+    this.append(method)
+    return method
   }
 }
 
@@ -736,6 +727,10 @@ class CModule extends CDeclaration {
     this.path = path
   }
 
+  getMember(name) {
+    return this.get(name)
+  }
+
   get(name) {
     return this.find(stat => stat instanceof CIdentifier && stat.name === name)
   }
@@ -831,5 +826,6 @@ module.exports = {
   CBlock,
   CClass,
   CStruct,
-  CFunction
+  CFunction,
+  CMethod
 }

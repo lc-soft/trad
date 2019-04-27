@@ -14,19 +14,18 @@ function getBindingFunctionName(target) {
 
 function addBindingFunction(that, cClass, target) {
   const name = getBindingFunctionName(target)
-  let func = cClass.getMethod(name)
 
-  if (func) {
-    assert(!func, `"${name}" has already been defined`)
-  }
+  assert(!cClass.getMethod(name), `"${name}" has already been defined`)
 
   const arg = new CObject('void', 'arg', { isPointer: true })
   const tmp = new types.Object(null, target.name)
+  const func = new types.CLCUIWidgetMethod(name)
 
-  func = cClass.createMethod(name)
   // Reset function arguments for Object_Watch()
   func.funcArgs = [tmp, arg]
   func.isStatic = true
+  func.isexported = false
+  cClass.addMethod(func)
   func.block.append([
     that.define(),
     '',
@@ -36,15 +35,13 @@ function addBindingFunction(that, cClass, target) {
 }
 
 function createWidgetAtrributeSetter(cClass, props) {
-  const func = cClass.createMethod('bindProperty')
+  const func = cClass.addMethod(new types.CLCUIWidgetMethod('bindProperty'))
   const that = func.block.getObject('_this')
 
   func.funcArgs = [
-    new types.Object('Widget', 'widget'),
     new CObject('const char', 'name', { isPointer: true }),
     new types.Object(null, 'value')
   ]
-  func.block.append(['', `${that.id} = Widget_GetData(widget);`])
   props.typeDeclaration.keys().forEach((name, i) => {
     const prop = props.selectProperty(name)
     const watcher = addBindingFunction(that, cClass, prop)
@@ -53,8 +50,8 @@ function createWidgetAtrributeSetter(cClass, props) {
       `${i > 0 ? 'else ' : ''}if (strcmp(name, "${name}") == 0)`,
       '{',
       `${prop.id} = value;`,
-      `Object_Watch(value, ${watcher.funcRealName}, ${that.id});`,
-      `${watcher.funcRealName}(value, ${that.id});`,
+      `Object_Watch(value, ${watcher.funcName}, ${that.id});`,
+      `${watcher.funcName}(value, ${that.id});`,
       '}'
     ])
   })
@@ -140,7 +137,7 @@ function install(Compiler) {
       const value = this.parse(attr.value)
 
       // If this object is Literal, or not a member of props
-      if (!value.id || !value.parent || value.parent.name !== 'props') {
+      if (!value || !value.id || !value.parent || value.parent.name !== 'props') {
         return super.parse(input)
       }
 

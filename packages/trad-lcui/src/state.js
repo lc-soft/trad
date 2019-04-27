@@ -13,28 +13,24 @@ function getBindingFunctionName(target) {
   return `onState${capitalize(target.name)}Changed`
 }
 
-function getBindingFunction(cClass, target) {
-  return cClass.getMethod(getBindingFunctionName(target))
-}
-
 function addBindingFunction(that, cClass, target) {
   const name = getBindingFunctionName(target)
-  let func = cClass.getMethod(name)
 
-  if (func) {
-    assert(!func, `"${name}" has already been defined`)
-  }
+  assert(!cClass.getMethod(name), `"${name}" has already been defined`)
 
   const arg = new CObject('void', 'arg', { isPointer: true })
   const tmp = new types.Object(null, target.name)
+  const func = cClass.addMethod(new types.CLCUIWidgetMethod(name))
 
-  func = cClass.createMethod(name)
   // Reset function arguments for Object_Watch()
   func.funcArgs = [tmp, arg]
   func.isStatic = true
-  func.block.append(that.define())
-  func.block.append('')
-  func.block.append(functions.assign(that, arg))
+  func.isexported = false
+  func.block.append([
+    that.define(),
+    '',
+    functions.assign(that, arg)
+  ])
   return func
 }
 
@@ -109,7 +105,7 @@ function install(Compiler) {
       const value = this.parse(attr.value)
 
       // If this object is Literal, or not a member of state
-      if (!value.id || !value.parent || value.parent.name !== 'state') {
+      if (!value || !value.id || !value.parent || value.parent.name !== 'state') {
         return super.parse(input)
       }
 

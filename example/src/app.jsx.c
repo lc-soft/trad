@@ -4,7 +4,6 @@
 #include <LCUI/gui/widget/button.h>
 #include <LCUI/gui/widget/textview.h>
 #include <LCUI/gui/widget/textedit.h>
-#include <stdlib.h>
 #include "app.jsx.h"
 typedef struct MyAppStateRec_ MyAppStateRec;
 typedef struct MyAppRefsRec_ MyAppRefsRec;
@@ -31,21 +30,20 @@ struct MyAppRec_
         MyAppRefsRec refs;
 }
 ;
-static void MyApp_Constructor(MyApp);
-static LCUI_Widget MyApp_Template(MyApp);
-static void MyApp_Created(MyApp);
-static void MyApp_OnBtnChangeClick(MyApp);
-static void MyApp_OnBtnMinusClick(MyApp);
-static void MyApp_OnBtnPlusClick(MyApp);
-static void MyApp_Destructor(MyApp);
-static MyApp MyApp_New();
-static void MyApp_Delete(MyApp);
-static void MyApp_OnStateTextChanged(LCUI_Object, void*);
-static void MyApp_OnStateInputChanged(LCUI_Object, void*);
-static void MyApp_OnStateValueChanged(LCUI_Object, void*);
-static void MyApp_OnStateTotalChanged(LCUI_Object, void*);
-static void MyApp_Constructor(MyApp _this)
+static void MyApp_Destructor(MyApp, );
+static void MyApp_Constructor(LCUI_Widget);
+static void MyApp_Destructor(MyApp _this, )
 {
+        Object_Destroy(&_this->state.text);
+        Object_Destroy(&_this->state.input);
+        Object_Destroy(&_this->state.value);
+        Object_Destroy(&_this->state.total);
+}
+
+static void MyApp_Constructor(LCUI_Widget w)
+{
+        MyApp _this;
+        _this = Widget_AddData(w, my_app_class.proto, sizeof(struct MyAppRec_));
         /* CallExpression ignored */
         String_Init(&_this->state.text, NULL);
         String_Init(&_this->state.input, NULL);
@@ -57,12 +55,58 @@ static void MyApp_Constructor(MyApp _this)
         Object_Watch(&_this->state.total, MyApp_OnStateTotalChanged, _this);
 }
 
-static LCUI_Widget MyApp_Template(MyApp _this)
+void MyApp_OnStateTextChanged(LCUI_Object text, void *arg)
 {
+        MyApp _this;
+        _this = Widget_GetData(w,  my_app_class.proto);
+        MyApp _this;
+        _this = arg;
+}
+
+void MyApp_OnStateInputChanged(LCUI_Object input, void *arg)
+{
+        MyApp _this;
+        _this = Widget_GetData(w,  my_app_class.proto);
+        MyApp _this;
+        _this = arg;
+        Widget_SetAttributeEx(_this->refs._textedit, "value", &input, 0, NULL);
+}
+
+void MyApp_OnStateValueChanged(LCUI_Object value, void *arg)
+{
+        MyApp _this;
+        _this = Widget_GetData(w,  my_app_class.proto);
+        MyApp _this;
+        _this = arg;
+}
+
+void MyApp_OnStateTotalChanged(LCUI_Object total, void *arg)
+{
+        MyApp _this;
+        _this = Widget_GetData(w,  my_app_class.proto);
+        MyApp _this;
+        _this = arg;
+}
+
+void MyApp_Created(LCUI_Widget w)
+{
+        MyApp _this;
+        _this = Widget_GetData(w,  my_app_class.proto);
+        String_SetValue(&_this->state.text, "Hello, World!");
+        String_SetValue(&_this->state.input, "Hello, World!");
+        Number_SetValue(&_this->state.value, 50);
+        Number_SetValue(&_this->state.total, 100);
+}
+
+LCUI_Widget MyApp_Template(LCUI_Widget w)
+{
+        MyApp _this;
         LCUI_Widget widget;
+        LCUI_Widget textview;
+        LCUI_Widget textview_1;
+        _this = Widget_GetData(w,  my_app_class.proto);
         widget = LCUIWidget_New(NULL);
         /* JSXText ignored */
-        LCUI_Widget textview;
         textview = LCUIWidget_New("textview");
         /* JSXText ignored */
         _this->refs._textedit = LCUIWidget_New("textedit");
@@ -71,7 +115,6 @@ static LCUI_Widget MyApp_Template(MyApp _this)
         /* JSXElementAttribute ignored */
         /* JSXText ignored */
         /* JSXText ignored */
-        LCUI_Widget textview_1;
         textview_1 = LCUIWidget_New("textview");
         /* JSXText ignored */
         /* JSXText ignored */
@@ -92,76 +135,23 @@ static LCUI_Widget MyApp_Template(MyApp _this)
         return widget;
 }
 
-static void MyApp_Created(MyApp _this)
+void MyApp_OnBtnChangeClick(LCUI_Widget w)
 {
-        String_SetValue(&_this->state.text, "Hello, World!");
-        String_SetValue(&_this->state.input, "Hello, World!");
-        Number_SetValue(&_this->state.value, 50);
-        Number_SetValue(&_this->state.total, 100);
-}
-
-static void MyApp_OnBtnChangeClick(MyApp _this)
-{
+        MyApp _this;
+        _this = Widget_GetData(w,  my_app_class.proto);
         Object_Operate(&_this->state.text, "=", &_this->state.input);
 }
 
-static void MyApp_OnBtnMinusClick(MyApp _this)
+void MyApp_OnBtnMinusClick(LCUI_Widget w)
 {
+        MyApp _this;
+        _this = Widget_GetData(w,  my_app_class.proto);
         /* IfStatement ignored */
 }
 
-static void MyApp_OnBtnPlusClick(MyApp _this)
+void MyApp_OnBtnPlusClick(LCUI_Widget w)
 {
+        MyApp _this;
+        _this = Widget_GetData(w,  my_app_class.proto);
         /* IfStatement ignored */
-}
-
-static void MyApp_Destructor(MyApp _this)
-{
-        Object_Destroy(&_this->state.text);
-        Object_Destroy(&_this->state.input);
-        Object_Destroy(&_this->state.value);
-        Object_Destroy(&_this->state.total);
-}
-
-static MyApp MyApp_New()
-{
-        MyApp _this;
-        _this = malloc(sizeof(MyAppRec));
-        if (_this == NULL)
-        {
-                return NULL;
-        }
-        MyApp_Constructor(_this);
-        return _this;
-}
-
-static void MyApp_Delete(MyApp _this)
-{
-        MyApp_Destructor(_this);
-        free(_this);
-}
-
-static void MyApp_OnStateTextChanged(LCUI_Object text, void *arg)
-{
-        MyApp _this;
-        _this = arg;
-}
-
-static void MyApp_OnStateInputChanged(LCUI_Object input, void *arg)
-{
-        MyApp _this;
-        _this = arg;
-        Widget_SetAttributeEx(_this->refs._textedit, "value", &input, 0, NULL);
-}
-
-static void MyApp_OnStateValueChanged(LCUI_Object value, void *arg)
-{
-        MyApp _this;
-        _this = arg;
-}
-
-static void MyApp_OnStateTotalChanged(LCUI_Object total, void *arg)
-{
-        MyApp _this;
-        _this = arg;
 }

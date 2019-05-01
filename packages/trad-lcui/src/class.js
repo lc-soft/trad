@@ -61,14 +61,17 @@ function beforeParsingWidgetClass(cClass) {
 
 function afterParsingWidgetClass(cClass) {
   const className = toWidgetTypeName(cClass.className)
-  const superClassName = cClass.superClass ? toWidgetTypeName(cClass.superClass.className) : null
+  let superClassName = cClass.superClass ? toWidgetTypeName(cClass.superClass.className) : null
   const proto = `${toIdentifierName(cClass.className)}_class`
   const func = new WidgetRegisterFunction(cClass)
   const constructor = cClass.getMethod('constructor')
   const destructor = cClass.getMethod('destructor')
 
+  if (superClassName === 'widget') {
+    superClassName = null
+  }
   func.block.append([
-    `${proto}.proto = ${functions.LCUIWidget_NewPrototype(className, superClassName)}`,
+    `${proto}.proto = ${functions.LCUIWidget_NewPrototype(className, superClassName).define()}`,
     `${proto}.proto->init = ${constructor.funcName};`,
     `${proto}.proto->destroy = ${destructor.funcName};`
   ])

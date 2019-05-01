@@ -4,6 +4,22 @@ function capitalize(str) {
   return str.substr(0, 1).toUpperCase() + str.substr(1)
 }
 
+function rvalue(value) {
+  if (typeof value === 'undefined' || value === null) {
+    return 'NULL'
+  }
+  if (typeof value === 'string') {
+    return JSON.stringify(value)
+  }
+  if (typeof value === 'number') {
+    return value
+  }
+  if (value instanceof CFunction) {
+    return value.funcName
+  }
+  return undefined
+}
+
 class CNode {
   constructor(data) {
     this.data = data
@@ -142,6 +158,77 @@ class CDeclaration extends CStatment {
 class CIdentifier extends CDeclaration {
   get pointerLevel() {
     return this.isPointer ? 1 : 0
+  }
+}
+
+class CExpression extends CStatment {
+  constructor(type) {
+    super('expression')
+
+    this.type = type
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  export() {
+    return ''
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  declare() {
+    return ''
+  }
+}
+
+class CCallExpression extends CExpression {
+  constructor(func, ...args) {
+    super('call')
+
+    this.func = func
+    this.funcArgs = args
+  }
+
+  define() {
+    const argsStr = this.func.funcArgs.map((declaration, i) => {
+      const arg = this.funcArgs[i]
+      const value = rvalue(arg)
+
+      if (typeof value !== 'undefined') {
+        return value
+      }
+      if (declaration.pointerLevel === arg.pointerLevel) {
+        return arg.id
+      }
+      if (declaration.pointerLevel < arg.pointerLevel) {
+        return `*${arg.id}`
+      }
+      return `&${arg.id}`
+    }).join(', ')
+
+    return `${this.func.funcName}(${argsStr});`
+  }
+}
+
+class CAssignmentExpression extends CExpression {
+  constructor(left, right) {
+    super('assignment')
+
+    this.left = left
+    this.right = right
+  }
+
+  define() {
+    const value = rvalue(this.right)
+
+    if (typeof value !== 'undefined') {
+      return `${this.left.id} = ${value};`
+    }
+    if (this.left.pointerLevel === this.right.pointerLevel) {
+      return `${this.left.id} = ${this.right.id};`
+    }
+    if (this.left.pointerLevel < this.right.pointerLevel) {
+      return `${this.left.id} = *${this.right.id};`
+    }
+    return `${this.left.id} = &${this.right.id};`
   }
 }
 
@@ -304,6 +391,7 @@ class CMethod extends CFunction {
 let structCount = 0
 
 class CStruct extends CType {
+  // eslint-disable-next-line no-plusplus
   constructor(name = `_unnamed${++structCount}`) {
     super(`struct ${name}`)
 
@@ -880,5 +968,7 @@ module.exports = {
   CClass,
   CStruct,
   CFunction,
-  CMethod
+  CMethod,
+  CCallExpression,
+  CAssignmentExpression
 }

@@ -165,7 +165,7 @@ class CExpression extends CStatment {
   constructor(type) {
     super('expression')
 
-    this.type = type
+    this.expressionType = type
   }
 
   // eslint-disable-next-line class-methods-use-this
@@ -218,17 +218,23 @@ class CAssignmentExpression extends CExpression {
 
   define() {
     const value = rvalue(this.right)
+    let { right } = this
 
     if (typeof value !== 'undefined') {
       return `${this.left.id} = ${value};`
     }
-    if (this.left.pointerLevel === this.right.pointerLevel) {
-      return `${this.left.id} = ${this.right.id};`
+    if (right instanceof CCallExpression) {
+      const definition = right.define()
+
+      right = new CObject(right.func.funcReturnType, definition.substr(0, definition.length - 1))
     }
-    if (this.left.pointerLevel < this.right.pointerLevel) {
-      return `${this.left.id} = *${this.right.id};`
+    if (this.left.pointerLevel === right.pointerLevel) {
+      return `${this.left.id} = ${right.id};`
     }
-    return `${this.left.id} = &${this.right.id};`
+    if (this.left.pointerLevel < right.pointerLevel) {
+      return `${this.left.id} = *${right.id};`
+    }
+    return `${this.left.id} = &${right.id};`
   }
 }
 
@@ -556,6 +562,7 @@ class CObject extends CIdentifier {
     this.value = value
     this.isPointer = isPointer
     this.isHidden = isHidden
+    this.isDeletable = false
   }
 
   get baseType() {
@@ -598,6 +605,15 @@ class CObject extends CIdentifier {
     return `${this.baseType} ${this.isPointer ? '*' : ''}${this.name};`
   }
 
+  destroy() {
+    const type = this.typeDeclaration
+
+    if (type && type.destructor) {
+      return new CCallExpression(type.destructor, this)
+    }
+    return undefined
+  }
+
   addProperty(prop) {
     assert(prop instanceof CObject, `${prop.name} property must be CObject`)
     assert(!this.typeDeclaration.getMember(prop.name), `${prop.name} property already exists`)
@@ -636,6 +652,7 @@ class CClass extends CStruct {
     this.superClass = superClass
     this.typedefPointer = new CTypedef(this, name, true)
     this.typedef = new CTypedef(this, `${name}Rec`, false, false)
+    this.destructor = null
   }
 
   set isExported(isExported) {
@@ -738,6 +755,7 @@ class CBlock extends CDeclaration {
     const types = []
     const typedefs = []
     const objects = []
+    const deletions = []
     const classMethods = []
     const staticFunctions = []
     const body = this.body.filter((stat) => {
@@ -760,6 +778,9 @@ class CBlock extends CDeclaration {
         return false
       }
       if (stat instanceof CObject) {
+        if (stat.isDeletable) {
+          deletions.push(stat.destroy())
+        }
         objects.push(stat)
         return false
       }
@@ -775,7 +796,8 @@ class CBlock extends CDeclaration {
       staticFunctions.map(func => func.declare(false)),
       mapDefinitions(objects),
       mapDefinitions(classMethods),
-      mapDefinitions(body)
+      mapDefinitions(body),
+      mapDefinitions(deletions)
     ]
     if (this.parent) {
       return [

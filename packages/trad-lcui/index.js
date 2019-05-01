@@ -2,6 +2,7 @@ const assert = require('assert')
 const types = require('./src/types')
 const JSXParser = require('./src/jsx')
 const functions = require('./src/functions')
+const BaseParser = require('./src/base')
 const ClassParser = require('./src/class')
 const StateBindingParser = require('./src/state')
 const PropsBindingParser = require('./src/props')
@@ -51,6 +52,7 @@ function mixin(base, ...plugins) {
 function install(Compiler) {
   return mixin(
     Compiler,
+    BaseParser,
     JSXParser,
     ClassParser,
     EventBindingParser,

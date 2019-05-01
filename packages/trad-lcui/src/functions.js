@@ -17,11 +17,13 @@ const cptr = new CObject('void', 'ptr', { isPointer: true })
 const cfunc = new CObject('void', 'func', { isPointer: true })
 const cwidget = new types.Object('Widget', 'widget')
 
-const cfuncStringInit = new CFunction('String_Init', [cstrObj, cstrConst])
 const cfuncNumberInit = new CFunction('Number_Init', [cnumObj, cnum])
+const cfuncStringInit = new CFunction('String_Init', [cstrObj, cstrConst])
+const cfuncNumberNew = new CFunction('Number_New', [cnum], cnumObj.typeDeclaration)
+const cfuncStringNew = new CFunction('String_New', [cstrConst], cstrObj.typeDeclaration)
 const cfuncNumberSetValue = new CFunction('Number_SetValue', [cnumObj, cnum])
 const cfuncStringSetValue = new CFunction('String_SetValue', [cstrObj, cstrConst])
-const cfuncObjectDestroy = new CFunction('Object_Init', [cobj])
+const cfuncObjectDestroy = new CFunction('Object_Destroy', [cobj])
 const cfuncObjectWatch = new CFunction('Object_Watch', [cobj, cfunc, cptr])
 const cfuncObjectNotify = new CFunction('Object_Notify', [cobj])
 const cfuncObjectOperate = new CFunction('Object_Operate', [cobj, cstrConst, cobj])
@@ -36,6 +38,14 @@ function String_Init(obj, value = null) {
 
 function Number_Init(obj, value = 0) {
   return new CCallExpression(cfuncNumberInit, obj, value)
+}
+
+function String_New(value = null) {
+  return new CCallExpression(cfuncStringNew, value)
+}
+
+function Number_New(value = 0) {
+  return new CCallExpression(cfuncNumberNew, value)
 }
 
 function Object_Init(obj, type) {
@@ -97,6 +107,8 @@ module.exports = {
   Object_Init,
   String_Init,
   Number_Init,
+  String_New,
+  Number_New,
   Object_Destroy,
   Object_Watch,
   Object_Operate,

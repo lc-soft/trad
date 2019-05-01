@@ -75,51 +75,49 @@ function afterParsingWidgetClass(cClass) {
   cClass.parent.append(func)
 }
 
-function install(Compiler) {
-  return class ClassParser extends Compiler {
-    parseMethodDefinition(input) {
-      const cClass = this.findContextData(CClass)
+const install = Compiler => class ClassParser extends Compiler {
+  parseMethodDefinition(input) {
+    const cClass = this.findContextData(CClass)
 
-      if (!isLCUIClassBased(cClass)) {
-        return super.parse(input)
-      }
-
-      const method = new types.CLCUIWidgetMethod(input.key.name)
-
-      cClass.addMethod(method)
-      this.context.data = method
-      this.parseChildren([input.value])
-      return method
-    }
-
-    parseClassDeclaration(input) {
-      const parser = this.handlers.ClassDeclaration
-      const cClass = parser.parseDeclaration(input)
-
-      if (!isLCUIClassBased(cClass)) {
-        return parser.parse(input)
-      }
-      this.block.append(cClass)
-      if (cClass.superClass.name === 'Widget') {
-        beforeParsingWidgetClass(cClass)
-      }
-      this.parseChildren(input.body.body.slice().sort((a, b) => getMethodOrder(a) - getMethodOrder(b)))
-      if (cClass.superClass.name === 'Widget') {
-        afterParsingWidgetClass(cClass)
-      }
-      // Move Class definition to current position
-      this.block.append(cClass)
-      return cClass
-    }
-
-    parse(input) {
-      const method = `parse${input.type}`
-
-      if (ClassParser.prototype.hasOwnProperty(method)) {
-        return ClassParser.prototype[method].call(this, input)
-      }
+    if (!isLCUIClassBased(cClass)) {
       return super.parse(input)
     }
+
+    const method = new types.CLCUIWidgetMethod(input.key.name)
+
+    cClass.addMethod(method)
+    this.context.data = method
+    this.parseChildren([input.value])
+    return method
+  }
+
+  parseClassDeclaration(input) {
+    const parser = this.handlers.ClassDeclaration
+    const cClass = parser.parseDeclaration(input)
+
+    if (!isLCUIClassBased(cClass)) {
+      return parser.parse(input)
+    }
+    this.block.append(cClass)
+    if (cClass.superClass.name === 'Widget') {
+      beforeParsingWidgetClass(cClass)
+    }
+    this.parseChildren(input.body.body.slice().sort((a, b) => getMethodOrder(a) - getMethodOrder(b)))
+    if (cClass.superClass.name === 'Widget') {
+      afterParsingWidgetClass(cClass)
+    }
+    // Move Class definition to current position
+    this.block.append(cClass)
+    return cClass
+  }
+
+  parse(input) {
+    const method = `parse${input.type}`
+
+    if (ClassParser.prototype.hasOwnProperty(method)) {
+      return ClassParser.prototype[method].call(this, input)
+    }
+    return super.parse(input)
   }
 }
 

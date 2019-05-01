@@ -57,108 +57,106 @@ function createWidgetAtrributeSetter(cClass, props) {
   })
 }
 
-function install(Compiler) {
-  return class PropsBindingParser extends Compiler {
-    initPropsBindings() {
-      const cClass = this.findContextData(CClass)
-      const that = new CObject(this.block.getType(cClass.className), '_this')
-      const props = that.selectProperty('props')
-      const defaultProps = that.selectProperty('default_props')
-      const constructor = cClass.getMethod('constructor')
-      const destructor = cClass.getMethod('destructor')
+const install = Compiler => class PropsBindingParser extends Compiler {
+  initPropsBindings() {
+    const cClass = this.findContextData(CClass)
+    const that = new CObject(this.block.getType(cClass.className), '_this')
+    const props = that.selectProperty('props')
+    const defaultProps = that.selectProperty('default_props')
+    const constructor = cClass.getMethod('constructor')
+    const destructor = cClass.getMethod('destructor')
 
-      if (!props) {
-        return false
-      }
-      assert(props instanceof CObject, 'props must be a object')
-      props.typeDeclaration.keys().map((key) => {
-        const prop = props.selectProperty(key)
-        const defaultProp = defaultProps.selectProperty(key)
-
-        constructor.block.append(functions.Object_Init(defaultProp))
-        destructor.block.append(functions.assign(prop, null))
-        return { prop, defaultProp }
-      }).forEach(({ prop, defaultProp }) => {
-        constructor.block.append(functions.assign(prop, defaultProp))
-      })
-      createWidgetAtrributeSetter(cClass, props, defaultProps)
-      return true
+    if (!props) {
+      return false
     }
+    assert(props instanceof CObject, 'props must be a object')
+    props.typeDeclaration.keys().map((key) => {
+      const prop = props.selectProperty(key)
+      const defaultProp = defaultProps.selectProperty(key)
 
-    createProps(input, name, structName, isPointer = false) {
-      const suffix = isPointer ? '' : 'Rec'
-      const that = this.block.getObject('_this')
-      const cClass = this.findContextData(CClass)
-      const left = this.parse(input.left.object)
-      const propsStruct = this.parse(input.right)
-      const propsType = new CTypedef(propsStruct, `${left.className}${structName}`)
+      constructor.block.append(functions.Object_Init(defaultProp))
+      destructor.block.append(functions.assign(prop, null))
+      return { prop, defaultProp }
+    }).forEach(({ prop, defaultProp }) => {
+      constructor.block.append(functions.assign(prop, defaultProp))
+    })
+    createWidgetAtrributeSetter(cClass, props, defaultProps)
+    return true
+  }
 
-      propsStruct.setStructName(`${left.className}${structName}_`)
-      propsStruct.keys().forEach((key) => {
-        const member = propsStruct.getMember(key)
+  createProps(input, name, structName, isPointer = false) {
+    const suffix = isPointer ? '' : 'Rec'
+    const that = this.block.getObject('_this')
+    const cClass = this.findContextData(CClass)
+    const left = this.parse(input.left.object)
+    const propsStruct = this.parse(input.right)
+    const propsType = new CTypedef(propsStruct, `${left.className}${structName}`)
 
-        if (member.type === 'String') {
-          propsStruct.addMember(new types.Object(`String${suffix}`, key))
-        } else if (member.type === 'Number') {
-          propsStruct.addMember(new types.Object(`Number${suffix}`, key))
-        }
-      })
-      cClass.parent.append(propsType)
-      cClass.parent.append(propsStruct)
-      return that.addProperty(new CObject(propsType, name))
-    }
+    propsStruct.setStructName(`${left.className}${structName}_`)
+    propsStruct.keys().forEach((key) => {
+      const member = propsStruct.getMember(key)
 
-    parseAssignmentExpression(input) {
-      if (input.right.type !== 'ObjectExpression' || input.left.property.name !== 'props') {
-        return super.parse(input)
+      if (member.type === 'String') {
+        propsStruct.addMember(new types.Object(`String${suffix}`, key))
+      } else if (member.type === 'Number') {
+        propsStruct.addMember(new types.Object(`Number${suffix}`, key))
       }
+    })
+    cClass.parent.append(propsType)
+    cClass.parent.append(propsStruct)
+    return that.addProperty(new CObject(propsType, name))
+  }
 
-      const left = this.parse(input.left)
-
-      assert(typeof left === 'undefined', 'object-to-object assignment is not supported')
-
-      const props = this.createProps(input, 'props', 'PropsRec', true)
-      this.createProps(input, 'default_props', 'DefaultPropsRec')
-      return props
-    }
-
-    parseMethodDefinition(input) {
-      const func = super.parse(input)
-
-      if (func.name === 'constructor') {
-        this.initPropsBindings()
-      }
-      return func
-    }
-
-    parseJSXElementAttribute(input) {
-      const { attr, ctx } = input
-      const attrName = attr.name.name
-      const value = this.parse(attr.value)
-
-      // If this object is Literal, or not a member of props
-      if (!value || !value.id || !value.parent || value.parent.name !== 'props') {
-        return super.parse(input)
-      }
-
-      const funcName = getBindingFunctionName(value)
-      const func = ctx.cClass.getMethod(funcName)
-
-      assert(typeof func !== 'undefined', `${funcName} is undefined`)
-      this.block.append(
-        functions.Widget_SetAttributeEx(ctx.widget, attrName, func.funcArgs[0])
-      )
-      return true
-    }
-
-    parse(input) {
-      const method = `parse${input.type}`
-
-      if (PropsBindingParser.prototype.hasOwnProperty(method)) {
-        return PropsBindingParser.prototype[method].call(this, input)
-      }
+  parseAssignmentExpression(input) {
+    if (input.right.type !== 'ObjectExpression' || input.left.property.name !== 'props') {
       return super.parse(input)
     }
+
+    const left = this.parse(input.left)
+
+    assert(typeof left === 'undefined', 'object-to-object assignment is not supported')
+
+    const props = this.createProps(input, 'props', 'PropsRec', true)
+    this.createProps(input, 'default_props', 'DefaultPropsRec')
+    return props
+  }
+
+  parseMethodDefinition(input) {
+    const func = super.parse(input)
+
+    if (func.name === 'constructor') {
+      this.initPropsBindings()
+    }
+    return func
+  }
+
+  parseJSXElementAttribute(input) {
+    const { attr, ctx } = input
+    const attrName = attr.name.name
+    const value = this.parse(attr.value)
+
+    // If this object is Literal, or not a member of props
+    if (!value || !value.id || !value.parent || value.parent.name !== 'props') {
+      return super.parse(input)
+    }
+
+    const funcName = getBindingFunctionName(value)
+    const func = ctx.cClass.getMethod(funcName)
+
+    assert(typeof func !== 'undefined', `${funcName} is undefined`)
+    this.block.append(
+      functions.Widget_SetAttributeEx(ctx.widget, attrName, func.funcArgs[0])
+    )
+    return true
+  }
+
+  parse(input) {
+    const method = `parse${input.type}`
+
+    if (PropsBindingParser.prototype.hasOwnProperty(method)) {
+      return PropsBindingParser.prototype[method].call(this, input)
+    }
+    return super.parse(input)
   }
 }
 

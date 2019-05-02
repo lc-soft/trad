@@ -26,6 +26,10 @@ const cfuncStringSetValue = new CFunction('String_SetValue', [cstrObj, cstrConst
 const cfuncObjectDestroy = new CFunction('Object_Destroy', [cobj])
 const cfuncObjectWatch = new CFunction('Object_Watch', [cobj, cfunc, cptr])
 const cfuncObjectNotify = new CFunction('Object_Notify', [cobj])
+const cfuncObjectToString = new CFunction('Object_ToString', [cobj], cstrObj.typeDeclaration)
+const cfuncObjectDuplicate = new CFunction('Object_Duplicate', [cnumObj], cobj.typeDeclaration)
+const cfuncNumberDuplicate = new CFunction('Object_Duplicate', [cnumObj], cnumObj.typeDeclaration)
+const cfuncStringDuplicate = new CFunction('Object_Duplicate', [cstrObj], cstrObj.typeDeclaration)
 const cfuncStringOperate = new CFunction('Object_Operate', [cstrObj, cstrConst, cobj], cstrObj.typeDeclaration)
 const cfuncNumberOperate = new CFunction('Object_Operate', [cnumObj, cstrConst, cobj], cnumObj.typeDeclaration)
 const cfuncObjectOperate = new CFunction('Object_Operate', [cobj, cstrConst, cobj], cobj.typeDeclaration)
@@ -74,6 +78,15 @@ function Object_Notify(obj) {
   return new CCallExpression(cfuncObjectNotify, obj)
 }
 
+function Object_Duplicate(obj) {
+  if (types.isString(obj)) {
+    return new CCallExpression(cfuncStringDuplicate, obj)
+  } else if (types.isNumber(obj)) {
+    return new CCallExpression(cfuncNumberDuplicate, obj)
+  }
+  return new CCallExpression(cfuncObjectDuplicate, obj)
+}
+
 function Object_Operate(left, operatorStr, right) {
   let func = cfuncObjectOperate
 
@@ -83,6 +96,10 @@ function Object_Operate(left, operatorStr, right) {
     func = cfuncNumberOperate
   }
   return new CCallExpression(func, left, operatorStr, right)
+}
+
+function Object_ToString(obj) {
+  return new CCallExpression(cfuncObjectToString, obj)
 }
 
 function Number_SetValue(left, right) {
@@ -122,6 +139,8 @@ module.exports = {
   Object_Watch,
   Object_Operate,
   Object_Notify,
+  Object_Duplicate,
+  Object_ToString,
   Number_SetValue,
   String_SetValue,
   Widget_BindEvent,

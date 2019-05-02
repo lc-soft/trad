@@ -23,14 +23,14 @@ const install = Compiler => class LCUIBaseParser extends Compiler {
     const type = Object.keys(typeMeta).find(k => types[`is${k}`](initValue))
 
     if (!type) {
-      assert(0, `unable to infer the type of ${initValue.value}`)
+      assert(0, `unable to infer the type of ${initValue.type}`)
       return undefined
     }
 
     let value = null
     let variable = null
     const meta = typeMeta[type]
-    const name = baseName ? baseName : this.block.allocObjectName(`_${meta.shortName}`)
+    const name = this.block.allocObjectName(baseName ? baseName : `_${meta.shortName}`)
 
     do {
       if (initValue instanceof CCallExpression) {
@@ -50,11 +50,10 @@ const install = Compiler => class LCUIBaseParser extends Compiler {
         break
       }
       if (initValue.pointerLevel > 0) {
-        value = new CObject(meta.cType, `${initValue.id}->value.${type.toLocaleLowerCase()}`)
         variable = new types.Object(type, name)
         this.block.append([
           variable,
-          functions.assign(variable, functions[`${type}_New`](value))
+          functions.assign(variable, functions.Object_Duplicate(initValue))
         ])
         break
       }
@@ -70,11 +69,20 @@ const install = Compiler => class LCUIBaseParser extends Compiler {
   }
 
   parseBinaryExpression(input) {
-    const left = this.parse(input.left)
+    let left = this.parse(input.left)
     let right = this.parse(input.right)
 
     if (!right.id) {
       right = this.createObject(null, right)
+    }
+    if (types.isString(right) !== types.isString(left)) {
+      if (types.isString(left)) {
+        right = this.createObject(`${right.name}_str`, functions.Object_ToString(right))
+        this.block.append(right)
+      } else {
+        left = this.createObject(`${left.name}_str`, functions.Object_ToString(left))
+        this.block.append(left)
+      }
     }
     right = functions.Object_Operate(left, input.operator, right)
     return this.createObject(null, right)

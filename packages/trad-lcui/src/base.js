@@ -1,84 +1,89 @@
 const assert = require('assert')
 const types = require('./types')
-const { CObject } = require('../../trad')
+const { CObject, CCallExpression } = require('../../trad')
 const functions = require('./functions')
 
+const typeMeta = {
+  String: {
+    name: 'String',
+    shortName: 'str',
+    cType: 'char',
+    cPointer: true
+  },
+  Number: {
+    name: 'Number',
+    shortName: 'num',
+    cType: 'double',
+    cPointer: false
+  }
+}
+
 const install = Compiler => class LCUIBaseParser extends Compiler {
-  initNumberObject(input, right) {
+  createObject(baseName, initValue) {
+    const type = Object.keys(typeMeta).find(k => types[`is${k}`](initValue))
+
+    if (!type) {
+      assert(0, `unable to infer the type of ${initValue.value}`)
+      return undefined
+    }
+
+    let value = null
     let variable = null
+    const meta = typeMeta[type]
+    const name = baseName ? baseName : this.block.allocObjectName(`_${meta.shortName}`)
 
-    if (right.id) {
-      if (right.isPointer) {
-        const value = new CObject('double', `${right.id}->value.number`)
-
-        variable = new types.Object('Number', input.id.name)
+    do {
+      if (initValue instanceof CCallExpression) {
+        variable = new types.Object(type, name)
         this.block.append([
           variable,
-          functions.assign(variable, functions.Number_New(variable, value))
+          functions.assign(variable, initValue)
         ])
-      } else {
-        const value = new CObject('double', `${right.id}.value.number`)
-
-        variable = new types.Object('NumberRec', input.id.name)
-        this.block.append([
-          variable,
-          functions.Number_Init(variable, value)
-        ])
+        break
       }
-    } else {
-      variable = new types.Object('NumberRec', input.id.name)
+      if (!initValue.id) {
+        variable = new types.Object(`${type}Rec`, name)
+        this.block.append([
+          variable,
+          functions[`${type}_Init`](variable, initValue.value)
+        ])
+        break
+      }
+      if (initValue.pointerLevel > 0) {
+        value = new CObject(meta.cType, `${initValue.id}->value.${type.toLocaleLowerCase()}`)
+        variable = new types.Object(type, name)
+        this.block.append([
+          variable,
+          functions.assign(variable, functions[`${type}_New`](value))
+        ])
+        break
+      }
+      value = new CObject(meta.cType, `${initValue.id}.value.${type.toLocaleLowerCase()}`)
+      variable = new types.Object(`${type}Rec`, name)
       this.block.append([
         variable,
-        functions.Number_Init(variable, right.value)
+        functions[`${type}_Init`](variable, value)
       ])
-    }
+    } while (0)
     variable.isDeletable = true
     return variable
   }
 
-  initStringObject(input, right) {
-    let variable = null
+  parseBinaryExpression(input) {
+    const left = this.parse(input.left)
+    let right = this.parse(input.right)
 
-    if (right.id) {
-      if (right.isPointer) {
-        const value = new CObject('char', `${right.id}->value.string`)
-
-        variable = new types.Object('String', input.id.name)
-        this.block.append([
-          variable,
-          functions.assign(variable, functions.String_New(variable, value))
-        ])
-      } else {
-        const value = new CObject('double', `${right.id}.value.string`)
-
-        variable = new types.Object('StringRec', input.id.name)
-        this.block.append([
-          variable,
-          functions.String_Init(variable, value)
-        ])
-      }
-    } else {
-      variable = new types.Object('String', input.id.name)
-      this.block.append([
-        variable,
-        functions.assign(variable, functions.String_New(right.value))
-      ])
+    if (!right.id) {
+      right = this.createObject(null, right)
     }
-    variable.isDeletable = true
-    return variable
+    right = functions.Object_Operate(left, input.operator, right)
+    return this.createObject(null, right)
   }
 
   parseVariableDeclaration(inputs) {
     const variables = inputs.declarations.map((input) => {
       if (input.init) {
-        const right = this.parse(input.init)
-
-        if (right.type === 'Number') {
-          return this.initNumberObject(input, right)
-        }
-        if (right.type === 'String') {
-          return this.initStringObject(input, right)
-        }
+        return this.createObject(input.id.name, this.parse(input.init))
       }
       // FIXME: Design a syntax for typed object declaration
       assert(0, `unable to infer the type of ${input.id.name}`)

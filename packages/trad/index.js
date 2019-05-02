@@ -187,6 +187,20 @@ class CCallExpression extends CExpression {
     this.funcArgs = args
   }
 
+  get type() {
+    if (this.func.funcReturnType instanceof CType) {
+      return this.func.funcReturnType.name
+    }
+    return this.func.funcReturnType
+  }
+
+  get typeDeclaration() {
+    if (this.func.funcReturnType instanceof CType) {
+      return this.func.funcReturnType
+    }
+    return this.func.funcReturnType
+  }
+
   define() {
     const argsStr = this.func.funcArgs.map((declaration, i) => {
       const arg = this.funcArgs[i]

@@ -26,7 +26,9 @@ const cfuncStringSetValue = new CFunction('String_SetValue', [cstrObj, cstrConst
 const cfuncObjectDestroy = new CFunction('Object_Destroy', [cobj])
 const cfuncObjectWatch = new CFunction('Object_Watch', [cobj, cfunc, cptr])
 const cfuncObjectNotify = new CFunction('Object_Notify', [cobj])
-const cfuncObjectOperate = new CFunction('Object_Operate', [cobj, cstrConst, cobj])
+const cfuncStringOperate = new CFunction('Object_Operate', [cstrObj, cstrConst, cobj], cstrObj.typeDeclaration)
+const cfuncNumberOperate = new CFunction('Object_Operate', [cnumObj, cstrConst, cobj], cnumObj.typeDeclaration)
+const cfuncObjectOperate = new CFunction('Object_Operate', [cobj, cstrConst, cobj], cobj.typeDeclaration)
 const cfuncWidgetBindEvent = new CFunction('Widget_BindEvent', [cwidget, cstrConst, cfunc, cptr, cptr])
 const cfuncWidgetSetAttribute = new CFunction('Widget_SetAttribute', [cwidget, cstrConst, cptr])
 const cfuncWidgetSetAttributeEx = new CFunction('Widget_SetAttributeEx', [cwidget, cstrConst, cptr, cnum, cptr])
@@ -73,7 +75,14 @@ function Object_Notify(obj) {
 }
 
 function Object_Operate(left, operatorStr, right) {
-  return new CCallExpression(cfuncObjectOperate, left, operatorStr, right)
+  let func = cfuncObjectOperate
+
+  if (types.isString(left)) {
+    func = cfuncStringOperate
+  } else if (types.isNumber(left)) {
+    func = cfuncNumberOperate
+  }
+  return new CCallExpression(func, left, operatorStr, right)
 }
 
 function Number_SetValue(left, right) {

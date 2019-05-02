@@ -62,7 +62,7 @@ class CLCUIObject extends CObject {
       typeDeclaration = declarations[type]
       assert(typeof type !== 'undefined')
     } else if (!type) {
-      typeDeclaration = 'LCUI_Object'
+      typeDeclaration = declarations['Object']
     }
     super(typeDeclaration, name, { isPointer })
   }
@@ -115,14 +115,16 @@ class CLCUIWidgetMethod extends CMethod {
 
 function isString(obj) {
   return (
-    obj.typeDeclaration === declarations.String
+    obj.type === 'String'
+    || obj.typeDeclaration === declarations.String
     || obj.typeDeclaration === declarations.StringRec
   )
 }
 
 function isNumber(obj) {
   return (
-    obj.typeDeclaration === declarations.Number
+    obj.type === 'Number'
+    || obj.typeDeclaration === declarations.Number
     || obj.typeDeclaration === declarations.NumberRec
   )
 }
@@ -131,11 +133,10 @@ function isObject(obj) {
   return obj.typeDeclaration instanceof CLCUIObjectRecType
 }
 
-const cobj = new Object(null, 'obj')
-const cfuncObjectDestroy = new CFunction('Object_Destroy', [cobj])
-const cfuncObjectDelete = new CFunction('Object_Delete', [cobj])
-
+const cfuncObjectDestroy = new CFunction('Object_Destroy')
+const cfuncObjectDelete = new CFunction('Object_Delete')
 const declarations = {
+  Object: new CLCUIObjectType(),
   WidgetPrototype: new CLCUIWidgetPrototype(),
   WidgetEvent: new CLCUIWidgetEvent(),
   Widget: new CLCUIWidget(),
@@ -144,6 +145,10 @@ const declarations = {
   Number: new CLCUINumber(),
   NumberRec: new CLCUINumberRec()
 }
+const cobj = new CLCUIObject(null, 'obj')
+
+cfuncObjectDestroy.funcArgs = [cobj]
+cfuncObjectDelete.funcArgs = [cobj]
 
 module.exports = {
   isObject,

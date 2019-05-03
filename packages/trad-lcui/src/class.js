@@ -5,13 +5,13 @@ const { toIdentifierName, toWidgetTypeName } = require('./lib')
 const { CClass, CFunction } = require('../../trad')
 
 function getMethodOrder(method) {
-  if (method === 'constructor') {
+  if (method.key.name === 'constructor') {
     return 0
   }
-  if (method === 'template') {
+  if (method.key.name === 'template') {
     return 2
   }
-  if (method === 'template') {
+  if (method.key.name === 'update') {
     return 3
   }
   return 1

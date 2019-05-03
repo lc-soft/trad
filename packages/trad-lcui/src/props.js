@@ -19,10 +19,9 @@ function addBindingFunction(that, cClass, target) {
 
   const arg = new CObject('void', 'arg', { isPointer: true })
   const tmp = new types.Object(null, target.name)
-  const func = new types.CLCUIWidgetMethod(name)
+  const func = new types.CLCUIWidgetMethod(name, [tmp, arg])
 
   // Reset function arguments for Object_Watch()
-  func.funcArgs = [tmp, arg]
   func.isStatic = true
   func.isexported = false
   cClass.addMethod(func)
@@ -74,7 +73,7 @@ const install = Compiler => class PropsBindingParser extends Compiler {
       const prop = props.selectProperty(key)
       const defaultProp = defaultProps.selectProperty(key)
 
-      constructor.block.append(functions.Object_Init(defaultProp))
+      constructor.block.append(defaultProp.init())
       destructor.block.append(functions.assign(prop, null))
       return { prop, defaultProp }
     }).forEach(({ prop, defaultProp }) => {
@@ -84,8 +83,7 @@ const install = Compiler => class PropsBindingParser extends Compiler {
     return true
   }
 
-  createProps(input, name, structName, isPointer = false) {
-    const suffix = isPointer ? '' : 'Rec'
+  createProps(input, name, structName, isAllocFromStack = true) {
     const that = this.block.getObject('_this')
     const cClass = this.findContextData(CClass)
     const left = this.parse(input.left.object)
@@ -96,10 +94,8 @@ const install = Compiler => class PropsBindingParser extends Compiler {
     propsStruct.keys().forEach((key) => {
       const member = propsStruct.getMember(key)
 
-      if (member.type === 'String') {
-        propsStruct.addMember(new types.Object(`String${suffix}`, key))
-      } else if (member.type === 'Number') {
-        propsStruct.addMember(new types.Object(`Number${suffix}`, key))
+      if (['String', 'Number'].indexOf(member.type) >= 0) {
+        propsStruct.addMember(new types.Object(member.type, key, { isAllocFromStack }))
       }
     })
     cClass.parent.append(propsType)
@@ -116,7 +112,7 @@ const install = Compiler => class PropsBindingParser extends Compiler {
 
     assert(typeof left === 'undefined', 'object-to-object assignment is not supported')
 
-    const props = this.createProps(input, 'props', 'PropsRec', true)
+    const props = this.createProps(input, 'props', 'PropsRec', false)
     this.createProps(input, 'default_props', 'DefaultPropsRec')
     return props
   }

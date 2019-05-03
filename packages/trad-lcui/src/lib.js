@@ -5,11 +5,11 @@ const widgetTypeDict = {
 }
 
 function toWidgetTypeName(name) {
-  return name.replace(/([A-Z])/g, '-$1').toLowerCase().substr(1)
+  return name.replace(/([A-Z])/g, '-$1').toLowerCase().replace(/^-/, '')
 }
 
 function toIdentifierName(name) {
-  return name.replace(/([A-Z])/g, '_$1').toLowerCase().substr(1)
+  return name.replace(/([A-Z])/g, '_$1').toLowerCase().replace(/^_/, '')
 }
 
 function getWidgetType(node, proto) {

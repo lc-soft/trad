@@ -17,7 +17,7 @@ class MemberExpressionParser extends Parser {
     const obj = this.compiler.parse(input.object)
 
     if (!obj) {
-      assert(obj, `${input.object.property.name} is undefined`)
+      assert(obj, `${input.property.name} is undefined`)
     }
     return obj.selectProperty(input.property.name)
   }

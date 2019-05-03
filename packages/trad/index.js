@@ -183,6 +183,9 @@ class CCallExpression extends CExpression {
   constructor(func, ...args) {
     super('call')
 
+    if (!func) {
+      debugger
+    }
     this.func = func
     this.funcArgs = args
   }
@@ -311,11 +314,19 @@ class CFunction extends CIdentifier {
   constructor(name, args = [], returnType = 'void') {
     super(name)
 
-    this.funcArgs = args
+    this.meta.funcArgs = args
     this.funcReturnType = returnType
     this.block = new CBlock()
     this.isPointer = true
     this.append(this.block)
+  }
+
+  get funcArgs() {
+    return this.meta.funcArgs
+  }
+
+  set funcArgs(args) {
+    this.meta.funcArgs = args
   }
 
   get funcName() {
@@ -371,8 +382,8 @@ class CFunction extends CIdentifier {
 }
 
 class CMethod extends CFunction {
-  constructor(name) {
-    super(name)
+  constructor(name, args = [], returnType = 'void') {
+    super(name, args, returnType)
 
     this.methodName = name
     // The value of isExported is inherited from its class
@@ -380,19 +391,20 @@ class CMethod extends CFunction {
     this.isStatic = false
   }
 
-  get funcName() {
-    return `${this.parent.className}_${capitalize(this.methodName)}`
+  get funcArgs() {
+    if (this.isStatic) {
+      return this.meta.funcArgs
+    }
+    // Insert the _this object as the first argument to this function
+    return [this.block.getObject('_this')].concat(this.meta.funcArgs)
   }
 
-  declareArgs(withArgName = true) {
-    if (this.isStatic) {
-      return super.declareArgs(withArgName)
-    }
+  set funcArgs(args) {
+    this.meta.funcArgs = args
+  }
 
-    const that = this.block.getObject('_this')
-
-    // Insert the _this object as the first argument to this function
-    return [withArgName ? that.define({ force: true }).replace(';', '') : that.type, super.declareArgs(withArgName)]
+  get funcName() {
+    return `${this.parent.methodPrefix}_${capitalize(this.methodName)}`
   }
 
   bind(cClass) {
@@ -583,6 +595,13 @@ class CObject extends CIdentifier {
     return this.typeDeclaration ? this.typeDeclaration.name : 'void'
   }
 
+  get finalTypeDeclaration() {
+    if (this.typeDeclaration instanceof CTypedef) {
+      return this.typeDeclaration.originType
+    }
+    return this.typeDeclaration
+  }
+
   get type() {
     return `${this.baseType}${this.isPointer ? '*' : ''}`
   }
@@ -619,13 +638,34 @@ class CObject extends CIdentifier {
     return `${this.baseType} ${this.isPointer ? '*' : ''}${this.name};`
   }
 
-  destroy() {
-    const type = this.typeDeclaration
+  callMethod(name, ...args) {
+    const type = this.finalTypeDeclaration
+    return type && type.init ? type.callMethod(name, ...args) : undefined
+  }
 
-    if (type && type.destructor) {
-      return new CCallExpression(type.destructor, this)
-    }
-    return undefined
+  init(...args) {
+    const type = this.finalTypeDeclaration
+    return type && type.init ? type.init(this, ...args) : undefined
+  }
+
+  duplicate() {
+    const type = this.finalTypeDeclaration
+    return type && type.duplicate ? type.duplicate(this) : undefined
+  }
+
+  operate(operator, right) {
+    const type = this.finalTypeDeclaration
+    return type && type.operate ? type.operate(this, operator, right) : undefined
+  }
+
+  destroy() {
+    const type = this.finalTypeDeclaration
+    return type && type.destroy ? type.destroy(this) : undefined
+  }
+
+  stringify() {
+    const type = this.finalTypeDeclaration
+    return type && type.stringify ? type.stringify(this) : undefined
   }
 
   addProperty(prop) {
@@ -639,14 +679,18 @@ class CObject extends CIdentifier {
   selectProperty(name) {
     assert(this.typeDeclaration.getMember, `${this.type} is not defined getMember() method`)
 
+    let prop = null
     const ref = this.typeDeclaration.getMember(name)
 
     if (!ref) {
       return undefined
     }
 
-    const prop = new CObject(ref instanceof CObject ? ref.typeDeclaration : ref, name)
-
+    if (ref instanceof CObject) {
+      prop = new ref.constructor(ref.typeDeclaration, name)
+    } else {
+      prop = new CObject(ref, name)
+    }
     if (this.typeDeclaration.isPointer) {
       prop.id = `${this.id}->${name}`
     } else {
@@ -662,7 +706,7 @@ class CClass extends CStruct {
     super(`${name}Rec_`)
 
     this.className = name
-    this.methodClass = CMethod
+    this.methodPrefix = name
     this.superClass = superClass
     this.typedefPointer = new CTypedef(this, name, true)
     this.typedef = new CTypedef(this, `${name}Rec`, false, false)
@@ -711,6 +755,10 @@ class CClass extends CStruct {
     return this.methods.filter(method => !method.isExported)
   }
 
+  callMethod(name, ...args) {
+    return new CCallExpression(this.getMethod(name), ...args)
+  }
+
   getMethod(name) {
     const member = this.getMember(name)
 
@@ -724,6 +772,11 @@ class CClass extends CStruct {
   addMethod(method) {
     assert(method instanceof CMethod, `${method.name} is not CMethod`)
 
+    const oldMethod = this.getMethod(method.name)
+
+    if (oldMethod) {
+      oldMethod.node.remove()
+    }
     method.bind(this.typedefPointer, '_this')
     this.append(method)
     return method

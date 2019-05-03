@@ -1,40 +1,43 @@
 const assert = require('assert')
 const types = require('./types')
-const { CObject, CCallExpression } = require('../../trad')
+const { toIdentifierName } = require('./lib')
 const functions = require('./functions')
+const { CTypedef, CCallExpression } = require('../../trad')
 
-const typeMeta = {
-  String: {
-    name: 'String',
-    shortName: 'str',
-    cType: 'char',
-    cPointer: true
-  },
-  Number: {
-    name: 'Number',
-    shortName: 'num',
-    cType: 'double',
-    cPointer: false
+function getTypeName(type) {
+  let decl = type
+
+  if (decl instanceof CTypedef) {
+    decl = decl.originType
   }
+  return decl.alias || decl.className || decl.name
+}
+
+function convertObject(obj) {
+    // Rebuild base type to CLCUIObject
+    if (['String', 'Number'].indexOf(obj.type) >= 0) {
+      const value = obj.value
+
+      obj = new types.Object(obj.type, obj.id)
+      obj.value = value
+    }
+    return obj
 }
 
 const install = Compiler => class LCUIBaseParser extends Compiler {
   createObject(baseName, initValue) {
-    const type = Object.keys(typeMeta).find(k => types[`is${k}`](initValue))
-
-    if (!type) {
+    if (!initValue.typeDeclaration) {
       assert(0, `unable to infer the type of ${initValue.type}`)
       return undefined
     }
 
-    let value = null
     let variable = null
-    const meta = typeMeta[type]
-    const name = this.block.allocObjectName(baseName ? baseName : `_${meta.shortName}`)
+    const typeName = getTypeName(initValue.typeDeclaration)
+    const name = this.block.allocObjectName(baseName ? baseName : `_${toIdentifierName(typeName)}`)
 
     do {
       if (initValue instanceof CCallExpression) {
-        variable = new types.Object(type, name)
+        variable = new types.Object(typeName, name)
         this.block.append([
           variable,
           functions.assign(variable, initValue)
@@ -42,26 +45,25 @@ const install = Compiler => class LCUIBaseParser extends Compiler {
         break
       }
       if (!initValue.id) {
-        variable = new types.Object(`${type}Rec`, name)
+        variable = new types.Object(typeName, name, { isAllocFromStack: true })
         this.block.append([
           variable,
-          functions[`${type}_Init`](variable, initValue.value)
+          variable.init(initValue.value)
         ])
         break
       }
       if (initValue.pointerLevel > 0) {
-        variable = new types.Object(type, name)
+        variable = new types.Object(typeName, name)
         this.block.append([
           variable,
-          functions.assign(variable, functions.Object_Duplicate(initValue))
+          functions.assign(variable, initValue.duplicate())
         ])
         break
       }
-      value = new CObject(meta.cType, `${initValue.id}.value.${type.toLocaleLowerCase()}`)
-      variable = new types.Object(`${type}Rec`, name)
+      variable = new types.Object(typeName, name, { isAllocFromStack: true })
       this.block.append([
         variable,
-        functions[`${type}_Init`](variable, value)
+        variable.operate('=', initValue)
       ])
     } while (0)
     variable.isDeletable = true
@@ -73,31 +75,56 @@ const install = Compiler => class LCUIBaseParser extends Compiler {
     let right = this.parse(input.right)
 
     if (!right.id) {
-      right = this.createObject(null, right)
+      right = this.createObject(null, convertObject(right))
     }
     if (types.isString(right) !== types.isString(left)) {
       if (types.isString(left)) {
-        right = this.createObject(`${right.name}_str`, functions.Object_ToString(right))
+        right = this.createObject(`${right.name}_str`, right.stringify())
         this.block.append(right)
       } else {
-        left = this.createObject(`${left.name}_str`, functions.Object_ToString(left))
+        left = this.createObject(`${left.name}_str`, left.stringify())
         this.block.append(left)
       }
     }
-    right = functions.Object_Operate(left, input.operator, right)
+    right = left.operate(input.operator, right)
     return this.createObject(null, right)
   }
 
   parseVariableDeclaration(inputs) {
     const variables = inputs.declarations.map((input) => {
       if (input.init) {
-        return this.createObject(input.id.name, this.parse(input.init))
+        const right = this.parse(input.init)
+
+        return this.createObject(input.id.name, convertObject(right))
       }
       // FIXME: Design a syntax for typed object declaration
       assert(0, `unable to infer the type of ${input.id.name}`)
       return null
     })
     return variables[variables.length - 1]
+  }
+
+  parseLiteral(input) {
+
+    if (typeof input.value === 'string') {
+      return this.block.createObject('String', null, { value: input.value, isHidden: true })
+    }
+    if (typeof input.value === 'number') {
+      return this.block.createObject('Number', null, { value: input.value, isHidden: true })
+    }
+  }
+
+  parseAssignmentExpression(input) {
+    const left = this.parse(input.left)
+
+    if (left && types.isObject(left)) {
+      let right = this.parse(input.right)
+
+      right = convertObject(right)
+      this.block.append(left.operate('=', right))
+      return left
+    }
+    return super.parse(input)
   }
 
   parse(input) {

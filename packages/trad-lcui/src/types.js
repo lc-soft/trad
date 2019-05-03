@@ -1,40 +1,149 @@
 const assert = require('assert')
 const { toIdentifierName } = require('./lib')
+const { cssStyleProperties } = require('./css')
 const {
   CType,
+  CClass,
   CObject,
   CFunction,
   CTypedef,
+  CAssignmentExpression,
+  CCallExpression,
   CMethod
 } = require('../../trad')
 
-class CLCUIObjectRecType extends CType {
+class CLCUIObjectType extends CClass {
   constructor() {
-    super('LCUI_ObjectRec')
+    super('LCUI_Object')
 
-    this.destructor = cfuncObjectDestroy
+    this.alias = 'Object'
+    this.methodPrefix = 'Object'
+  }
+
+  install() {
+    const obj = new CLCUIObject(null, 'obj')
+    const cstrConst = new CObject('const char', 'str', { isPointer: true })
+    const cstrObj = new CLCUIObject('String', 'str')
+    const cfunc = new CObject('void', 'func', { isPointer: true })
+    const cptr = new CObject('void', 'ptr', { isPointer: true })
+
+    this.addMethod(new CMethod('init'))
+    this.addMethod(new CMethod('destroy'))
+    this.addMethod(new CMethod('new', [], obj.typeDeclaration))
+    this.addMethod(new CMethod('delete'))
+    this.addMethod(new CMethod('operate', [cstrConst, obj], obj.typeDeclaration))
+    this.addMethod(new CMethod('duplicate', [], obj.typeDeclaration))
+    this.addMethod(new CMethod('toString', [], cstrObj.typeDeclaration))
+    this.addMethod(new CMethod('watch', [cfunc, cptr]))
+    this.addMethod(new CMethod('notify'))
+  }
+
+  init(obj) {
+    if (obj.pointerLevel > 0) {
+      return new CAssignmentExpression(obj, this.callMethod('new'))
+    }
+    return this.callMethod('init', obj)
+  }
+
+  destroy(obj) {
+    if (obj.pointerLevel > 0) {
+      return this.callMethod('delete', obj)
+    }
+    return this.callMethod('destroy', obj)
+  }
+
+  duplicate(obj) {
+    return this.callMethod('duplicate', obj)
+  }
+
+  operate(left, operator, right) {
+    return this.callMethod('operate', left, operator, right)
+  }
+
+  stringify(obj) {
+    return this.callMethod('toString', obj)
   }
 }
 
-class CLCUIObjectType extends CLCUIObjectRecType {
+class CLCUIString extends CLCUIObjectType {
   constructor() {
     super()
 
-    this.name = 'LCUI_Object'
-    this.isPointer = true
-    this.destructor = cfuncObjectDelete
+    this.alias = 'String'
+  }
+
+  install() {
+    const obj = new CLCUIObject('String', 'obj')
+    const cstrConst = new CObject('const char', 'str', { isPointer: true })
+
+    super.install()
+    this.addMember(new CFunction('String_New', [cstrConst], obj.typeDeclaration))
+    this.addMember(new CFunction('String_Init', [obj, cstrConst]))
+    this.addMember(new CFunction('String_SetValue', [obj, cstrConst]))
+    this.addMember(new CFunction('Object_Operate', [obj, cstrConst, obj], obj.typeDeclaration))
+  }
+
+  init(obj, value = null) {
+    if (obj.pointerLevel > 0) {
+      return new CAssignmentExpression(obj, new CCallExpression(this.getMember('String_New'), value))
+    }
+    return new CCallExpression(this.getMember('String_Init'), obj, value)
+  }
+
+  operate(left, operator, right) {
+    // if right object is literal
+    if (operator === '=' && !right.id) {
+      return new CCallExpression(this.getMember('String_SetValue'), left, right.value)
+    }
+    return new CCallExpression(this.getMember('Object_Operate'), left, operator, right)
   }
 }
 
-class CLCUIStringRec extends CLCUIObjectRecType {}
-class CLCUIString extends CLCUIObjectType {}
-class CLCUINumberRec extends CLCUIObjectRecType {}
-class CLCUINumber extends CLCUIObjectType {}
+class CLCUINumber extends CLCUIObjectType {
+  constructor() {
+    super()
 
-class CLCUIWidget extends CType {
+    this.alias = 'Number'
+  }
+
+  install() {
+    const obj = new CLCUIObject('Number', 'obj')
+    const cnum = new CObject('double', 'num')
+    const cstrConst = new CObject('const char', 'str', { isPointer: true })
+
+    super.install()
+    this.addMember(new CFunction('Number_New', [cnum], obj.typeDeclaration))
+    this.addMember(new CFunction('Number_Init', [obj, cnum]))
+    this.addMember(new CFunction('Number_SetValue', [obj, cnum]))
+    this.addMember(new CFunction('Object_Operate', [obj, cstrConst, obj], obj.typeDeclaration))
+  }
+
+  init(obj, value = 0) {
+    if (obj.pointerLevel > 0) {
+      return new CAssignmentExpression(obj, new CCallExpression(this.getMember('Number_New'), value))
+    }
+    return new CCallExpression(this.getMember('Number_Init'), obj, value)
+  }
+
+  operate(left, operator, right) {
+    // if right object is literal
+    if (operator === '=' && !right.id) {
+      return new CCallExpression(this.getMember('Number_SetValue'), left, right.value)
+    }
+    return new CCallExpression(this.getMember('Object_Operate'), left, operator, right)
+  }
+}
+
+class CLCUIWidget extends CClass {
   constructor() {
     super('LCUI_Widget')
+
     this.isPointer = true
+    this.alias = 'Widget'
+  }
+
+  install() {
+    this.addMember(new CLCUIObject('WidgetStyle', 'style'))
   }
 }
 
@@ -43,6 +152,7 @@ class CLCUIWidgetEvent extends CType {
     super('LCUI_WidgetEvent')
 
     this.isPointer = true
+    this.alias = 'WidgetEvent'
   }
 }
 
@@ -51,38 +161,80 @@ class CLCUIWidgetPrototype extends CType {
     super('LCUI_WidgetPrototype')
 
     this.isPointer = true
+    this.alias = 'WidgetPrototype'
+  }
+}
+
+class CLCUIWidgetStyleProperty extends CLCUIString {
+  constructor() {
+    super('LCUI_Style')
+    this.alias = 'WidgetStyleProperty'
+    this.funcSetStyle = null
+  }
+
+  install() {
+    const w = new CLCUIObject('Widget', 'w')
+    const cnum = new CObject('int', 'num')
+    const cstr = new CObject('const char', 'str', { isPointer: true })
+
+    this.funcSetStyle = new CFunction('Widget_SetStyleString', [w, cnum, cstr])
+  }
+
+  operate(obj, operator, right) {
+    const widget = obj.closest(isWidget)
+
+    if (operator === '=') {
+      const key = new CObject('Number', `key_${toIdentifierName(obj.name)}`)
+      return new CCallExpression(this.funcSetStyle, widget, key, right)
+    }
+    return super.operate(obj, operator, right)
+  }
+}
+
+class CLCUIWidgetStyle extends CClass {
+  constructor() {
+    super('LCUI_WidgetStyle')
+    this.alias = 'WidgetStyle'
+  }
+
+  install() {
+    cssStyleProperties.forEach(name => this.addMember(new CLCUIObject('WidgetStyleProperty', name)))
   }
 }
 
 class CLCUIObject extends CObject {
-  constructor(type, name, isPointer = false) {
-    let typeDeclaration = type
+  constructor(type, name, { isPointer = false, isAllocFromStack = false } = {}) {
+    let decl = type
 
     if (typeof type === 'string') {
-      typeDeclaration = declarations[type]
+      decl = declarations[type]
       assert(typeof type !== 'undefined')
     } else if (!type) {
-      typeDeclaration = declarations['Object']
+      decl = declarations['Object']
     }
-    super(typeDeclaration, name, { isPointer })
+    if (decl instanceof CClass) {
+      decl = isAllocFromStack ? decl.typedef : decl.typedefPointer
+    }
+    super(decl, name, { isPointer })
   }
 }
 
 class CLCUIWidgetMethod extends CMethod {
-  constructor(name) {
-    super(name)
+  constructor(name, args = [], returnType = 'void') {
+    super(name, args, returnType)
 
     this.widget = new CLCUIObject('Widget', 'w')
   }
 
-  declareArgs(withArgName = true) {
-    const args = CFunction.prototype.declareArgs.call(this, withArgName)
-
+  get funcArgs() {
     if (this.isStatic) {
-      return args
+      return this.meta.funcArgs
     }
-    const that = withArgName ? this.widget.define({ force: true }).replace(';', '') : this.widget.type
-    return [that].concat(args)
+    return [this.widget].concat(this.meta.funcArgs)
+  }
+
+  set funcArgs(args) {
+    this.meta.funcArgs = args
   }
 
   bind(cClass) {
@@ -114,46 +266,41 @@ class CLCUIWidgetMethod extends CMethod {
 }
 
 function isString(obj) {
-  return (
-    obj.type === 'String'
-    || obj.typeDeclaration === declarations.String
-    || obj.typeDeclaration === declarations.StringRec
-  )
+  return obj.finalTypeDeclaration === declarations.String
 }
 
 function isNumber(obj) {
-  return (
-    obj.type === 'Number'
-    || obj.typeDeclaration === declarations.Number
-    || obj.typeDeclaration === declarations.NumberRec
-  )
+  return obj.finalTypeDeclaration === declarations.Number
 }
 
 function isObject(obj) {
-  return obj.typeDeclaration instanceof CLCUIObjectRecType
+  return obj.finalTypeDeclaration instanceof CLCUIObjectType
 }
 
-const cfuncObjectDestroy = new CFunction('Object_Destroy')
-const cfuncObjectDelete = new CFunction('Object_Delete')
-const declarations = {
-  Object: new CLCUIObjectType(),
-  WidgetPrototype: new CLCUIWidgetPrototype(),
-  WidgetEvent: new CLCUIWidgetEvent(),
-  Widget: new CLCUIWidget(),
-  StringRec: new CLCUIStringRec(),
-  String: new CLCUIString(),
-  Number: new CLCUINumber(),
-  NumberRec: new CLCUINumberRec()
+function isWidget(obj) {
+  return obj.finalTypeDeclaration instanceof CLCUIWidget
 }
-const cobj = new CLCUIObject(null, 'obj')
 
-cfuncObjectDestroy.funcArgs = [cobj]
-cfuncObjectDelete.funcArgs = [cobj]
+const declarations = {}
+const types = [
+  new CLCUIObjectType(),
+  new CLCUIString(),
+  new CLCUINumber(),
+  new CLCUIWidgetStyle(),
+  new CLCUIWidgetStyleProperty(),
+  new CLCUIWidgetPrototype(),
+  new CLCUIWidgetEvent(),
+  new CLCUIWidget()
+]
+
+types.forEach(type => declarations[type.alias] = type)
+types.slice().reverse().forEach(type => type.install ? type.install() : 0)
 
 module.exports = {
   isObject,
   isString,
   isNumber,
+  isWidget,
   CLCUIWidgetMethod,
   Object: CLCUIObject
 }

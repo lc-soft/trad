@@ -50,11 +50,11 @@ const install = Compiler => class StateBindingParser extends Compiler {
       const prop = state.selectProperty(name)
       const func = addBindingFunction(that, cClass, prop)
 
-      constructor.block.append(functions.Object_Init(prop))
-      destructor.block.append(functions.Object_Destroy(prop))
+      constructor.block.append(prop.init())
+      destructor.block.append(prop.destroy())
       return { prop, func }
     }).forEach(({ prop, func }) => {
-      constructor.block.append(functions.Object_Watch(prop, func, that))
+      constructor.block.append(prop.callMethod('watch', func, that))
     })
     return true
   }
@@ -78,10 +78,8 @@ const install = Compiler => class StateBindingParser extends Compiler {
     stateStruct.keys().forEach((key) => {
       const member = stateStruct.getMember(key)
 
-      if (member.type === 'String') {
-        stateStruct.addMember(new types.Object('StringRec', member.name))
-      } else if (member.type === 'Number') {
-        stateStruct.addMember(new types.Object('NumberRec', member.name))
+      if (['String', 'Number'].indexOf(member.type) >= 0) {
+        stateStruct.addMember(new types.Object(member.type, key))
       }
     })
     cClass.parent.append(stateType)

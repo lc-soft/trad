@@ -161,13 +161,16 @@ class Compiler {
     let indent = 0
 
     return this.flat(inputs).map((input) => {
-      if (input === '}' && indent > 0) {
+      if (input.substr(0, 1) === '}' && indent > 0) {
         indent -= 1
       }
 
-      const output = ' '.repeat(indent * this.tabSize) + input
+      let output = ' '.repeat(indent * this.tabSize) + input
 
-      if (input === '{') {
+      if (!input) {
+        output = ''
+      }
+      if (input.substr(input.length - 1) === '{') {
         indent += 1
       }
       return output

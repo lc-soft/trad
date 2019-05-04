@@ -496,11 +496,10 @@ class CStruct extends CType {
       }
     })
     return [
-      `${this.name}`,
-      '{',
+      `${this.name} {`,
       outputs,
-      '}',
-      ';'
+      '};',
+      ''
     ]
   }
 
@@ -829,6 +828,20 @@ function mapExports(list) {
   return list.map(item => (item instanceof CStatment ? item.export() : item)).filter(item => !!item)
 }
 
+function formatBlocks(blocks) {
+  const outputs = []
+
+  blocks.forEach((block, i) => {
+    if (block instanceof Array && block.some(b => !!b)) {
+      outputs.push(block)
+      outputs.push('')
+      return
+    }
+  })
+  outputs.pop()
+  return outputs
+}
+
 class CBlock extends CDeclaration {
   constructor() {
     super('block')
@@ -907,11 +920,11 @@ class CBlock extends CDeclaration {
     if (this.parent) {
       return [
         '{',
-        declaration,
+        formatBlocks(declaration),
         '}'
       ]
     }
-    return declaration
+    return formatBlocks(declaration)
   }
 
   getObjectCount() {
@@ -1076,10 +1089,10 @@ class CProgram extends CBlock {
   }
 
   define() {
-    return [
+    return formatBlocks([
       mapDefinitions(this.includes),
       super.define()
-    ]
+    ])
   }
 }
 

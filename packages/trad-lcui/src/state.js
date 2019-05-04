@@ -12,11 +12,12 @@ function getBindingFunctionName(target) {
   return `onState${capitalize(target.name)}Changed`
 }
 
-function addBindingFunction(that, cClass, target) {
+function addBindingFunction(cClass, target) {
   const name = getBindingFunctionName(target)
 
   assert(!cClass.getMethod(name), `"${name}" has already been defined`)
 
+  const that = new types.Object(cClass.typedefPointer, '_this')
   const arg = new CObject('void', 'arg', { isPointer: true })
   const tmp = new types.Object(null, target.name)
   const func = new types.WidgetMethod(name, [tmp, arg])
@@ -26,8 +27,8 @@ function addBindingFunction(that, cClass, target) {
   func.isExported = false
   cClass.addMethod(func)
   func.block.append([
-    that.define(),
-    func.widget.define(),
+    that,
+    func.widget,
     functions.assign(func.widget, arg),
     functions.assign(that, functions.Widget_GetData(func.widget)),
     functions.update(that.selectProperty('state_changes')),
@@ -53,7 +54,7 @@ const install = Compiler => class StateBindingParser extends Compiler {
     constructor.block.append(functions.assign(that.selectProperty('state_changes'), 1))
     state.typeDeclaration.keys().map((name) => {
       const prop = state.selectProperty(name)
-      const func = addBindingFunction(that, cClass, prop)
+      const func = addBindingFunction(cClass, prop)
 
       constructor.block.append(prop.init())
       destructor.block.append(prop.destroy())

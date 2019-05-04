@@ -13,11 +13,12 @@ function getBindingFunctionName(target) {
   return `onProp${capitalize(target.name)}Changed`
 }
 
-function addBindingFunction(that, cClass, target) {
+function addBindingFunction(cClass, target) {
   const name = getBindingFunctionName(target)
 
   assert(!cClass.getMethod(name), `"${name}" has already been defined`)
 
+  const that = new types.Object(cClass.typedefPointer, '_this')
   const arg = new CObject('void', 'arg', { isPointer: true })
   const tmp = new types.Object(null, target.name)
   const func = new types.WidgetMethod(name, [tmp, arg])
@@ -27,8 +28,8 @@ function addBindingFunction(that, cClass, target) {
   func.isExported = false
   cClass.addMethod(func)
   func.block.append([
-    that.define(),
-    func.widget.define(),
+    that,
+    func.widget,
     functions.assign(func.widget, arg),
     functions.assign(that, functions.Widget_GetData(func.widget)),
     functions.update(that.selectProperty('props_changes')),
@@ -47,7 +48,7 @@ function createWidgetAtrributeSetter(cClass, props) {
   ]
   props.typeDeclaration.keys().forEach((name, i) => {
     const prop = props.selectProperty(name)
-    const watcher = addBindingFunction(that, cClass, prop)
+    const watcher = addBindingFunction(cClass, prop)
 
     func.block.append([
       `${i > 0 ? 'else ' : ''}if (strcmp(name, "${name}") == 0)`,

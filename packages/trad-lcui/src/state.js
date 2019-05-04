@@ -4,7 +4,6 @@ const functions = require('./functions')
 const { capitalize } = require('../../trad-utils')
 const {
   CClass,
-  CFunction,
   CObject,
   CTypedef
 } = require('../../trad')
@@ -20,16 +19,19 @@ function addBindingFunction(that, cClass, target) {
 
   const arg = new CObject('void', 'arg', { isPointer: true })
   const tmp = new types.Object(null, target.name)
-  const func = cClass.addMethod(new types.CLCUIWidgetMethod(name))
+  const func = new types.CLCUIWidgetMethod(name, [tmp, arg])
 
   // Reset function arguments for Object_Watch()
-  func.funcArgs = [tmp, arg]
   func.isStatic = true
-  func.isexported = false
+  func.isExported = false
+  cClass.addMethod(func)
   func.block.append([
     that.define(),
-    '',
-    functions.assign(that, arg)
+    func.widget.define(),
+    functions.assign(func.widget, arg),
+    functions.assign(that, functions.Widget_GetData(func.widget)),
+    functions.update(that.selectProperty('state_changes')),
+    functions.Widget_AddTask(func.widget, 'user')
   ])
   return func
 }
@@ -46,6 +48,9 @@ const install = Compiler => class StateBindingParser extends Compiler {
       return false
     }
     assert(state instanceof CObject, 'state must be a object')
+    // add a counter to check if the widget should be updated
+    cClass.addMember(new CObject('unsigned', 'state_changes'))
+    constructor.block.append(functions.assign(that.selectProperty('state_changes'), 1))
     state.typeDeclaration.keys().map((name) => {
       const prop = state.selectProperty(name)
       const func = addBindingFunction(that, cClass, prop)
@@ -54,7 +59,7 @@ const install = Compiler => class StateBindingParser extends Compiler {
       destructor.block.append(prop.destroy())
       return { prop, func }
     }).forEach(({ prop, func }) => {
-      constructor.block.append(prop.callMethod('watch', func, that))
+      constructor.block.append(prop.callMethod('watch', func, constructor.widget))
     })
     return true
   }

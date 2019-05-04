@@ -27,6 +27,7 @@ class CLCUIObjectType extends CClass {
     const cfunc = new CObject('void', 'func', { isPointer: true })
     const cptr = new CObject('void', 'ptr', { isPointer: true })
 
+    this.addMember(new CObject('int', 'value'))
     this.addMethod(new CMethod('init'))
     this.addMethod(new CMethod('destroy'))
     this.addMethod(new CMethod('new', [], obj.typeDeclaration))
@@ -138,7 +139,6 @@ class CLCUIWidget extends CClass {
   constructor() {
     super('LCUI_Widget')
 
-    this.isPointer = true
     this.alias = 'Widget'
   }
 
@@ -184,8 +184,10 @@ class CLCUIWidgetStyleProperty extends CLCUIString {
     const widget = obj.closest(isWidget)
 
     if (operator === '=') {
+      const value = right.selectProperty('value')
       const key = new CObject('Number', `key_${toIdentifierName(obj.name)}`)
-      return new CCallExpression(this.funcSetStyle, widget, key, right)
+      const cstr = new CObject('const char', `${value.id}.string`, { isPointer: true })
+      return new CCallExpression(this.funcSetStyle, widget, key, cstr)
     }
     return super.operate(obj, operator, right)
   }
@@ -216,6 +218,9 @@ class CLCUIObject extends CObject {
       decl = isAllocFromStack ? decl.typedef : decl.typedefPointer
     }
     super(decl, name, { isPointer })
+
+    // class name in C
+    this.cClassName = 'Object'
   }
 }
 
@@ -239,27 +244,32 @@ class CLCUIWidgetMethod extends CMethod {
 
   bind(cClass) {
     let that = this.block.getObject('_this')
-    let type = cClass.name
+    let ctype = cClass.name
 
     if (that) {
       that.node.remove()
     }
+    this.widget.cClassName = cClass.className
     if (this.isStatic) {
       return null
     }
     if (cClass instanceof CTypedef) {
-      type = cClass.originType.name
+      ctype = cClass.originType.name
       that = this.block.createObject(cClass, '_this')
     } else {
       that = this.block.createObject(cClass.typedefPointer, '_this')
     }
 
     const moduleClass = `${toIdentifierName(cClass.className)}_class`
+    const proto = new CObject('void', `${moduleClass}.proto`, { isPointer: true })
+    const size = new CObject('size_t', `sizeof(${ctype})`)
+    const funcAddData = new CFunction('Widget_AddData', [this.widget, proto, size], that)
+    const funcGetData = new CFunction('Widget_GetData', [this.widget, proto], that)
 
     if (this.methodName === 'constructor') {
-      this.block.append(`${that.id} = Widget_AddData(${this.widget.id}, ${moduleClass}.proto, sizeof(${type}));`)
+      this.block.append(new CAssignmentExpression(that, new CCallExpression(funcAddData, this.widget, proto, size)))
     } else {
-      this.block.append(`${that.id} = Widget_GetData(${this.widget.id},  ${moduleClass}.proto);`)
+      this.block.append(new CAssignmentExpression(that, new CCallExpression(funcGetData, this.widget, proto)))
     }
     return that
   }

@@ -36,6 +36,10 @@ class CNode {
     this.children.push(node)
   }
 
+  insertChild(index, node) {
+    this.children.splice(index, 0, node)
+  }
+
   removeChild(node) {
     return this.children.some((child, i) => {
       if (child === node) {
@@ -125,16 +129,30 @@ class CDeclaration extends CStatment {
   }
 
   forEach(callback) {
-    this.node.children.forEach(child => (child instanceof CNode ? callback(child.data) : 0))
+    this.node.children.forEach((child, i) => (child instanceof CNode ? callback(child.data, i) : 0))
+  }
+
+  some(callback) {
+    return this.node.children.some((child, i) => (child instanceof CNode && callback(child.data, i)))
   }
 
   map(callback) {
-    return this.node.children.map(child => (child instanceof CNode ? callback(child.data) : 0))
+    return this.node.children.map((child, i) => (child instanceof CNode ? callback(child.data, i) : 0))
   }
 
   find(callback) {
-    const node = this.node.children.find(child => child instanceof CNode && callback(child.data))
+    const node = this.node.children.find((child, i) => child instanceof CNode && callback(child.data, i))
     return node ? node.data : undefined
+  }
+
+  insert(index, stat) {
+    if (stat instanceof Array) {
+      stat.forEach((s, i) => {
+        this.node.insertChild(index + i, s instanceof CStatment ? s.node : s)
+      })
+      return
+    }
+    this.node.insertChild(index, stat instanceof CStatment ? stat.node : stat)
   }
 
   append(stat) {
@@ -225,12 +243,32 @@ class CCallExpression extends CExpression {
   }
 }
 
+class CUpdateExpression extends CExpression {
+  constructor(argument, operator = '++', prefix = true) {
+    assert(argument instanceof CObject, 'invalid left-hand side expression in postfix operation')
+
+    super('update')
+
+    this.argument = argument
+    this.operator = operator
+    this.prefix = prefix
+  }
+
+  define() {
+    if (this.prefix) {
+      return `${this.operator}${this.argument.id};`
+    }
+    return `${this.argument.id}${this.operator};`
+  }
+}
+
 class CAssignmentExpression extends CExpression {
-  constructor(left, right) {
+  constructor(left, right, operator = '=') {
     super('assignment')
 
     this.left = left
     this.right = right
+    this.operator = operator
   }
 
   define() {
@@ -238,7 +276,7 @@ class CAssignmentExpression extends CExpression {
     let { right } = this
 
     if (typeof value !== 'undefined') {
-      return `${this.left.id} = ${value};`
+      return `${this.left.id} ${this.operator} ${value};`
     }
     if (right instanceof CCallExpression) {
       const definition = right.define()
@@ -246,12 +284,12 @@ class CAssignmentExpression extends CExpression {
       right = new CObject(right.func.funcReturnType, definition.substr(0, definition.length - 1))
     }
     if (this.left.pointerLevel === right.pointerLevel) {
-      return `${this.left.id} = ${right.id};`
+      return `${this.left.id} ${this.operator} ${right.id};`
     }
     if (this.left.pointerLevel < right.pointerLevel) {
-      return `${this.left.id} = *${right.id};`
+      return `${this.left.id} ${this.operator} *${right.id};`
     }
-    return `${this.left.id} = &${right.id};`
+    return `${this.left.id} ${this.operator} &${right.id};`
   }
 }
 
@@ -640,7 +678,7 @@ class CObject extends CIdentifier {
 
   callMethod(name, ...args) {
     const type = this.finalTypeDeclaration
-    return type && type.init ? type.callMethod(name, ...args) : undefined
+    return type && type.init ? type.callMethod(name, this, ...args) : undefined
   }
 
   init(...args) {
@@ -1059,5 +1097,6 @@ module.exports = {
   CFunction,
   CMethod,
   CCallExpression,
+  CUpdateExpression,
   CAssignmentExpression
 }

@@ -5,7 +5,8 @@ const { capitalize } = require('../../trad-utils')
 const {
   CClass,
   CObject,
-  CTypedef
+  CTypedef,
+  CCallExpression
 } = require('../../trad')
 
 function getBindingFunctionName(target) {
@@ -23,12 +24,15 @@ function addBindingFunction(that, cClass, target) {
 
   // Reset function arguments for Object_Watch()
   func.isStatic = true
-  func.isexported = false
+  func.isExported = false
   cClass.addMethod(func)
   func.block.append([
     that.define(),
-    '',
-    functions.assign(that, arg)
+    func.widget.define(),
+    functions.assign(func.widget, arg),
+    functions.assign(that, functions.Widget_GetData(func.widget)),
+    functions.update(that.selectProperty('props_changes')),
+    functions.Widget_AddTask(func.widget, 'user')
   ])
   return func
 }
@@ -49,8 +53,8 @@ function createWidgetAtrributeSetter(cClass, props) {
       `${i > 0 ? 'else ' : ''}if (strcmp(name, "${name}") == 0)`,
       '{',
       `${prop.id} = value;`,
-      `Object_Watch(value, ${watcher.funcName}, ${that.id});`,
-      `${watcher.funcName}(value, ${that.id});`,
+      `Object_Watch(value, ${watcher.funcName}, ${func.widget.id});`,
+      `${watcher.funcName}(value, ${func.widget.id});`,
       '}'
     ])
   })
@@ -69,6 +73,9 @@ const install = Compiler => class PropsBindingParser extends Compiler {
       return false
     }
     assert(props instanceof CObject, 'props must be a object')
+    // add a counter to check if the widget should be updated
+    cClass.addMember(new CObject('unsigned', 'props_changes'))
+    constructor.block.append(functions.assign(that.selectProperty('props_changes'), 1))
     props.typeDeclaration.keys().map((key) => {
       const prop = props.selectProperty(key)
       const defaultProp = defaultProps.selectProperty(key)

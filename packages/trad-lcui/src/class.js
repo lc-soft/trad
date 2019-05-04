@@ -2,7 +2,12 @@ const assert = require('assert')
 const types = require('./types')
 const functions = require('./functions')
 const { toIdentifierName, toWidgetTypeName } = require('./lib')
-const { CClass, CFunction } = require('../../trad')
+const {
+  CAssignmentExpression,
+  CObject,
+  CClass,
+  CFunction
+} = require('../../trad')
 
 function getMethodOrder(method) {
   if (method.key.name === 'constructor') {
@@ -59,11 +64,60 @@ function beforeParsingWidgetClass(cClass) {
   cClass.parent.createObject(protoClass.typedef, `${toIdentifierName(cClass.className)}_class`)
 }
 
+function initWidgetUpdateMethod(cClass) {
+  let conditions = []
+  let insertIndex = -1
+  let funcUpdate = cClass.getMethod('update')
+  const that = new CObject(cClass.typedefPointer, '_this')
+  const stateChanges = that.selectProperty('state_changes')
+  const propsChanges = that.selectProperty('props_changes')
+
+  if (stateChanges) {
+    conditions.push(`${stateChanges.id} < 1`)
+  }
+  if (propsChanges) {
+    conditions.push(`${propsChanges.id} < 1`)
+  }
+  if (conditions.length < 1) {
+    return null
+  }
+
+  if (!funcUpdate) {
+    funcUpdate = cClass.addMethod(new types.CLCUIWidgetMethod('update'))
+  }
+  // Find the first assignment expression of _this
+  funcUpdate.block.some((stat, i) => {
+    if (stat instanceof CAssignmentExpression && stat.left.id === '_this') {
+      insertIndex = i + 1
+      return true
+    }
+    return false
+  })
+
+  assert(insertIndex > 0)
+
+  const lines = [
+    `if (${conditions.join(' && ')})`,
+    '{',
+    'return;',
+    '}'
+  ]
+  if (stateChanges) {
+    lines.push(functions.assign(stateChanges, 0))
+  }
+  if (propsChanges) {
+    lines.push(functions.assign(propsChanges, 0))
+  }
+  funcUpdate.block.insert(insertIndex, lines)
+  return funcUpdate
+}
+
 function afterParsingWidgetClass(cClass) {
   const className = toWidgetTypeName(cClass.className)
   let superClassName = cClass.superClass ? toWidgetTypeName(cClass.superClass.className) : null
   const proto = `${toIdentifierName(cClass.className)}_class`
   const func = new WidgetRegisterFunction(cClass)
+  const funcUpdate = initWidgetUpdateMethod(cClass)
   const constructor = cClass.getMethod('constructor')
   const destructor = cClass.getMethod('destructor')
 
@@ -75,6 +129,10 @@ function afterParsingWidgetClass(cClass) {
     `${proto}.proto->init = ${constructor.funcName};`,
     `${proto}.proto->destroy = ${destructor.funcName};`
   ])
+  if (funcUpdate) {
+    func.block.append(`${proto}.proto->runtask = ${funcUpdate.funcName};`)
+  }
+  constructor.block.append(functions.call(funcUpdate, constructor.widget))
   cClass.parent.append(func)
 }
 

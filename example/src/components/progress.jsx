@@ -13,6 +13,8 @@ class Progress extends LCUI.Widget {
   update() {
     const percentage = this.props.value * 100 / this.props.total
 
+    percentage += 1
+    ++percentage
     this.refs.bar.style.width = percentage + '%'
   }
 

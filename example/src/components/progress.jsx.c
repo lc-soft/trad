@@ -9,6 +9,7 @@ typedef struct ProgressClassRec_ ProgressClassRec;
 typedef struct ProgressClassRec_* ProgressClass;
 typedef struct ProgressPropsRec_ ProgressPropsRec;
 typedef struct ProgressDefaultPropsRec_ ProgressDefaultPropsRec;
+typedef struct ProgressStateRec_ ProgressStateRec;
 typedef struct ProgressRefsRec_ ProgressRefsRec;
 typedef struct ProgressRec_ ProgressRec;
 struct ProgressClassRec_
@@ -28,6 +29,11 @@ struct ProgressDefaultPropsRec_
         LCUI_ObjectRec value;
 }
 ;
+struct ProgressStateRec_
+{
+        LCUI_Object text;
+}
+;
 struct ProgressRefsRec_
 {
         LCUI_Widget bar;
@@ -37,6 +43,9 @@ struct ProgressRec_
 {
         ProgressPropsRec props;
         ProgressDefaultPropsRec default_props;
+        ProgressStateRec state;
+        unsigned state_changes;
+        unsigned props_changes;
         ProgressRefsRec refs;
 }
 ;
@@ -46,7 +55,8 @@ ProgressClassRec progress_class;
 static void Progress_Destructor(LCUI_Widget w)
 {
         Progress _this;
-        _this = Widget_GetData(w,  progress_class.proto);
+        _this = Widget_GetData(w, progress_class.proto);
+        Object_Delete(_this->state.text);
         _this->props.total = NULL;
         _this->props.value = NULL;
 }
@@ -56,47 +66,70 @@ static void Progress_Constructor(LCUI_Widget w)
         Progress _this;
         _this = Widget_AddData(w, progress_class.proto, sizeof(struct ProgressRec_));
         /* CallExpression ignored */
+        _this->state_changes = 1;
+        _this->state.text = String_New(NULL);
+        Object_Watch(_this->state.text, Progress_OnStateTextChanged, w);
+        _this->props_changes = 1;
         Number_Init(&_this->default_props.total, 0);
         Number_Init(&_this->default_props.value, 0);
         _this->props.total = &_this->default_props.total;
         _this->props.value = &_this->default_props.value;
+        Progress_Update(w);
+}
+
+void Progress_OnStateTextChanged(LCUI_Object text, void *arg)
+{
+        Progress _this;
+        LCUI_Widget w;
+        w = arg;
+        _this = Widget_GetData(w, progress_class.proto);
+        ++_this->state_changes;
+        Widget_AddTask(w, LCUI_WTASK_USER);
 }
 
 void Progress_BindProperty(LCUI_Widget w, const char *name, LCUI_Object value)
 {
         Progress _this;
-        _this = Widget_GetData(w,  progress_class.proto);
+        _this = Widget_GetData(w, progress_class.proto);
         if (strcmp(name, "total") == 0)
         {
                 _this->props.total = value;
-                Object_Watch(value, Progress_OnPropTotalChanged, _this);
-                Progress_OnPropTotalChanged(value, _this);
+                Object_Watch(value, Progress_OnPropTotalChanged, w);
+                Progress_OnPropTotalChanged(value, w);
         }
         else if (strcmp(name, "value") == 0)
         {
                 _this->props.value = value;
-                Object_Watch(value, Progress_OnPropValueChanged, _this);
-                Progress_OnPropValueChanged(value, _this);
+                Object_Watch(value, Progress_OnPropValueChanged, w);
+                Progress_OnPropValueChanged(value, w);
         }
 }
 
 void Progress_OnPropTotalChanged(LCUI_Object total, void *arg)
 {
         Progress _this;
-        _this = arg;
+        LCUI_Widget w;
+        w = arg;
+        _this = Widget_GetData(w, progress_class.proto);
+        ++_this->props_changes;
+        Widget_AddTask(w, LCUI_WTASK_USER);
 }
 
 void Progress_OnPropValueChanged(LCUI_Object value, void *arg)
 {
         Progress _this;
-        _this = arg;
+        LCUI_Widget w;
+        w = arg;
+        _this = Widget_GetData(w, progress_class.proto);
+        ++_this->props_changes;
+        Widget_AddTask(w, LCUI_WTASK_USER);
 }
 
 LCUI_Widget Progress_Template(LCUI_Widget w)
 {
         Progress _this;
         LCUI_Widget widget;
-        _this = Widget_GetData(w,  progress_class.proto);
+        _this = Widget_GetData(w, progress_class.proto);
         widget = LCUIWidget_New(NULL);
         Widget_SetAttribute(widget, "class", "progress");
         /* JSXText ignored */
@@ -117,15 +150,23 @@ void Progress_Update(LCUI_Widget w)
         LCUI_ObjectRec _string;
         LCUI_Object percentage_str;
         LCUI_Object _string_1;
-        _this = Widget_GetData(w,  progress_class.proto);
+        _this = Widget_GetData(w, progress_class.proto);
+        if (_this->state_changes < 1 && _this->props_changes < 1)
+        {
+                return;
+        }
+        _this->state_changes = 0;
+        _this->props_changes = 0;
         Number_Init(&_number, 100);
         _number_1 = Object_Operate(_this->props.value, "*", &_number);
         _number_2 = Object_Operate(_number_1, "/", _this->props.total);
         percentage = Object_Duplicate(_number_2);
+        Number_SetValue(percentage, 1);
+        /* UpdateExpression ignored */
         String_Init(&_string, "%");
         percentage_str = Object_ToString(percentage);
         _string_1 = Object_Operate(percentage_str, "+", &_string);
-        Widget_SetStyleString(_this->refs.bar, key_width, _string_1);
+        Widget_SetStyleString(_this->refs.bar, key_width, _string_1->value.string);
         Object_Destroy(&_number);
         Object_Delete(_number_1);
         Object_Delete(_number_2);
@@ -140,4 +181,5 @@ void LCUIWidget_AddProgress()
         progress_class.proto = LCUIWidget_NewPrototype("progress", NULL);
         progress_class.proto->init = Progress_Constructor;
         progress_class.proto->destroy = Progress_Destructor;
+        progress_class.proto->runtask = Progress_Update;
 }

@@ -49,7 +49,7 @@ function beforeParsingWidgetClass(cClass) {
     const oldMethod = cClass.getMethod(name)
 
     if (oldMethod) {
-      const method = new types.CLCUIWidgetMethod(name)
+      const method = new types.WidgetMethod(name)
 
       method.block = oldMethod.block
       oldMethod.node.remove()
@@ -83,7 +83,7 @@ function initWidgetUpdateMethod(cClass) {
   }
 
   if (!funcUpdate) {
-    funcUpdate = cClass.addMethod(new types.CLCUIWidgetMethod('update'))
+    funcUpdate = cClass.addMethod(new types.WidgetMethod('update'))
   }
   // Find the first assignment expression of _this
   funcUpdate.block.some((stat, i) => {
@@ -132,7 +132,10 @@ function afterParsingWidgetClass(cClass) {
   if (funcUpdate) {
     func.block.append(`${proto}.proto->runtask = ${funcUpdate.funcName};`)
   }
-  constructor.block.append(functions.call(funcUpdate, constructor.widget))
+  constructor.block.append([
+    functions.call(cClass.getMethod('template'), constructor.widget),
+    functions.call(funcUpdate, constructor.widget)
+  ])
   cClass.parent.append(func)
 }
 
@@ -144,7 +147,7 @@ const install = Compiler => class ClassParser extends Compiler {
       return super.parse(input)
     }
 
-    const method = new types.CLCUIWidgetMethod(input.key.name)
+    const method = new types.WidgetMethod(input.key.name)
 
     cClass.addMethod(method)
     this.context.data = method
@@ -160,11 +163,11 @@ const install = Compiler => class ClassParser extends Compiler {
       return parser.parse(input)
     }
     this.block.append(cClass)
-    if (cClass.superClass.name === 'Widget') {
+    if (types.getSuperClass(cClass, 'Widget')) {
       beforeParsingWidgetClass(cClass)
     }
     this.parseChildren(input.body.body.slice().sort((a, b) => getMethodOrder(a) - getMethodOrder(b)))
-    if (cClass.superClass.name === 'Widget') {
+    if (types.getSuperClass(cClass, 'Widget')) {
       afterParsingWidgetClass(cClass)
     }
     // Move Class definition to current position

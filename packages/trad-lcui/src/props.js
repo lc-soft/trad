@@ -20,7 +20,7 @@ function addBindingFunction(that, cClass, target) {
 
   const arg = new CObject('void', 'arg', { isPointer: true })
   const tmp = new types.Object(null, target.name)
-  const func = new types.CLCUIWidgetMethod(name, [tmp, arg])
+  const func = new types.WidgetMethod(name, [tmp, arg])
 
   // Reset function arguments for Object_Watch()
   func.isStatic = true
@@ -38,7 +38,7 @@ function addBindingFunction(that, cClass, target) {
 }
 
 function createWidgetAtrributeSetter(cClass, props) {
-  const func = cClass.addMethod(new types.CLCUIWidgetMethod('bindProperty'))
+  const func = cClass.addMethod(new types.WidgetMethod('bindProperty'))
   const that = func.block.getObject('_this')
 
   func.funcArgs = [

@@ -291,6 +291,15 @@ function isWidget(obj) {
   return obj.finalTypeDeclaration instanceof CLCUIWidget
 }
 
+function getSuperClass(cClass, superClassName) {
+  for (let superClass = cClass.superClass; superClass; superClass = cClass.superClass) {
+    if (superClass.className === superClassName) {
+      return superClass
+    }
+  }
+  return undefined
+}
+
 const declarations = {}
 const types = [
   new CLCUIObjectType(),
@@ -311,6 +320,7 @@ module.exports = {
   isString,
   isNumber,
   isWidget,
-  CLCUIWidgetMethod,
+  getSuperClass,
+  WidgetMethod: CLCUIWidgetMethod,
   Object: CLCUIObject
 }

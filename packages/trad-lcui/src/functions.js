@@ -22,6 +22,7 @@ const cfuncWidgetAddTask = new CFunction('Widget_AddTask', [cwidget, cnum])
 const cfuncWidgetBindEvent = new CFunction('Widget_BindEvent', [cwidget, cstrConst, cfunc, cptr, cptr])
 const cfuncWidgetSetAttribute = new CFunction('Widget_SetAttribute', [cwidget, cstrConst, cptr])
 const cfuncWidgetSetAttributeEx = new CFunction('Widget_SetAttributeEx', [cwidget, cstrConst, cptr, cnum, cptr])
+const cfuncLCUIWidgetNew = new CFunction('LCUIWidget_New', [cstrConst])
 const cfuncLCUIWidgetNewPrototype = new CFunction('LCUIWidget_NewPrototype', [cstrConst, cstrConst])
 
 function call(func, ...args) {
@@ -59,6 +60,9 @@ module.exports = {
   },
   Widget_SetAttributeEx(widget, name, value) {
     return call(cfuncWidgetSetAttributeEx, widget, name, value, 0, null)
+  },
+  LCUIWidget_New(type = null) {
+    return call(cfuncLCUIWidgetNew, type === 'widget' ? null : type)
   },
   LCUIWidget_NewPrototype(className, superClassName) {
     return call(cfuncLCUIWidgetNewPrototype, className, superClassName)

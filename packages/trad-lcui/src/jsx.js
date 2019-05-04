@@ -50,6 +50,12 @@ function allocWidgetObjectName(scope, node, proto, prefix = '') {
 }
 
 const install = Compiler => class JSXParser extends Compiler {
+  constructor(...args) {
+    super(...args)
+
+    this.jsxElementDepth = 0
+  }
+
   parseJSXElementRef(ctx) {
     let refName = null
     let refs = ctx.that.selectProperty('refs')
@@ -115,17 +121,19 @@ const install = Compiler => class JSXParser extends Compiler {
 
     assert(ctx.cClass, 'JSX code must be in class method function')
 
+    this.jsxElementDepth += 1
     this.parseJSXElementRef(ctx)
-    if (!ctx.widget) {
-      const name = allocWidgetObjectName(this.block, ctx.node, ctx.proto)
-
-      ctx.widget = new types.Object('Widget', name)
-      this.block.append(ctx.widget)
-    }
-    if (ctx.type === 'widget') {
-      this.block.append(`${ctx.widget.id} = LCUIWidget_New(NULL);`)
+    // In the widget class method, the root widget is itself
+    if (this.jsxElementDepth == 1 && types.getSuperClass(ctx.cClass, 'Widget')) {
+      ctx.widget = this.findContextData(types.WidgetMethod).widget
     } else {
-      this.block.append(`${ctx.widget.id} = LCUIWidget_New("${ctx.type}");`)
+      if (!ctx.widget) {
+        const name = allocWidgetObjectName(this.block, ctx.node, ctx.proto)
+
+        ctx.widget = new types.Object('Widget', name)
+        this.block.append(ctx.widget)
+      }
+      functions.assign(ctx.widget, functions.LCUIWidget_New(ctx.type))
     }
     ctx.node.attributes.forEach(attr => this.parse({ type: 'JSXElementAttribute', attr, ctx }))
     this.parseChildren(input.children).forEach((child) => {

@@ -19,7 +19,7 @@ function addBindingFunction(that, cClass, target) {
 
   const arg = new CObject('void', 'arg', { isPointer: true })
   const tmp = new types.Object(null, target.name)
-  const func = new types.CLCUIWidgetMethod(name, [tmp, arg])
+  const func = new types.WidgetMethod(name, [tmp, arg])
 
   // Reset function arguments for Object_Watch()
   func.isStatic = true

@@ -32,7 +32,7 @@ class ClassParser extends Parser {
     func.block.append([
       that.define(),
       '',
-      `_this = malloc(sizeof(${this.typedef.name}));`,
+      `_this = malloc(sizeof(${cClass.typedef.name}));`,
       'if (_this == NULL)',
       '{',
       'return NULL;',

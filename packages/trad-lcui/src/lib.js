@@ -15,7 +15,7 @@ function toIdentifierName(name) {
 function getWidgetType(node, proto) {
   let { name } = node.name
 
-  if (proto && proto.module.name === 'lcui') {
+  if (proto && proto.modulePath === 'lcui') {
     const type = widgetTypeDict[proto.name]
 
     if (type) {

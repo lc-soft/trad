@@ -25,7 +25,7 @@ function getMethodOrder(method) {
 function isLCUIClassBased(cClass) {
   const { superClass } = cClass
 
-  if (superClass && superClass.module.name === 'lcui') {
+  if (superClass && superClass.modulePath === 'lcui') {
     assert(['App', 'Widget'].indexOf(superClass.name) >= 0, `Inherited ${superClass.name} class is not supported`)
     return true
   }

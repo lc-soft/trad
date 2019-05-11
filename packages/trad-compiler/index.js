@@ -1,5 +1,8 @@
+const fs = require('fs')
+const path = require('path')
 const acorn = require('acorn')
 const acornJSX = require('acorn-jsx')
+const TradJSON = require('./src/json')
 const { CBlock, CProgram } = require('../trad')
 const { LiteralParser } = require('./src/literal')
 const { IdentifierParser } = require('./src/identifier')
@@ -40,6 +43,7 @@ class Compiler {
     this.contextIndex = -1
     this.program = null
     this.handlers = null
+    this.options = options
   }
 
   get context() {
@@ -99,6 +103,10 @@ class Compiler {
     this.popContext()
   }
 
+  duplicate() {
+    return new this.constructor(this.options)
+  }
+
   parseChildren(children) {
     const results = children.map((input) => {
       this.beginParse(input)
@@ -139,11 +147,25 @@ class Compiler {
     this.popContext()
   }
 
-  compile(code, file = 'output.trad') {
+  compile(fileName) {
+    const filePath = path.resolve(fileName)
+    const sourceFilePath = `${filePath}.c`
+    const headerFilePath = `${filePath}.h`
+    const exportFilePath = `${filePath}.json`
+    const data = fs.readFileSync(filePath, 'utf-8')
     const parser = acorn.Parser.extend(acornJSX())
-    const input = parser.parse(code, { sourceType: 'module' })
+    const input = parser.parse(data, { sourceType: 'module' })
 
-    this.parseProgram(input, file)
+    this.parseProgram(input, filePath)
+    console.log(`output ${sourceFilePath}`)
+    fs.writeFileSync(sourceFilePath, this.dumpC())
+    console.log(`output ${headerFilePath}`)
+    fs.writeFileSync(headerFilePath, this.dumpH())
+    console.log(`output ${exportFilePath}`)
+    fs.writeFileSync(exportFilePath, this.dumpeJSON())
+
+    const stat = fs.statSync(filePath)
+    fs.utimesSync(exportFilePath, stat.atime, stat.mtime)
   }
 
   flat(inputs, outputs = []) {
@@ -177,11 +199,15 @@ class Compiler {
     })
   }
 
-  getSourceFileData() {
+  dumpeJSON() {
+    return TradJSON.stringify(this.program)
+  }
+
+  dumpC() {
     return this.process(this.program.define()).join(this.eol)
   }
 
-  getHeaderFileData() {
+  dumpH() {
     const body = this.process(this.program.declare())
     const header = [
       '#ifdef __cplusplus',

@@ -1,4 +1,5 @@
 const assert = require('assert')
+const pathModule = require('path')
 
 function capitalize(str) {
   return str.substr(0, 1).toUpperCase() + str.substr(1)
@@ -85,6 +86,22 @@ class CDeclaration extends CStatment {
     }
   }
 
+  get modulePath() {
+    const mod = this.closest(stat => stat instanceof CModule || stat instanceof CProgram)
+
+    if (mod) {
+      return mod.inStandardDirectory ? mod.name: mod.path
+    }
+    return ''
+  }
+
+  get path() {
+    if (this.modulePath) {
+      return pathModule.join(this.modulePath, this.name)
+    }
+    return this.name
+  }
+
   get isExported() {
     return this.meta.isExported
   }
@@ -164,7 +181,7 @@ class CDeclaration extends CStatment {
   }
 
   closest(callback) {
-    for (let { node } = this; node.parent; node = node.parent) {
+    for (let { node } = this; node; node = node.parent) {
       if (callback(node.data)) {
         return node.data
       }
@@ -174,6 +191,10 @@ class CDeclaration extends CStatment {
 }
 
 class CIdentifier extends CDeclaration {
+  constructor() {
+    this.reference = null
+  }
+
   get pointerLevel() {
     return this.isPointer ? 1 : 0
   }
@@ -297,16 +318,23 @@ class CType extends CIdentifier {
   constructor(name) {
     super(name)
 
-    if (typeof name === 'string') {
-      this.isPointer = name.lastIndexOf('*') === name.length - 1
-    }
+    this.isConst = false
+    this.isComposite = false
   }
 
+  // eslint-disable-next-line class-methods-use-this
   export() {
-    if (!this.isExported || this.isImported) {
-      return ''
-    }
-    return super.export()
+    return ''
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  declare() {
+    return ''
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  define() {
+    return ''
   }
 }
 
@@ -766,6 +794,16 @@ class CClass extends CStruct {
     return this.meta.isExported
   }
 
+  set isImported(isImported) {
+    this.typedefPointer.isImported = isImported
+    this.typedef.isImported = isImported
+    this.meta.isImported = isImported
+  }
+
+  get isImported() {
+    return this.meta.isImported
+  }
+
   export() {
     if (!this.isImported) {
       return this.publicMethods.map(method => method.export())
@@ -845,6 +883,10 @@ function formatBlocks(blocks) {
 class CBlock extends CDeclaration {
   constructor() {
     super('block')
+  }
+
+  export() {
+    return this.body.filter(stat => stat instanceof CIdentifier && stat.isExported)
   }
 
   declare() {
@@ -1001,11 +1043,21 @@ class CBlock extends CDeclaration {
   }
 }
 
-class CModule extends CDeclaration {
+class CModule extends CType {
   constructor(name, path) {
     super(name)
 
     this.path = path
+    this.exports = {}
+    this.inStandardDirectory = true
+  }
+
+  get path() {
+    return this.meta.path
+  }
+
+  set path(path) {
+    this.meta.path = path
   }
 
   getMember(name) {
@@ -1015,6 +1067,69 @@ class CModule extends CDeclaration {
   get(name) {
     return this.find(stat => stat instanceof CIdentifier && stat.name === name)
   }
+
+  append(stat) {
+    assert(stat instanceof CIdentifier)
+    if (this.exports[stat.name]) {
+      return
+    }
+    if (stat instanceof CClass) {
+      this.append(stat.typedef)
+      this.append(stat.typedefPointer)
+    }
+    this.exports[stat.name] = stat
+    stat.isImported = true
+    super.append(stat)
+  }
+}
+
+const keywords = {
+  // C
+  '*': function (ctype) {
+    ctype.isPointer = true
+  },
+  'short': true,
+  'const': function (ctype) {
+    ctype.isConst = true
+  },
+  'signed': true,
+  'unsigned': true,
+  'long': true,
+  'double': true,
+  'int': true,
+  'unsigned': true,
+  'char': true,
+  'float': true,
+  'void': true,
+  'string': true,
+  'number': true,
+  'struct': function (ctype) {
+    ctype.isComposite = true
+  },
+  'typedef': true,
+  // Trad
+  'class': function (ctype) {
+    ctype.isComposite = true
+  },
+  'module': function (ctype) {
+    ctype.isComposite = true
+  }
+}
+
+function createType(name) {
+  const ctype = new CType(name)
+
+  ctype.name = name.split(' ').map(k => k.trim()).filter(str => !!str).map((keyword) => {
+    const handler = keywords[keyword]
+
+    if (typeof handler === 'undefined') {
+      assert(this.isComposite, `${keyword} is an undeclared identifier`)
+    } else if (typeof handler === 'function') {
+      handler(this)
+    }
+    return keyword
+  }).join(' ')
+  return ctype
 }
 
 class CString extends CType {
@@ -1040,30 +1155,40 @@ class Trad extends CModule {
 
     this.isImported = true
     this.isExported = false
-    this.exports = {
-      String: new CString(),
-      Number: new CNumber()
-    }
+    this.append(new CString())
+    this.append(new CNumber())
   }
 
-  install(program) {
-    Object.keys(this.exports).forEach((name) => {
-      program.append(this.exports[name])
+  static install(program) {
+    const trad = new Trad()
+
+    program.append(trad)
+    Object.keys(trad.exports).forEach((name) => {
+      program.append(trad.exports[name])
     })
   }
 }
 
-const trad = new Trad()
-
 class CProgram extends CBlock {
-  constructor(file) {
+  constructor(path) {
     super()
 
-    this.file = file
+    this.path = path
     this.includes = []
     this.modules = {}
 
-    trad.install(this)
+    Object.keys(keywords).forEach((keyword) => {
+      this.append(createType(keyword))
+    })
+    Trad.install(this)
+  }
+
+  get path() {
+    return this.meta.path
+  }
+
+  set path(path) {
+    this.meta.path = path
   }
 
   addInclude(inc) {
@@ -1084,8 +1209,14 @@ class CProgram extends CBlock {
     return this.modules[name]
   }
 
-  addModule(mod) {
-    this.modules[mod.name] = mod
+  append(stat) {
+    if (stat instanceof CInclude) {
+      this.addInclude(stat)
+    } else if (stat instanceof CModule) {
+      this.modules[stat.name] = stat
+    } else {
+      super.append(stat)
+    }
   }
 
   define() {
@@ -1097,6 +1228,7 @@ class CProgram extends CBlock {
 }
 
 module.exports = {
+  createType,
   CInclude,
   CIdentifier,
   CType,

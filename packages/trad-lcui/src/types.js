@@ -9,12 +9,13 @@ const {
   CTypedef,
   CAssignmentExpression,
   CCallExpression,
-  CMethod
+  CMethod,
+  CModule
 } = require('../../trad')
 
 class CLCUIObjectType extends CClass {
   constructor() {
-    super('LCUI_Object')
+    super('Object')
 
     this.alias = 'Object'
     this.methodPrefix = 'Object'
@@ -292,7 +293,7 @@ function isWidget(obj) {
 }
 
 function getSuperClass(cClass, superClassName) {
-  for (let superClass = cClass.superClass; superClass; superClass = cClass.superClass) {
+  for (let superClass = cClass.superClass; superClass; superClass = superClass.superClass) {
     if (superClass.className === superClassName) {
       return superClass
     }
@@ -300,6 +301,7 @@ function getSuperClass(cClass, superClassName) {
   return undefined
 }
 
+const LCUI = new CModule('lcui', 'lcui')
 const declarations = {}
 const types = [
   new CLCUIObjectType(),
@@ -314,8 +316,10 @@ const types = [
 
 types.forEach(type => declarations[type.alias] = type)
 types.slice().reverse().forEach(type => type.install ? type.install() : 0)
+types.forEach(type => LCUI.append(type))
 
 module.exports = {
+  LCUI,
   isObject,
   isString,
   isNumber,

@@ -36,7 +36,7 @@ function allocObjectName(scope, baseName) {
   let i = 1
   let name = baseName
 
-  scope.forEach((stat) => {
+  scope.body.forEach((stat) => {
     if (stat instanceof CIdentifier && stat.name === name) {
       name = `${baseName}_${i}`
       i += 1

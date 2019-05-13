@@ -25,8 +25,14 @@ function getMethodOrder(method) {
 function isLCUIClassBased(cClass) {
   const { superClass } = cClass
 
-  if (superClass && superClass.modulePath === 'lcui') {
-    assert(['App', 'Widget'].indexOf(superClass.name) >= 0, `Inherited ${superClass.name} class is not supported`)
+  if (
+    superClass
+    && (
+      superClass.modulePath === 'lcui'
+      || (superClass.reference && superClass.reference.modulePath === 'lcui')
+    )
+  ) {
+    assert(['App', 'Widget'].indexOf(superClass.className) >= 0, `inheritance from class ${superClass.name} is not supported`)
     return true
   }
   return false
@@ -86,7 +92,7 @@ function initWidgetUpdateMethod(cClass) {
     funcUpdate = cClass.addMethod(new types.WidgetMethod('update'))
   }
   // Find the first assignment expression of _this
-  funcUpdate.block.some((stat, i) => {
+  funcUpdate.block.body.some((stat, i) => {
     if (stat instanceof CAssignmentExpression && stat.left.id === '_this') {
       insertIndex = i + 1
       return true

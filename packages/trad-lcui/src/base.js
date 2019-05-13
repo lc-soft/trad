@@ -8,7 +8,7 @@ function getTypeName(type) {
   let decl = type
 
   if (decl instanceof CTypedef) {
-    decl = decl.originType
+    decl = decl.reference
   }
   return decl.alias || decl.className || decl.name
 }
@@ -26,10 +26,10 @@ function convertObject(obj) {
 
 const install = Compiler => class LCUIBaseParser extends Compiler {
   createObject(baseName, initValue) {
-    if (!initValue.typeDeclaration) {
-      assert(0, `unable to infer the type of ${initValue.type}`)
-      return undefined
+    if (!initValue) {
+      debugger
     }
+    assert(initValue.typeDeclaration, `unable to infer the type of ${initValue.type}`)
 
     let variable = null
     const typeName = getTypeName(initValue.typeDeclaration)

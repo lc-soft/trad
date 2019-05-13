@@ -99,7 +99,7 @@ class ImportParser extends Parser {
       }
       // load all objects from this module
       moduleData.exports.forEach((item) => this.loadTarget(moduleDecl, item))
-      return moduleDecl
+      return new trad.CObject(moduleDecl, moduleDecl.name)
     }
     try {
       source = trad.createType(sourceName)
@@ -233,12 +233,15 @@ class ImportParser extends Parser {
 
     input.specifiers.forEach((specifier) => {
       const { name } = specifier.local
+      let obj
 
       if (specifier.type === 'ImportDefaultSpecifier') {
-        this.program.createObject(this.import(source), name, { isHidden: true })
+        obj = this.import(source).createReference(name)
       } else {
-        this.program.append(this.import(source, name))
+        obj = this.import(source, name).createReference()
       }
+      obj.isImported = true
+      this.program.append(obj)
     })
   }
 }

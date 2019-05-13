@@ -32,7 +32,7 @@ function serializeClass(cClass) {
     name: cClass.className,
     type: 'class',
     superClass: cClass.superClass ? cClass.superClass.path : cClass,
-    body: cClass.map((stat) => {
+    body: cClass.body.map((stat) => {
       if (stat instanceof trad.CMethod) {
         return serializeMethod(stat)
       }

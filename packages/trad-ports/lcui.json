@@ -13,6 +13,10 @@
       "type": "class"
     },
     {
+      "name": "LCUI_Object",
+      "type": "class"
+    },
+    {
       "name": "Widget",
       "type": "class",
       "includes": ["LCUI/gui/widget.h"]

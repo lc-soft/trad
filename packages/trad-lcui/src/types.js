@@ -15,7 +15,7 @@ const {
 
 class CLCUIObjectType extends CClass {
   constructor() {
-    super('Object')
+    super('LCUI_Object')
 
     this.alias = 'Object'
     this.methodPrefix = 'Object'
@@ -213,7 +213,7 @@ class CLCUIObject extends CObject {
       decl = declarations[type]
       assert(typeof type !== 'undefined')
     } else if (!type) {
-      decl = declarations['Object']
+      decl = declarations.Object
     }
     if (decl instanceof CClass) {
       decl = isAllocFromStack ? decl.typedef : decl.typedefPointer

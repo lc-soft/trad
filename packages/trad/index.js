@@ -75,131 +75,6 @@ class CStatment {
   }
 }
 
-class CDeclaration extends CStatment {
-  constructor(name) {
-    super(name)
-
-    this.meta = {
-      isExported: false,
-      isImported: false,
-      isPointer: false
-    }
-  }
-
-  get modulePath() {
-    const mod = this.closest(stat => stat instanceof CModule || stat instanceof CProgram)
-
-    if (mod) {
-      return mod.inStandardDirectory ? mod.name: mod.path
-    }
-    return ''
-  }
-
-  get path() {
-    if (this.modulePath) {
-      return pathModule.join(this.modulePath, this.name)
-    }
-    return this.name
-  }
-
-  get isExported() {
-    return this.meta.isExported
-  }
-
-  get isImported() {
-    return this.meta.isImported
-  }
-
-  get isPointer() {
-    return this.meta.isPointer
-  }
-
-  set isExported(value) {
-    this.meta.isExported = value
-  }
-
-  set isImported(value) {
-    this.meta.isImported = value
-  }
-
-  set isPointer(value) {
-    this.meta.isPointer = value
-  }
-
-  get body() {
-    return this.node.children.map(child => (child instanceof CNode ? child.data : child))
-  }
-
-  get parent() {
-    return this.node.parent ? this.node.parent.data : undefined
-  }
-
-  keys() {
-    const keys = []
-
-    this.node.children.forEach((child) => {
-      if (child instanceof CNode && child.data instanceof CIdentifier) {
-        keys.push(child.data.name)
-      }
-    })
-    return keys
-  }
-
-  forEach(callback) {
-    this.node.children.forEach((child, i) => (child instanceof CNode ? callback(child.data, i) : 0))
-  }
-
-  some(callback) {
-    return this.node.children.some((child, i) => (child instanceof CNode && callback(child.data, i)))
-  }
-
-  map(callback) {
-    return this.node.children.map((child, i) => (child instanceof CNode ? callback(child.data, i) : 0))
-  }
-
-  find(callback) {
-    const node = this.node.children.find((child, i) => child instanceof CNode && callback(child.data, i))
-    return node ? node.data : undefined
-  }
-
-  insert(index, stat) {
-    if (stat instanceof Array) {
-      stat.forEach((s, i) => {
-        this.node.insertChild(index + i, s instanceof CStatment ? s.node : s)
-      })
-      return
-    }
-    this.node.insertChild(index, stat instanceof CStatment ? stat.node : stat)
-  }
-
-  append(stat) {
-    if (stat instanceof Array) {
-      stat.forEach(s => this.append(s))
-      return
-    }
-    this.node.append(stat instanceof CStatment ? stat.node : stat)
-  }
-
-  closest(callback) {
-    for (let { node } = this; node; node = node.parent) {
-      if (callback(node.data)) {
-        return node.data
-      }
-    }
-    return undefined
-  }
-}
-
-class CIdentifier extends CDeclaration {
-  constructor() {
-    this.reference = null
-  }
-
-  get pointerLevel() {
-    return this.isPointer ? 1 : 0
-  }
-}
-
 class CExpression extends CStatment {
   constructor(type) {
     super('expression')
@@ -311,6 +186,126 @@ class CAssignmentExpression extends CExpression {
       return `${this.left.id} ${this.operator} *${right.id};`
     }
     return `${this.left.id} ${this.operator} &${right.id};`
+  }
+}
+
+class CDeclaration extends CStatment {
+  constructor(name) {
+    super(name)
+
+    this.meta = {
+      isExported: false,
+      isImported: false,
+      isPointer: false
+    }
+  }
+
+  get modulePath() {
+    const mod = this.closest(stat => stat instanceof CModule || stat instanceof CProgram)
+
+    if (mod) {
+      return mod.inStandardDirectory ? mod.name: mod.path
+    }
+    return ''
+  }
+
+  get path() {
+    if (this.modulePath) {
+      return pathModule.join(this.modulePath, this.name)
+    }
+    return this.name
+  }
+
+  get isExported() {
+    return this.meta.isExported
+  }
+
+  get isImported() {
+    return this.meta.isImported
+  }
+
+  get isPointer() {
+    return this.meta.isPointer
+  }
+
+  set isExported(value) {
+    this.meta.isExported = value
+  }
+
+  set isImported(value) {
+    this.meta.isImported = value
+  }
+
+  set isPointer(value) {
+    this.meta.isPointer = value
+  }
+
+  get body() {
+    return this.node.children.map(child => (child instanceof CNode ? child.data : child))
+  }
+
+  get parent() {
+    return this.node.parent ? this.node.parent.data : undefined
+  }
+
+  keys() {
+    return this.body.filter(child => child instanceof CIdentifier).map(child => child.name)
+  }
+
+  insert(index, stat) {
+    if (stat instanceof Array) {
+      stat.forEach((s, i) => {
+        this.node.insertChild(index + i, s instanceof CStatment ? s.node : s)
+      })
+      return
+    }
+    this.node.insertChild(index, stat instanceof CStatment ? stat.node : stat)
+  }
+
+  append(stat) {
+    if (stat instanceof Array) {
+      stat.forEach(s => this.append(s))
+      return
+    }
+    this.node.append(stat instanceof CStatment ? stat.node : stat)
+  }
+
+  closest(callback) {
+    for (let { node } = this; node; node = node.parent) {
+      if (callback(node.data)) {
+        return node.data
+      }
+    }
+    return undefined
+  }
+}
+
+class CIdentifier extends CDeclaration {
+  constructor(name) {
+    super(name)
+
+    this.cName = name
+    this.reference = null
+  }
+
+  get $() {
+    return this.reference ? this.reference : this
+  }
+
+  get body() {
+    return this.reference ? this.reference.body : super.body
+  }
+
+  get pointerLevel() {
+    return this.$.isPointer ? 1 : 0
+  }
+
+  createReference(name = this.name) {
+    const id = new this.constructor(name)
+
+    id.reference = this.$
+    id.isPointer = id.reference.isPointer
+    return id
   }
 }
 
@@ -479,10 +474,7 @@ class CMethod extends CFunction {
     if (that) {
       that.node.remove()
     }
-    if (cClass instanceof CTypedef) {
-      return this.block.createObject(cClass, '_this', { isHidden: true })
-    }
-    return this.block.createObject(cClass.typedefPointer, '_this', { isHidden: true })
+    return this.block.createObject(cClass, '_this', { isHidden: true })
   }
 }
 
@@ -546,7 +538,7 @@ class CStruct extends CType {
   }
 
   getMember(name) {
-    return this.find(stat => stat.name === name)
+    return this.body.find(stat => stat.name === name)
   }
 }
 
@@ -554,64 +546,44 @@ class CTypedef extends CType {
   constructor(typeDeclaration, name, isPointer = false, isExported = null) {
     super(name)
 
-    this.originType = typeDeclaration
+    this.reference = typeDeclaration
     this.meta.isExported = isExported
     this.meta.isPointer = isPointer
   }
 
   set isExported(value) {
     this.meta.isExported = value
-    this.originType.isExported = value
+    this.reference.isExported = value
   }
 
   get isExported() {
-    return this.meta.isExported === null ? this.originType.isExported : this.meta.isExported
+    return this.meta.isExported === null ? this.reference.isExported : this.meta.isExported
   }
 
   get className() {
-    return this.originType.className
+    return this.reference.className
   }
 
   get superClass() {
-    return this.originType.superClass
-  }
-
-  get body() {
-    return this.originType.body
+    return this.reference.superClass
   }
 
   get pointerLevel() {
     const level = this.isPointer ? 1 : 0
 
-    return level + this.originType.pointerLevel
-  }
-
-  map(callback) {
-    return this.originType.map(callback)
-  }
-
-  keys() {
-    return this.originType.keys()
-  }
-
-  forEach(callback) {
-    this.originType.forEach(callback)
-  }
-
-  find(callback) {
-    return this.originType.find(callback)
+    return level + this.reference.pointerLevel
   }
 
   append(stat) {
-    this.originType.append(stat)
+    this.reference.append(stat)
   }
 
   getMember(name) {
-    return this.originType.getMember(name)
+    return this.reference.getMember(name)
   }
 
   addMember(name) {
-    this.originType.addMember(name)
+    this.reference.addMember(name)
   }
 
   export() {
@@ -628,15 +600,19 @@ class CTypedef extends CType {
   }
 
   getTypeDefinition() {
-    if (this.originType instanceof CFunction) {
-      const func = this.originType
+    if (this.reference instanceof CFunction) {
+      const func = this.reference
       let str = func.declare(false)
 
       str = str.replace(func.funcRealName, `(*${this.name})`)
       str = str.replace('static ', '')
       return `typedef ${str}`
     }
-    return `typedef ${this.originType.name}${this.isPointer ? '*' : ''} ${this.name};`
+    return `typedef ${this.reference.name}${this.isPointer ? '*' : ''} ${this.name};`
+  }
+
+  createReference(name = this.name) {
+    return new CTypedef(this.reference, name, this.isPointer)
   }
 }
 
@@ -646,6 +622,8 @@ class CObject extends CIdentifier {
 
     if (typeof type === 'string') {
       this.typeDeclaration = new CType(type)
+    } else if (type instanceof CClass) {
+      this.typeDeclaration = type.typedefPointer
     } else {
       this.typeDeclaration = type
     }
@@ -657,12 +635,17 @@ class CObject extends CIdentifier {
   }
 
   get baseType() {
-    return this.typeDeclaration ? this.typeDeclaration.name : 'void'
+    const type = this.typeDeclaration
+
+    if (!type) {
+      return 'void'
+    }
+    return type.className || type.cName
   }
 
   get finalTypeDeclaration() {
     if (this.typeDeclaration instanceof CTypedef) {
-      return this.typeDeclaration.originType
+      return this.typeDeclaration.reference
     }
     return this.typeDeclaration
   }
@@ -675,7 +658,7 @@ class CObject extends CIdentifier {
     let classDeclaration = this.typeDeclaration
 
     if (classDeclaration instanceof CTypedef) {
-      classDeclaration = classDeclaration.originType
+      classDeclaration = classDeclaration.reference
     }
     if (classDeclaration instanceof CClass) {
       return classDeclaration.className
@@ -725,7 +708,7 @@ class CObject extends CIdentifier {
 
   destroy() {
     const type = this.finalTypeDeclaration
-    return type && type.destroy ? type.destroy(this) : undefined
+    type && type.destroy ? type.destroy(this) : undefined
   }
 
   stringify() {
@@ -763,6 +746,14 @@ class CObject extends CIdentifier {
     }
     prop.node.parent = this.node
     return prop
+  }
+
+  createReference(name) {
+    const ref = new this.constructor(this.typeDeclaration, name)
+
+    ref.reference = this.$
+    ref.isPointer = ref.reference.isPointer
+    return ref
   }
 }
 
@@ -852,7 +843,7 @@ class CClass extends CStruct {
     if (oldMethod) {
       oldMethod.node.remove()
     }
-    method.bind(this.typedefPointer, '_this')
+    method.bind(this, '_this')
     this.append(method)
     return method
   }
@@ -922,7 +913,7 @@ class CBlock extends CDeclaration {
       if (typeof stat === 'string') {
         return true
       }
-      if (stat.isImported) {
+      if (typeof stat === 'undefined' || stat.isImported) {
         return false
       }
       if (stat instanceof CType) {
@@ -977,7 +968,7 @@ class CBlock extends CDeclaration {
     let obj = null
 
     for (let block = this; block && !obj; block = block.parent) {
-      obj = block.find(stat => stat instanceof CObject && stat.name === name)
+      obj = block.body.find(stat => stat instanceof CObject && stat.name === name)
     }
     return obj
   }
@@ -986,7 +977,7 @@ class CBlock extends CDeclaration {
     let type = null
 
     for (let block = this; block && !type; block = block.parent) {
-      type = block.find(stat => stat instanceof CType && stat.name === name)
+      type = block.body.find(stat => stat instanceof CType && stat.name === name)
     }
     return type
   }
@@ -995,7 +986,7 @@ class CBlock extends CDeclaration {
     let id = null
 
     for (let block = this; block && !id; block = block.parent) {
-      id = block.find(stat => stat instanceof CIdentifier && stat.name === name)
+      id = block.body.find(stat => stat instanceof CIdentifier && stat.name === name)
     }
     return id
   }
@@ -1033,7 +1024,7 @@ class CBlock extends CDeclaration {
     let i = 1
     let name = baseName
 
-    this.forEach((stat) => {
+    this.body.forEach((stat) => {
       if (stat instanceof CIdentifier && stat.name === name) {
         name = `${baseName}_${i}`
         i += 1
@@ -1065,7 +1056,7 @@ class CModule extends CType {
   }
 
   get(name) {
-    return this.find(stat => stat instanceof CIdentifier && stat.name === name)
+    return this.body.find(stat => stat instanceof CIdentifier && stat.name === name)
   }
 
   append(stat) {

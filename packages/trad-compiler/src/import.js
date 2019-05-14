@@ -190,12 +190,21 @@ class ImportParser extends Parser {
     return method
   }
 
+  loadNamespace(body) {
+    return new trad.Namespace(body.name)
+  }
+
   loadClass(body) {
     const cClass = new trad.CClass(body.name)
 
     if (body.superClass) {
       cClass.superClass = this.loadIdentify(body.superClass)
     }
+    if (body.namespace) {
+      cClass.namespace = this.loadIdentify(body.namespace)
+    }
+    cClass.useNamespace = body.useNamespace
+    cClass.useNamespaceForMethods = body.useNamespaceForMethods
     if (body.body) {
       body.body.forEach((member) => {
         if (member.type === 'method') {

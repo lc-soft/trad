@@ -31,6 +31,9 @@ function serializeClass(cClass) {
   return {
     name: cClass.className,
     type: 'class',
+    namespace: cClass.namespace,
+    useNamespace: cClass.useNamespace,
+    useNamespaceForMethods: cClass.useNamespaceForMethods,
     superClass: cClass.superClass ? cClass.superClass.path : cClass,
     body: cClass.map((stat) => {
       if (stat instanceof trad.CMethod) {

@@ -58,8 +58,16 @@ class CNode {
 
 class CStatment {
   constructor(name) {
-    this.name = name
+    this.meta = { name }
     this.node = new CNode(this)
+  }
+
+  get name() {
+    return this.meta.name
+  }
+
+  set name(name) {
+    this.meta.name = name
   }
 
   export() {
@@ -79,11 +87,9 @@ class CDeclaration extends CStatment {
   constructor(name) {
     super(name)
 
-    this.meta = {
-      isExported: false,
-      isImported: false,
-      isPointer: false
-    }
+    this.meta.isExported = false
+    this.meta.isImported = false
+    this.meta.isPointer = false
   }
 
   get modulePath() {
@@ -193,12 +199,27 @@ class CDeclaration extends CStatment {
 class CIdentifier extends CDeclaration {
   constructor() {
     this.reference = null
+    this.namespace = null
+    this.useNamespace = true
+  }
+
+  get name() {
+    if (this.useNamespace && this.namespace) {
+      return `${this.namespace.name}_${this.meta.name}`
+    }
+    return this.meta.name
+  }
+
+  set name(name) {
+    this.meta.name = name
   }
 
   get pointerLevel() {
     return this.isPointer ? 1 : 0
   }
 }
+
+class CNamespace extends CIdentifier {}
 
 class CExpression extends CStatment {
   constructor(type) {
@@ -470,7 +491,12 @@ class CMethod extends CFunction {
   }
 
   get funcName() {
-    return `${this.parent.methodPrefix}_${capitalize(this.methodName)}`
+    const name = `${this.parent.className}_${capitalize(this.methodName)}`
+
+    if (this.parent.useNamespaceForMethods) {
+      return `${this.parent.namespace}_${name}`
+    }
+    return name
   }
 
   bind(cClass) {
@@ -771,8 +797,8 @@ class CClass extends CStruct {
     super(`${name}Rec_`)
 
     this.className = name
-    this.methodPrefix = name
     this.superClass = superClass
+    this.useNamespaceForMethods = true
     this.typedefPointer = new CTypedef(this, name, true)
     this.typedef = new CTypedef(this, `${name}Rec`, false, false)
     this.destructor = null
@@ -1231,6 +1257,7 @@ module.exports = {
   createType,
   CInclude,
   CIdentifier,
+  CNamespace,
   CType,
   CTypedef,
   CObject,

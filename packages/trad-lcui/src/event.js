@@ -38,16 +38,16 @@ const install = Compiler => class EventBindingParser extends Compiler {
       return wrapperClass
     }
 
-    const { that } = ctx.that
+    const { that } = ctx
     const handler = this.selectEventHandler(ctx)
-    const func = ctx.cClass.createMethod('dispathWidgetEvent')
+    const func = new types.WidgetMethod('dispathWidgetEvent')
 
     wrapperClass = new CClass(className, 'wrapper')
     wrapperClass.addMember('_this', ctx.cClass)
     wrapperClass.addMember('data', 'void*')
     wrapperClass.addMember('handler', handler.typeDeclaration)
-    ctx.cClass.owner.add(new CTypedef(wrapperClass, className, true))
-    ctx.cClass.owner.add(wrapperClass)
+    ctx.cClass.parent.append(new CTypedef(wrapperClass, className, true))
+    ctx.cClass.parent.append(wrapperClass)
 
     const wrapper = this.block.createObject(className, 'wrapper')
 
@@ -67,12 +67,13 @@ const install = Compiler => class EventBindingParser extends Compiler {
       `wrapper->handler(${that.id}, e);`,
       `e->data = ${wrapper.id};`
     ])
+    ctx.cClass.append(func)
     return wrapperClass
   }
 
   parseJSXElementEventBinding(ctx, attrName, func) {
     const wrapperClass = this.selectEventWrapperClass(ctx)
-    const wrapperName = this.allocObjectName('_event_wrapper')
+    const wrapperName = this.block.allocObjectName('_event_wrapper')
     const wrapper = new CObject(wrapperClass, wrapperName)
     const eventName = attrName.substr(2).toLowerCase()
 

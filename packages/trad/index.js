@@ -713,33 +713,27 @@ class CObject extends CIdentifier {
   }
 
   callMethod(name, ...args) {
-    const type = this.finalTypeDeclaration
-    return type && type.init ? type.callMethod(name, this, ...args) : undefined
+    return this.finalTypeDeclaration.callMethod(name, this, ...args)
   }
 
   init(...args) {
-    const type = this.finalTypeDeclaration
-    return type && type.init ? type.init(this, ...args) : undefined
+    return this.finalTypeDeclaration.init(this, ...args)
   }
 
   duplicate() {
-    const type = this.finalTypeDeclaration
-    return type && type.duplicate ? type.duplicate(this) : undefined
+    return this.finalTypeDeclaration.duplicate(this)
   }
 
   operate(operator, right) {
-    const type = this.finalTypeDeclaration
-    return type && type.operate ? type.operate(this, operator, right) : undefined
+    return this.finalTypeDeclaration.operate(this, operator, right)
   }
 
   destroy() {
-    const type = this.finalTypeDeclaration
-    type && type.destroy ? type.destroy(this) : undefined
+    return this.finalTypeDeclaration.destroy(this)
   }
 
   stringify() {
-    const type = this.finalTypeDeclaration
-    return type && type.stringify ? type.stringify(this) : undefined
+    return this.finalTypeDeclaration.stringify(this)
   }
 
   addProperty(prop) {
@@ -759,10 +753,12 @@ class CObject extends CIdentifier {
     if (!ref) {
       return undefined
     }
-
+    if (ref instanceof CFunction) {
+      return ref
+    }
     if (ref instanceof CObject) {
       prop = new ref.constructor(ref.typeDeclaration, name)
-    } else {
+    } else if (ref instanceof CType) {
       prop = new CObject(ref, name)
     }
     if (this.typeDeclaration.isPointer) {
@@ -848,7 +844,10 @@ class CClass extends CStruct {
   }
 
   callMethod(name, ...args) {
-    return new CCallExpression(this.getMethod(name), ...args)
+    const method = this.getMethod(name)
+
+    assert(method, `${this.id}.${name} is not a function`)
+    return new CCallExpression(method, ...args)
   }
 
   getMethod(name) {

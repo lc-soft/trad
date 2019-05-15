@@ -40,7 +40,6 @@ function addBindingFunction(cClass, target) {
 
 function createWidgetAtrributeSetter(cClass, props) {
   const func = cClass.addMethod(new types.WidgetMethod('bindProperty'))
-  const that = func.block.getObject('_this')
 
   func.funcArgs = [
     new CObject('const char', 'name', { isPointer: true }),

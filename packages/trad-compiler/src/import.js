@@ -46,6 +46,11 @@ class ImportParser extends Parser {
     return this.load(moduleName)
   }
 
+  saveTarget(moduleDecl, target) {
+    moduleDecl.append(target)
+    this.exports[target.path] = target
+  }
+
   loadTarget(moduleDecl, target) {
     const loader = this[`load${capitalize(target.type)}`]
 
@@ -54,8 +59,12 @@ class ImportParser extends Parser {
     if (moduleDecl) {
       const source = loader.call(this, target)
 
-      moduleDecl.append(source)
-      this.exports[source.path] = source
+      this.saveTarget(moduleDecl, source)
+      if (source instanceof trad.CClass) {
+        this.saveTarget(moduleDecl, source.typedef)
+        this.saveTarget(moduleDecl, source.typedefPointer)
+        return source.typedefPointer
+      }
       return source
     }
     return loader.call(this, target)
@@ -97,13 +106,16 @@ class ImportParser extends Parser {
       if (moduleData.default) {
         return this.loadTarget(null, moduleData.default)
       }
-      // load all objects from this module
+      // Load all objects from this module
       moduleData.exports.forEach((item) => this.loadTarget(moduleDecl, item))
       return new trad.CObject(moduleDecl, moduleDecl.name)
     }
     try {
+      // Try to parse it as a built-in type
       source = trad.createType(sourceName)
+      this.saveTarget(moduleDecl, source)
     } catch (err) {
+      // Parse it as a custom type
       source = moduleDecl.get(sourceName)
       if (!source) {
         const target = moduleData.exports.find(item => item.name === sourceName)
@@ -112,7 +124,6 @@ class ImportParser extends Parser {
         source = this.loadTarget(moduleDecl, target)
       }
     }
-
     this.modulesStack.pop()
     return source
   }
@@ -190,12 +201,21 @@ class ImportParser extends Parser {
     return method
   }
 
+  loadNamespace(body) {
+    return new trad.CNamespace(body.name)
+  }
+
   loadClass(body) {
     const cClass = new trad.CClass(body.name)
 
     if (body.superClass) {
       cClass.superClass = this.loadIdentify(body.superClass)
     }
+    if (body.namespace) {
+      cClass.namespace = this.loadIdentify(body.namespace)
+    }
+    cClass.useNamespace = body.useNamespace
+    cClass.useNamespaceForMethods = body.useNamespaceForMethods
     if (body.body) {
       body.body.forEach((member) => {
         if (member.type === 'method') {
@@ -206,7 +226,7 @@ class ImportParser extends Parser {
         }
       })
     }
-    return cClass.typedefPointer
+    return cClass
   }
 
   loadIdentify(id) {

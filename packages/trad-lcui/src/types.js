@@ -5,6 +5,7 @@ const {
   CType,
   CClass,
   CObject,
+  CNamespace,
   CFunction,
   CTypedef,
   CAssignmentExpression,
@@ -15,10 +16,13 @@ const {
 
 class CLCUIObjectType extends CClass {
   constructor() {
-    super('LCUI_Object')
+    super('Object')
 
     this.alias = 'Object'
-    this.methodPrefix = 'Object'
+    this.namespace = LCUINamespace
+    this.typedef.namespace = LCUINamespace
+    this.typedefPointer.namespace = LCUINamespace
+    this.useNamespaceForMethods = false
   }
 
   install() {
@@ -302,6 +306,7 @@ function getSuperClass(cClass, superClassName) {
 }
 
 const LCUI = new CModule('lcui', 'lcui')
+const LCUINamespace = new CNamespace('LCUI')
 const declarations = {}
 const types = [
   new CLCUIObjectType(),
@@ -317,6 +322,7 @@ const types = [
 types.forEach(type => declarations[type.alias] = type)
 types.slice().reverse().forEach(type => type.install ? type.install() : 0)
 types.forEach(type => LCUI.append(type))
+LCUI.append(LCUINamespace)
 
 module.exports = {
   LCUI,

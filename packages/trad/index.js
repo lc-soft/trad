@@ -58,8 +58,20 @@ class CNode {
 
 class CStatment {
   constructor(name) {
-    this.name = name
+    this.meta = { name }
     this.node = new CNode(this)
+  }
+
+  get cName() {
+    return this.meta.name
+  }
+
+  get name() {
+    return this.meta.name
+  }
+
+  set name(name) {
+    this.meta.name = name
   }
 
   export() {
@@ -193,11 +205,9 @@ class CDeclaration extends CStatment {
   constructor(name) {
     super(name)
 
-    this.meta = {
-      isExported: false,
-      isImported: false,
-      isPointer: false
-    }
+    this.meta.isExported = false
+    this.meta.isImported = false
+    this.meta.isPointer = false
   }
 
   get modulePath() {
@@ -284,8 +294,15 @@ class CIdentifier extends CDeclaration {
   constructor(name) {
     super(name)
 
-    this.cName = name
-    this.reference = null
+    this.namespace = null
+    this.useNamespace = true
+  }
+
+  get cName() {
+    if (this.useNamespace && this.namespace) {
+      return `${this.namespace.cName}_${this.meta.name}`
+    }
+    return this.meta.name
   }
 
   get $() {
@@ -308,6 +325,8 @@ class CIdentifier extends CDeclaration {
     return id
   }
 }
+
+class CNamespace extends CIdentifier {}
 
 class CType extends CIdentifier {
   constructor(name) {
@@ -391,7 +410,7 @@ class CFunction extends CIdentifier {
   }
 
   get funcName() {
-    return this.name
+    return this.cName
   }
 
   declareArgs(withArgName = true) {
@@ -464,8 +483,13 @@ class CMethod extends CFunction {
     this.meta.funcArgs = args
   }
 
-  get funcName() {
-    return `${this.parent.methodPrefix}_${capitalize(this.methodName)}`
+  get cName() {
+    const name = `${this.parent.className}_${capitalize(this.methodName)}`
+
+    if (this.parent.useNamespaceForMethods && this.parent.namespace) {
+      return `${this.parent.namespace}_${name}`
+    }
+    return name
   }
 
   bind(cClass) {
@@ -486,6 +510,13 @@ class CStruct extends CType {
     super(`struct ${name}`)
 
     this.structName = name
+  }
+
+  get cName() {
+    if (this.useNamespace && this.namespace) {
+      return `struct ${this.namespace.cName}_${this.structName}`
+    }
+    return `struct ${this.structName}`
   }
 
   // eslint-disable-next-line class-methods-use-this
@@ -516,7 +547,7 @@ class CStruct extends CType {
       }
     })
     return [
-      `${this.name} {`,
+      `${this.cName} {`,
       outputs,
       '};',
       ''
@@ -635,12 +666,7 @@ class CObject extends CIdentifier {
   }
 
   get baseType() {
-    const type = this.typeDeclaration
-
-    if (!type) {
-      return 'void'
-    }
-    return type.className || type.cName
+    return this.typeDeclaration ? this.typeDeclaration.cName : 'void'
   }
 
   get finalTypeDeclaration() {
@@ -762,8 +788,8 @@ class CClass extends CStruct {
     super(`${name}Rec_`)
 
     this.className = name
-    this.methodPrefix = name
     this.superClass = superClass
+    this.useNamespaceForMethods = true
     this.typedefPointer = new CTypedef(this, name, true)
     this.typedef = new CTypedef(this, `${name}Rec`, false, false)
     this.destructor = null
@@ -1222,6 +1248,7 @@ module.exports = {
   createType,
   CInclude,
   CIdentifier,
+  CNamespace,
   CType,
   CTypedef,
   CObject,

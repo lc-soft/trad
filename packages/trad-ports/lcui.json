@@ -5,39 +5,64 @@
   ],
   "exports": [
     {
+      "name": "LCUI",
+      "type": "namespace"
+    },
+    {
       "name": "App",
-      "type": "class"
+      "type": "class",
+      "namespace": "LCUI",
+      "useNamespace": true,
+      "useNamespaceForMethods": false
     },
     {
       "name": "Object",
-      "type": "class"
+      "type": "class",
+      "namespace": "LCUI",
+      "useNamespace": true,
+      "useNamespaceForMethods": false
     },
     {
-      "name": "LCUI_Object",
-      "type": "class"
+      "name": "Object",
+      "type": "class",
+      "namespace": "LCUI",
+      "useNamespace": true,
+      "useNamespaceForMethods": false
     },
     {
       "name": "Widget",
       "type": "class",
-      "includes": ["LCUI/gui/widget.h"]
+      "includes": ["LCUI/gui/widget.h"],
+      "namespace": "LCUI",
+      "useNamespace": true,
+      "useNamespaceForMethods": false
     },
     {
       "name": "Button",
       "type": "class",
       "superClass": "Widget",
-      "includes": ["LCUI/gui/widget/button.h"]
+      "includes": ["LCUI/gui/widget/button.h"],
+      "namespace": "LCUI",
+      "useNamespace": true,
+      "useNamespaceForMethods": false
     },
     {
       "name": "TextView",
       "type": "class",
       "superClass": "Widget",
-      "includes": ["LCUI/gui/widget/textview.h"]
+      "includes": ["LCUI/gui/widget/textview.h"],
+      "namespace": "LCUI",
+      "useNamespace": true,
+      "useNamespaceForMethods": false
     },
     {
       "name": "TextEdit",
       "type": "class",
       "superClass": "Widget",
-      "includes": ["LCUI/gui/widget/textedit.h"]
+      "includes": ["LCUI/gui/widget/textedit.h"],
+      "namespace": "LCUI",
+      "useNamespace": true,
+      "useNamespaceForMethods": false
     }
   ]
 }

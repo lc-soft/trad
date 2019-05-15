@@ -6,7 +6,7 @@ function serializeObject(obj) {
     name: obj.name,
     type: 'object',
     isPointer: obj.isPointer,
-    objectType: obj.typeDeclaration.path
+    objectType: obj.typeDeclaration ? obj.typeDeclaration.path : obj.type
   }
 }
 

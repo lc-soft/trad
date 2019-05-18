@@ -18,10 +18,13 @@ function addBindingFunction(cClass, target) {
 
   assert(!cClass.getMethod(name), `"${name}" has already been defined`)
 
+  const superClassName = cClass.superClass.reference.className
   const that = new types.Object(cClass.typedefPointer, '_this')
   const arg = new CObject('void', 'arg', { isPointer: true })
   const tmp = new types.Object(null, target.name)
   const func = new types.WidgetMethod(name, [tmp, arg])
+
+  assert(superClassName === 'Widget', `${superClassName} does not support creating property bindings`)
 
   // Reset function arguments for Object_Watch()
   func.isStatic = true

@@ -635,7 +635,7 @@ class CTypedef extends CType {
       const func = this.reference
       let str = func.declare(false)
 
-      str = str.replace(func.funcRealName, `(*${this.name})`)
+      str = str.replace(func.cName, `(*${this.name})`)
       str = str.replace('static ', '')
       return `typedef ${str}`
     }

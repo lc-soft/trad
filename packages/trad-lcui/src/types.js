@@ -259,7 +259,7 @@ class CLCUIWidgetMethod extends CMethod {
       return null
     }
     if (cClass instanceof CTypedef) {
-      ctype = cClass.originType.name
+      ctype = cClass.reference.cName
       that = this.block.createObject(cClass, '_this')
     } else {
       that = this.block.createObject(cClass.typedefPointer, '_this')
@@ -280,6 +280,20 @@ class CLCUIWidgetMethod extends CMethod {
   }
 }
 
+class CLCUIAppMethod extends CMethod {
+  constructor(name, args = [], returnType = 'void') {
+    super(name, args, returnType)
+
+    this.widget = null
+  }
+
+  bind(cClass) {
+    super.bind(cClass)
+
+    this.widget = this.block.getObject('_this').selectProperty('widget')
+  }
+}
+
 function isString(obj) {
   return obj.finalTypeDeclaration === declarations.String
 }
@@ -294,15 +308,6 @@ function isObject(obj) {
 
 function isWidget(obj) {
   return obj.finalTypeDeclaration instanceof CLCUIWidget
-}
-
-function getSuperClass(cClass, superClassName) {
-  for (let superClass = cClass.superClass; superClass; superClass = superClass.superClass) {
-    if (superClass.className === superClassName) {
-      return superClass
-    }
-  }
-  return undefined
 }
 
 const LCUI = new CModule('lcui', 'lcui')
@@ -330,7 +335,7 @@ module.exports = {
   isString,
   isNumber,
   isWidget,
-  getSuperClass,
+  AppMethod: CLCUIAppMethod,
   WidgetMethod: CLCUIWidgetMethod,
   Object: CLCUIObject
 }

@@ -124,8 +124,14 @@ const install = Compiler => class JSXParser extends Compiler {
     this.jsxElementDepth += 1
     this.parseJSXElementRef(ctx)
     // In the widget class method, the root widget is itself
-    if (this.jsxElementDepth == 1 && types.getSuperClass(ctx.cClass, 'Widget')) {
-      ctx.widget = this.findContextData(types.WidgetMethod).widget
+    if (this.jsxElementDepth == 1) {
+      if (this.classParserName === 'Widget') {
+        ctx.widget = this.findContextData(types.WidgetMethod).widget
+      } else if (this.classParserName === 'App') {
+        ctx.widget = ctx.that.addProperty(new types.Object('Widget', 'widget'))
+      } else {
+        assert(0, `${this.classParserName} does not support JSX`)
+      }
     } else {
       if (!ctx.widget) {
         const name = allocWidgetObjectName(this.block, ctx.node, ctx.proto)
@@ -133,7 +139,7 @@ const install = Compiler => class JSXParser extends Compiler {
         ctx.widget = new types.Object('Widget', name)
         this.block.append(ctx.widget)
       }
-      functions.assign(ctx.widget, functions.LCUIWidget_New(ctx.type))
+      this.block.append(functions.assign(ctx.widget, functions.LCUIWidget_New(ctx.type)))
     }
     ctx.node.attributes.forEach(attr => this.parse({ type: 'JSXElementAttribute', attr, ctx }))
     this.parseChildren(input.children).forEach((child) => {

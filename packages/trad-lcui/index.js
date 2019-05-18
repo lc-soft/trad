@@ -1,5 +1,6 @@
 const JSXParser = require('./src/jsx')
 const BaseParser = require('./src/base')
+const AppClassParser = require('./src/app')
 const WidgetClassParser = require('./src/widget')
 const StateBindingParser = require('./src/state')
 const PropsBindingParser = require('./src/props')
@@ -19,6 +20,7 @@ function install(Compiler) {
     Compiler,
     JSXParser,
     WidgetClassParser,
+    AppClassParser,
     EventBindingParser,
     StateBindingParser,
     PropsBindingParser,

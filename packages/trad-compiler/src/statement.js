@@ -7,7 +7,7 @@ class ReturnStatementParser extends Parser {
     const result = this.compiler.parse(input.argument)
 
     if (result instanceof CObject) {
-      func.block.append(`return ${result.name};`)
+      func.block.append(`return ${result.id};`)
       func.funcReturnType = result.type
     } else if (typeof result !== 'string') {
       func.block.append('return;')

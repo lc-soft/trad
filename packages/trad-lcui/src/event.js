@@ -25,7 +25,7 @@ const install = Compiler => class EventBindingParser extends Compiler {
     ])
 
     handler = new CTypedef(func, name)
-    this.block.append(handler)
+    ctx.cClass.parent.append(handler)
     return handler
   }
 
@@ -35,17 +35,17 @@ const install = Compiler => class EventBindingParser extends Compiler {
 
     if (wrapperClass) {
       assert(wrapperClass instanceof CType)
-      return wrapperClass
+      return wrapperClass.reference
     }
 
-    const { that } = ctx
+    const that = new CObject(ctx.cClass, '_this')
     const handler = this.selectEventHandler(ctx)
     const func = new types.WidgetMethod('dispathWidgetEvent')
 
     wrapperClass = new CClass(className, 'wrapper')
-    wrapperClass.addMember('_this', ctx.cClass)
-    wrapperClass.addMember('data', 'void*')
-    wrapperClass.addMember('handler', handler.typeDeclaration)
+    wrapperClass.append(new CObject(ctx.cClass, '_this'))
+    wrapperClass.append(new CObject('void', 'data', { isPointer: true }))
+    wrapperClass.append(new CObject(handler, 'handler'))
     ctx.cClass.parent.append(new CTypedef(wrapperClass, className, true))
     ctx.cClass.parent.append(wrapperClass)
 
@@ -58,9 +58,8 @@ const install = Compiler => class EventBindingParser extends Compiler {
     ]
     func.isStatic = true
     func.block.append([
-      that.define(),
-      wrapper.define(),
-      '',
+      that,
+      wrapper,
       `${wrapper.id} = e->data;`,
       `${that.id} = ${wrapper.id}->_this;`,
       `e->data = ${wrapper.id}->data;`,
@@ -73,7 +72,7 @@ const install = Compiler => class EventBindingParser extends Compiler {
 
   parseJSXElementEventBinding(ctx, attrName, func) {
     const wrapperClass = this.selectEventWrapperClass(ctx)
-    const wrapperName = this.block.allocObjectName('_event_wrapper')
+    const wrapperName = this.block.allocObjectName('_ev')
     const wrapper = new CObject(wrapperClass, wrapperName)
     const eventName = attrName.substr(2).toLowerCase()
 
@@ -87,16 +86,16 @@ const install = Compiler => class EventBindingParser extends Compiler {
     this.block.append([
       '',
       wrapper,
-      `${wrapper.id} = malloc(sizeof(${wrapperClass.type}));`,
+      `${wrapper.id} = malloc(sizeof(${wrapperClass.typedef.cName}));`,
       `${wrapper.id}->_this = _this;`,
       `${wrapper.id}->data = NULL;`,
-      `${wrapper.id}->handler = ${func.funcRealName};`,
+      `${wrapper.id}->handler = ${func.cName};`,
       functions.Widget_BindEvent(
         ctx.widget,
         eventName,
         ctx.cClass.getMethod('dispathWidgetEvent'),
         wrapper,
-        new CFunction('void', 'free')
+        new CFunction('free')
       ),
       ''
     ])

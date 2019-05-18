@@ -1,7 +1,7 @@
-const assert = require('assert')
 const lib = require('./lib')
 const types = require('./types')
 const functions = require('./functions')
+const helper = require('./helper')
 const trad = require('../../trad')
 
 class WidgetRegisterFunction extends trad.CFunction {
@@ -16,54 +16,6 @@ class WidgetRegisterFunction extends trad.CFunction {
   }
 }
 
-function initWidgetUpdateMethod(cClass) {
-  let conditions = []
-  let insertIndex = -1
-  let funcUpdate = cClass.getMethod('update')
-  const that = new trad.CObject(cClass.typedefPointer, '_this')
-  const stateChanges = that.selectProperty('state_changes')
-  const propsChanges = that.selectProperty('props_changes')
-
-  if (stateChanges) {
-    conditions.push(`${stateChanges.id} < 1`)
-  }
-  if (propsChanges) {
-    conditions.push(`${propsChanges.id} < 1`)
-  }
-  if (conditions.length < 1) {
-    return null
-  }
-
-  if (!funcUpdate) {
-    funcUpdate = cClass.addMethod(new types.WidgetMethod('update'))
-  }
-  // Find the first assignment expression of _this
-  funcUpdate.block.body.some((stat, i) => {
-    if (stat instanceof trad.CAssignmentExpression && stat.left.id === '_this') {
-      insertIndex = i + 1
-      return true
-    }
-    return false
-  })
-
-  assert(insertIndex > 0)
-
-  const lines = [
-    `if (${conditions.join(' && ')})`,
-    '{',
-    'return;',
-    '}'
-  ]
-  if (stateChanges) {
-    lines.push(functions.assign(stateChanges, 0))
-  }
-  if (propsChanges) {
-    lines.push(functions.assign(propsChanges, 0))
-  }
-  funcUpdate.block.insert(insertIndex, lines)
-  return funcUpdate
-}
-
 const install = Compiler => class WidgetClassParser extends Compiler {
   parse(input) {
     const method = `parse${input.type}`
@@ -75,7 +27,7 @@ const install = Compiler => class WidgetClassParser extends Compiler {
   }
 
   parseMethodDefinition(input) {
-    if (!this.parsingWidgetClass) {
+    if (this.classParserName !== 'Widget') {
       return super.parse(input)
     }
 
@@ -92,25 +44,30 @@ const install = Compiler => class WidgetClassParser extends Compiler {
     const parser = this.handlers.ClassDeclaration
     const cClass = parser.parseDeclaration(input)
 
-    if (!lib.isFromModule(types.getSuperClass(cClass, 'Widget'), 'lcui')) {
+    if (
+      !lib.isFromModule(cClass.superClass, 'lcui')
+      || cClass.superClass.reference.className !== 'Widget'
+    ) {
       return super.parse(input)
     }
     this.block.append(cClass)
-    this.beforeParseClassDeclaration(cClass)
-    this.parseChildren(lib.sortMethodDefinitions(input.body.body))
-    this.afterParseClassDeclaration(cClass)
+    this.beforeParseWidgetClass(cClass)
+    this.parseChildren(helper.sortMethodDefinitions(input.body.body))
+    this.afterParseWidgetClass(cClass)
     // Move Class definition to current position
     this.block.append(cClass)
     return cClass
   }
 
-  beforeParseClassDeclaration(cClass) {
+  beforeParseWidgetClass(cClass) {
     const keys = ['constructor', 'destructor']
 
     this.enableJSX = true
     this.enableDataBinding = true
     this.enableEventBinding = true
     this.parsingWidgetClass = true
+    this.classParserName = 'Widget'
+    this.classMethodType = types.WidgetMethod
     keys.forEach((name) => {
       const oldMethod = cClass.getMethod(name)
 
@@ -130,12 +87,12 @@ const install = Compiler => class WidgetClassParser extends Compiler {
     cClass.parent.createObject(protoClass.typedef, `${lib.toIdentifierName(cClass.className)}_class`)
   }
 
-  afterParseClassDeclaration(cClass) {
+  afterParseWidgetClass(cClass) {
     const className = lib.toWidgetTypeName(cClass.className)
     let superClassName = cClass.superClass ? lib.toWidgetTypeName(cClass.superClass.className) : null
     const proto = `${lib.toIdentifierName(cClass.className)}_class`
     const func = new WidgetRegisterFunction(cClass)
-    const funcUpdate = initWidgetUpdateMethod(cClass)
+    const funcUpdate = helper.initUpdateMethod(cClass)
     const constructor = cClass.getMethod('constructor')
     const destructor = cClass.getMethod('destructor')
 
@@ -159,6 +116,8 @@ const install = Compiler => class WidgetClassParser extends Compiler {
     this.enableDataBinding = false
     this.enableEventBinding = false
     this.parsingWidgetClass = false
+    this.classParserName = null
+    this.classMethodType = null
   }
 }
 

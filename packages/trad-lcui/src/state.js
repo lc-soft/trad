@@ -17,23 +17,39 @@ function addBindingFunction(cClass, target) {
 
   assert(!cClass.getMethod(name), `"${name}" has already been defined`)
 
+  const superClassName = cClass.superClass.reference.className
   const that = new types.Object(cClass.typedefPointer, '_this')
   const arg = new CObject('void', 'arg', { isPointer: true })
   const tmp = new types.Object(null, target.name)
-  const func = new types.WidgetMethod(name, [tmp, arg])
+
+  if (superClassName === 'Widget') {
+    func = new types.WidgetMethod(name, [tmp, arg])
+  } else if (superClassName === 'App') {
+    func = new types.AppMethod(name, [tmp, arg])
+  } else {
+    assert(0, `${superClassName} does not support creating data bindings`)
+  }
 
   // Reset function arguments for Object_Watch()
   func.isStatic = true
   func.isExported = false
   cClass.addMethod(func)
-  func.block.append([
-    that,
-    func.widget,
-    functions.assign(func.widget, arg),
-    functions.assign(that, functions.Widget_GetData(func.widget)),
-    functions.update(that.selectProperty('state_changes')),
-    functions.Widget_AddTask(func.widget, 'user')
-  ])
+  if (superClassName === 'Widget') {
+    func.block.append([
+      that,
+      func.widget,
+      functions.assign(func.widget, arg),
+      functions.assign(that, functions.Widget_GetData(func.widget)),
+      functions.update(that.selectProperty('state_changes')),
+      functions.Widget_AddTask(func.widget, 'user')
+    ])
+  } else if (superClassName === 'App') {
+    func.block.append([
+      that,
+      functions.assign(that, arg),
+      functions.update(that.selectProperty('state_changes'))
+    ])
+  }
   return func
 }
 

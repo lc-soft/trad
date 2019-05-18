@@ -32,6 +32,7 @@ const install = Compiler => class LCUIBaseParser extends Compiler {
     this.enableDataBinding = false
     this.enableEventBinding = false
     this.parsingWidgetClass = false
+    this.classParserName = null
   }
 
   createObject(baseName, initValue) {

@@ -147,7 +147,7 @@ const install = Compiler => class JSXParser extends Compiler {
   parse(input) {
     const method = `parse${input.type}`
 
-    if (JSXParser.prototype.hasOwnProperty(method)) {
+    if (this.enableJSX && JSXParser.prototype.hasOwnProperty(method)) {
       return JSXParser.prototype[method].call(this, input)
     }
     return super.parse(input)

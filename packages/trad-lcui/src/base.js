@@ -25,6 +25,15 @@ function convertObject(obj) {
 }
 
 const install = Compiler => class LCUIBaseParser extends Compiler {
+  constructor(...args) {
+    super(...args)
+
+    this.enableJSX = false
+    this.enableDataBinding = false
+    this.enableEventBinding = false
+    this.parsingWidgetClass = false
+  }
+
   createObject(baseName, initValue) {
     if (!initValue) {
       debugger

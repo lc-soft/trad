@@ -127,7 +127,7 @@ const install = Compiler => class PropsBindingParser extends Compiler {
   parseMethodDefinition(input) {
     const func = super.parse(input)
 
-    if (func.name === 'constructor') {
+    if (this.enableDataBinding && func.name === 'constructor') {
       this.initPropsBindings()
     }
     return func
@@ -156,7 +156,7 @@ const install = Compiler => class PropsBindingParser extends Compiler {
   parse(input) {
     const method = `parse${input.type}`
 
-    if (PropsBindingParser.prototype.hasOwnProperty(method)) {
+    if (this.enableDataBinding && PropsBindingParser.prototype.hasOwnProperty(method)) {
       return PropsBindingParser.prototype[method].call(this, input)
     }
     return super.parse(input)

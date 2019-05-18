@@ -1,6 +1,6 @@
 const JSXParser = require('./src/jsx')
 const BaseParser = require('./src/base')
-const ClassParser = require('./src/class')
+const WidgetClassParser = require('./src/widget')
 const StateBindingParser = require('./src/state')
 const PropsBindingParser = require('./src/props')
 const EventBindingParser = require('./src/event')
@@ -18,7 +18,7 @@ function install(Compiler) {
   return mixin(
     Compiler,
     JSXParser,
-    ClassParser,
+    WidgetClassParser,
     EventBindingParser,
     StateBindingParser,
     PropsBindingParser,

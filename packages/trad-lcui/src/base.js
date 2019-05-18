@@ -4,6 +4,10 @@ const { toIdentifierName } = require('./lib')
 const functions = require('./functions')
 const { CTypedef, CCallExpression } = require('../../trad')
 
+function isComparator(operator) {
+  return ['>', '<', '==', '>=', '<='].indexOf(operator) >= 0
+}
+
 function getTypeName(type) {
   let decl = type
 
@@ -95,6 +99,9 @@ const install = Compiler => class LCUIBaseParser extends Compiler {
         left = this.createObject(`${left.name}_str`, left.stringify())
         this.block.append(left)
       }
+    }
+    if (isComparator(input.operator)) {
+      return left.compare(input.operator, right)
     }
     right = left.operate(input.operator, right)
     return this.createObject(null, right)

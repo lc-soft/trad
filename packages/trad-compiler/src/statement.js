@@ -1,12 +1,12 @@
 const { Parser } = require('./parser')
-const { CFunction, CObject, CBlock } = require('../../trad')
+const trad = require('../../trad')
 
 class ReturnStatementParser extends Parser {
   parse(input) {
-    const func = this.compiler.findContextData(CFunction)
+    const func = this.compiler.findContextData(trad.CFunction)
     const result = this.compiler.parse(input.argument)
 
-    if (result instanceof CObject) {
+    if (result instanceof trad.CObject) {
       func.block.append(`return ${result.id};`)
       func.funcReturnType = result.type
     } else if (typeof result !== 'string') {
@@ -17,18 +17,30 @@ class ReturnStatementParser extends Parser {
   }
 }
 
+class IfStatementParser extends Parser {
+  parse(input) {
+    const stat = new trad.CIfStatement()
+
+    stat.test = this.compiler.parse(input.test)
+    this.compiler.block.append(stat)
+    this.context = this.compiler.context
+    this.context.data = stat
+    stat.consequent = this.compiler.parse(input.consequent)
+  }
+}
+
 class BlockStatmentParser extends Parser {
   parse(input) {
-    let block = new CBlock()
+    let block = new trad.CBlock()
     const ctx = this.compiler.findContext(c => (
-      c.data instanceof CBlock || c.data instanceof CFunction
+      c.data instanceof trad.CStatement || c.data instanceof trad.CBlock || c.data instanceof trad.CFunction
     ))
     const parent = ctx ? ctx.data : null
 
-    if (parent instanceof CFunction) {
+    if (parent instanceof trad.CFunction) {
       block = parent.block
     } else {
-      this.block.append(block)
+      parent.append(block)
     }
     this.context = this.compiler.context
     this.context.data = block
@@ -44,6 +56,7 @@ class ExpressionStatementParser extends Parser {
 }
 
 module.exports = {
+  IfStatementParser,
   BlockStatmentParser,
   ReturnStatementParser,
   ExpressionStatementParser

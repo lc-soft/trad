@@ -107,10 +107,10 @@ const install = Compiler => class WidgetClassParser extends Compiler {
     if (funcUpdate) {
       func.block.append(`${proto}.proto->runtask = ${funcUpdate.funcName};`)
     }
-    constructor.block.append([
-      functions.call(cClass.getMethod('template'), constructor.widget),
-      functions.call(funcUpdate, constructor.widget)
-    ])
+    constructor.block.append(functions.call(cClass.getMethod('template'), constructor.widget))
+    if (funcUpdate) {
+      constructor.block.append(functions.call(funcUpdate, constructor.widget))
+    }
     cClass.parent.append(func)
     this.enableJSX = false
     this.enableDataBinding = false

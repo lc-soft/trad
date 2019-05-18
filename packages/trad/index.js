@@ -56,7 +56,7 @@ class CNode {
   }
 }
 
-class CStatment {
+class CCode {
   constructor(name) {
     this.meta = { name }
     this.node = new CNode(this)
@@ -85,9 +85,80 @@ class CStatment {
   define() {
     return `/* Define: ${this.name} */`
   }
+
+  get body() {
+    return this.node.children.map(child => (child instanceof CNode ? child.data : child))
+  }
+
+  get parent() {
+    return this.node.parent ? this.node.parent.data : undefined
+  }
+
+  keys() {
+    return this.body.filter(child => child instanceof CIdentifier).map(child => child.name)
+  }
+
+  insert(index, stat) {
+    if (stat instanceof Array) {
+      stat.forEach((s, i) => {
+        this.node.insertChild(index + i, s instanceof CCode ? s.node : s)
+      })
+      return
+    }
+    this.node.insertChild(index, stat instanceof CCode ? stat.node : stat)
+  }
+
+  append(stat) {
+    if (stat instanceof Array) {
+      stat.forEach(s => this.append(s))
+      return
+    }
+    this.node.append(stat instanceof CCode ? stat.node : stat)
+  }
+
+  closest(callback) {
+    for (let { node } = this; node; node = node.parent) {
+      if (callback(node.data)) {
+        return node.data
+      }
+    }
+    return undefined
+  }
 }
 
-class CExpression extends CStatment {
+class CStatement extends CCode {
+  constructor(name) {
+    super('statment')
+
+    this.statementType = name
+  }
+
+  export() {
+    return ''
+  }
+
+  declare() {
+    return ''
+  }
+}
+
+class CIfStatement extends CStatement {
+  constructor(test, consequent) {
+    super('if')
+
+    this.test = test
+    this.consequent = consequent
+  }
+
+  define() {
+    return [
+      `if (${this.test.define().slice(0, -1)})`,
+      this.consequent.define()
+    ]
+  }
+}
+
+class CExpression extends CCode {
   constructor(type) {
     super('expression')
 
@@ -201,7 +272,7 @@ class CAssignmentExpression extends CExpression {
   }
 }
 
-class CDeclaration extends CStatment {
+class CDeclaration extends CCode {
   constructor(name) {
     super(name)
 
@@ -248,45 +319,6 @@ class CDeclaration extends CStatment {
 
   set isPointer(value) {
     this.meta.isPointer = value
-  }
-
-  get body() {
-    return this.node.children.map(child => (child instanceof CNode ? child.data : child))
-  }
-
-  get parent() {
-    return this.node.parent ? this.node.parent.data : undefined
-  }
-
-  keys() {
-    return this.body.filter(child => child instanceof CIdentifier).map(child => child.name)
-  }
-
-  insert(index, stat) {
-    if (stat instanceof Array) {
-      stat.forEach((s, i) => {
-        this.node.insertChild(index + i, s instanceof CStatment ? s.node : s)
-      })
-      return
-    }
-    this.node.insertChild(index, stat instanceof CStatment ? stat.node : stat)
-  }
-
-  append(stat) {
-    if (stat instanceof Array) {
-      stat.forEach(s => this.append(s))
-      return
-    }
-    this.node.append(stat instanceof CStatment ? stat.node : stat)
-  }
-
-  closest(callback) {
-    for (let { node } = this; node; node = node.parent) {
-      if (callback(node.data)) {
-        return node.data
-      }
-    }
-    return undefined
   }
 }
 
@@ -352,7 +384,7 @@ class CType extends CIdentifier {
   }
 }
 
-class CPreprocessorDirective extends CStatment {
+class CPreprocessorDirective extends CCode {
   constructor(name) {
     super(`#${name}`)
 
@@ -728,6 +760,10 @@ class CObject extends CIdentifier {
     return this.finalTypeDeclaration.operate(this, operator, right)
   }
 
+  compare(operator, right) {
+    return this.finalTypeDeclaration.compare(this, operator, right)
+  }
+
   destroy() {
     return this.finalTypeDeclaration.destroy(this)
   }
@@ -875,11 +911,11 @@ class CClass extends CStruct {
 }
 
 function mapDefinitions(list) {
-  return list.map(item => (item instanceof CStatment ? item.define() : item)).filter(item => !!item)
+  return list.map(item => (item instanceof CCode ? item.define() : item)).filter(item => !!item)
 }
 
 function mapExports(list) {
-  return list.map(item => (item instanceof CStatment ? item.export() : item)).filter(item => !!item)
+  return list.map(item => (item instanceof CCode ? item.export() : item)).filter(item => !!item)
 }
 
 function formatBlocks(blocks) {
@@ -1258,6 +1294,8 @@ module.exports = {
   CStruct,
   CFunction,
   CMethod,
+  CStatement,
+  CIfStatement,
   CCallExpression,
   CUpdateExpression,
   CAssignmentExpression

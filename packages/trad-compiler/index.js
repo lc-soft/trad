@@ -11,6 +11,7 @@ const { ExportDefaultParser, ExportNamedParser } = require('./src/export')
 const { ClassParser, MethodParser } = require('./src/class')
 const { FunctionParser, FunctionExpressionParser } = require('./src/function')
 const {
+  IfStatementParser,
   BlockStatmentParser,
   ReturnStatementParser,
   ExpressionStatementParser
@@ -132,6 +133,7 @@ class Compiler {
       BlockStatement: new BlockStatmentParser(this),
       ExportDefaultDeclaration: new ExportDefaultParser(this),
       ExportNamedDeclaration: new ExportNamedParser(this),
+      IfStatement: new IfStatementParser(this),
       ReturnStatement: new ReturnStatementParser(this),
       ExpressionStatement: new ExpressionStatementParser(this),
       ThisExpression: new ThisExpressionParser(this),

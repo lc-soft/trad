@@ -29,7 +29,7 @@ class CLCUIObjectType extends CClass {
     const obj = new CLCUIObject(null, 'obj')
     const cstrConst = new CObject('const char', 'str', { isPointer: true })
     const cstrObj = new CLCUIObject('String', 'str')
-    const cnum = new CObject('int', 'bool')
+    const cnum = new CObject('int', 'num')
     const cfunc = new CObject('void', 'func', { isPointer: true })
     const cptr = new CObject('void', 'ptr', { isPointer: true })
 
@@ -39,7 +39,7 @@ class CLCUIObjectType extends CClass {
     this.addMethod(new CMethod('new', [], obj.typeDeclaration))
     this.addMethod(new CMethod('delete'))
     this.addMethod(new CMethod('operate', [cstrConst, obj], obj.typeDeclaration))
-    this.addMethod(new CMethod('compare', [cstrConst, obj], cnum))
+    this.addMethod(new CMethod('compare', [obj], cnum))
     this.addMethod(new CMethod('duplicate', [], obj.typeDeclaration))
     this.addMethod(new CMethod('toString', [], cstrObj.typeDeclaration))
     this.addMethod(new CMethod('watch', [cfunc, cptr]))
@@ -67,8 +67,9 @@ class CLCUIObjectType extends CClass {
   operate(left, operator, right) {
     return this.callMethod('operate', left, operator, right)
   }
-  compare(left, operator, right) {
-    return this.callMethod('compare', left, operator, right)
+
+  compare(left, right) {
+    return this.callMethod('compare', left, right)
   }
 
   stringify(obj) {

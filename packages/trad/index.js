@@ -5,20 +5,24 @@ function capitalize(str) {
   return str.substr(0, 1).toUpperCase() + str.substr(1)
 }
 
+// Convert to right value
 function rvalue(value) {
   if (typeof value === 'undefined' || value === null) {
-    return 'NULL'
+    return new CObject('void', 'NULL', { isPointer: true })
   }
   if (typeof value === 'string') {
-    return JSON.stringify(value)
+    return new CObject('const char', JSON.stringify(value), { isPointer: true })
   }
   if (typeof value === 'number') {
-    return value
+    return new CObject('int', value.toString())
   }
   if (value instanceof CFunction) {
-    return value.funcName
+    return new CObject('void', value.funcName, { isPointer: true })
   }
-  return undefined
+  if (value instanceof CCallExpression) {
+    return new CObject(value.func.funcReturnType, value.define().slice(0, -1))
+  }
+  return value
 }
 
 class CNode {
@@ -176,6 +180,29 @@ class CExpression extends CCode {
   }
 }
 
+class CBinaryExpression extends CExpression {
+  constructor(left, operator, right) {
+    super('binary')
+
+    this.left = left
+    this.right = right
+    this.operator = operator
+  }
+
+  define() {
+    const left = rvalue(this.left)
+    const right = rvalue(this.right)
+
+    if (left.pointerLevel === right.pointerLevel) {
+      return `${left.id} ${this.operator} ${right.id};`
+    }
+    if (this.left.pointerLevel < this.right.pointerLevel) {
+      return `${left.id} ${this.operator} *${right.id};`
+    }
+    return `${left.id} ${this.operator} &${right.id};`
+  }
+}
+
 class CCallExpression extends CExpression {
   constructor(func, ...args) {
     super('call')
@@ -203,12 +230,8 @@ class CCallExpression extends CExpression {
 
   define() {
     const argsStr = this.func.funcArgs.map((declaration, i) => {
-      const arg = this.funcArgs[i]
-      const value = rvalue(arg)
+      const arg = rvalue(this.funcArgs[i])
 
-      if (typeof value !== 'undefined') {
-        return value
-      }
       if (declaration.pointerLevel === arg.pointerLevel) {
         return arg.id
       }
@@ -251,24 +274,16 @@ class CAssignmentExpression extends CExpression {
   }
 
   define() {
-    const value = rvalue(this.right)
-    let { right } = this
+    const right = rvalue(this.right)
+    const left = rvalue(this.left)
 
-    if (typeof value !== 'undefined') {
-      return `${this.left.id} ${this.operator} ${value};`
+    if (left.pointerLevel === right.pointerLevel) {
+      return `${left.id} ${this.operator} ${right.id};`
     }
-    if (right instanceof CCallExpression) {
-      const definition = right.define()
-
-      right = new CObject(right.func.funcReturnType, definition.substr(0, definition.length - 1))
+    if (left.pointerLevel < right.pointerLevel) {
+      return `${left.id} ${this.operator} *${right.id};`
     }
-    if (this.left.pointerLevel === right.pointerLevel) {
-      return `${this.left.id} ${this.operator} ${right.id};`
-    }
-    if (this.left.pointerLevel < right.pointerLevel) {
-      return `${this.left.id} ${this.operator} *${right.id};`
-    }
-    return `${this.left.id} ${this.operator} &${right.id};`
+    return `${left.id} ${this.operator} &${right.id};`
   }
 }
 
@@ -760,8 +775,8 @@ class CObject extends CIdentifier {
     return this.finalTypeDeclaration.operate(this, operator, right)
   }
 
-  compare(operator, right) {
-    return this.finalTypeDeclaration.compare(this, operator, right)
+  compare(right) {
+    return this.finalTypeDeclaration.compare(this, right)
   }
 
   destroy() {
@@ -1296,6 +1311,7 @@ module.exports = {
   CMethod,
   CStatement,
   CIfStatement,
+  CBinaryExpression,
   CCallExpression,
   CUpdateExpression,
   CAssignmentExpression

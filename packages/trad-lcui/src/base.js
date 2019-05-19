@@ -2,7 +2,7 @@ const assert = require('assert')
 const types = require('./types')
 const { toIdentifierName } = require('./lib')
 const functions = require('./functions')
-const { CTypedef, CCallExpression } = require('../../trad')
+const { CTypedef, CBinaryExpression, CCallExpression } = require('../../trad')
 
 function isComparator(operator) {
   return ['>', '<', '==', '>=', '<='].indexOf(operator) >= 0
@@ -101,7 +101,7 @@ const install = Compiler => class LCUIBaseParser extends Compiler {
       }
     }
     if (isComparator(input.operator)) {
-      return left.compare(input.operator, right)
+      return new CBinaryExpression(left.compare(right), input.operator, 0)
     }
     right = left.operate(input.operator, right)
     return this.createObject(null, right)

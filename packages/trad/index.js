@@ -518,6 +518,22 @@ class CMethod extends CFunction {
     this.isStatic = false
   }
 
+  get isExported() {
+    if (this.meta.isExported === null) {
+      return this.parent ? this.parent.isExported : false
+    }
+    return this.meta.isExported
+  }
+
+  set isExported(isExported) {
+    // constructor and destructor must be static
+    if (['constructor', 'destructor'].indexOf(this.methodName) >= 0) {
+      this.meta.isExported = false
+    } else {
+      this.meta.isExported = isExported
+    }
+  }
+
   get funcArgs() {
     if (this.isStatic) {
       return this.meta.funcArgs
@@ -840,22 +856,6 @@ class CClass extends CStruct {
     this.typedefPointer = new CTypedef(this, name, true)
     this.typedef = new CTypedef(this, `${name}Rec`, false, false)
     this.destructor = null
-  }
-
-  set isExported(isExported) {
-    this.methods.forEach((method) => {
-      // constructor and destructor must be static
-      if (['constructor', 'destructor'].indexOf(method.methodName) >= 0) {
-        return
-      }
-      // eslint-disable-next-line no-param-reassign
-      method.isExported = isExported
-    })
-    this.meta.isExported = isExported
-  }
-
-  get isExported() {
-    return this.meta.isExported
   }
 
   set isImported(isImported) {

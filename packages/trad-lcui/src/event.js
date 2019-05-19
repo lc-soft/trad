@@ -57,6 +57,7 @@ const install = Compiler => class EventBindingParser extends Compiler {
       new CObject(null, 'arg', { isPointer: true })
     ]
     func.isStatic = true
+    func.isExported = false
     func.block.append([
       that,
       wrapper,
@@ -77,12 +78,9 @@ const install = Compiler => class EventBindingParser extends Compiler {
     const eventName = attrName.substr(2).toLowerCase()
 
     // Event handler should be static
-    func.isStatic = true
+    func.isExported = false
     // Rewrite event handler arguments
-    func.funcArgs = [
-      ctx.that,
-      new types.Object('WidgetEvent', 'e')
-    ]
+    func.funcArgs = [new types.Object('WidgetEvent', 'e')]
     this.block.append([
       '',
       wrapper,

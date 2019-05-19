@@ -110,6 +110,7 @@ const install = Compiler => class WidgetClassParser extends Compiler {
     const proto = `${lib.toIdentifierName(cClass.className)}_class`
     const func = new WidgetRegisterFunction(cClass)
     const funcUpdate = helper.initUpdateMethod(cClass)
+    const funcTemplate = cClass.getMethod('template')
     const constructor = cClass.getMethod('constructor')
     const destructor = cClass.getMethod('destructor')
 
@@ -124,7 +125,8 @@ const install = Compiler => class WidgetClassParser extends Compiler {
     if (funcUpdate) {
       func.block.append(`${proto}.proto->runtask = ${funcUpdate.funcName};`)
     }
-    constructor.block.append(functions.call(cClass.getMethod('template'), constructor.widget))
+    funcTemplate.isExported = false
+    constructor.block.append(functions.call(funcTemplate, constructor.widget))
     if (funcUpdate) {
       constructor.block.append(functions.call(funcUpdate, constructor.widget))
     }

@@ -101,7 +101,7 @@ const install = Compiler => class StateBindingParser extends Compiler {
       const member = stateStruct.getMember(key)
 
       if (['String', 'Number'].indexOf(member.type) >= 0) {
-        stateStruct.addMember(new types.Object(member.type, key))
+        stateStruct.addMember(new types.Object(member.type, key, { isAllocFromStack: true }))
       }
     })
     cClass.parent.append(stateType)

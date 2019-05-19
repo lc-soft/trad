@@ -15,7 +15,7 @@ class FunctionExpressionParser extends Parser {
 class FunctionParser extends Parser {
   parse(input) {
     // FIXME: improve function parser
-    assert(!this.findContextData(CFunction), 'function nesting is not supported')
+    assert(!this.compiler.findContextData(CFunction), 'function nesting is not supported')
 
     const func = new CFunction(input.id.name)
     this.context = this.compiler.context

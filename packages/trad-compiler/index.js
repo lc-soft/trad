@@ -20,7 +20,8 @@ const {
   ThisExpressionParser,
   AssignmentExpressionParser,
   MemberExpressionParser,
-  ObjectExpressionParser
+  ObjectExpressionParser,
+  CallExpressionParser
 } = require('./src/expression')
 
 class CompilerContext {
@@ -139,7 +140,8 @@ class Compiler {
       ThisExpression: new ThisExpressionParser(this),
       AssignmentExpression: new AssignmentExpressionParser(this),
       MemberExpression: new MemberExpressionParser(this),
-      ObjectExpression: new ObjectExpressionParser(this)
+      ObjectExpression: new ObjectExpressionParser(this),
+      CallExpression: new CallExpressionParser(this)
     }
     context.data = this.program
     this.pushContext(context)

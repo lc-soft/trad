@@ -87,7 +87,24 @@ const install = Compiler => class WidgetClassParser extends Compiler {
     cClass.parent.createObject(protoClass.typedef, `${lib.toIdentifierName(cClass.className)}_class`)
   }
 
-  afterParseWidgetClass(cClass) {
+  addWidgetNewMethod(cClass) {
+    const widget = new types.Object('Widget', 'w')
+    const method = new trad.CMethod('new', [], widget.type)
+
+    method.isStatic = true
+    method.block.append(`return LCUIWidget_New("${lib.toWidgetTypeName(cClass.className)}");`)
+    cClass.addMethod(method)
+  }
+
+  addWidgetDeleteMethod(cClass) {
+    const widget = new types.Object('Widget', 'w')
+    const method = new types.WidgetMethod('delete')
+
+    method.block.append(`Widget_Destroy(${widget.id});`)
+    cClass.addMethod(method)
+  }
+
+  addWidgetRegisterMethod(cClass) {
     const className = lib.toWidgetTypeName(cClass.className)
     let superClassName = cClass.superClass ? lib.toWidgetTypeName(cClass.superClass.className) : null
     const proto = `${lib.toIdentifierName(cClass.className)}_class`
@@ -112,6 +129,12 @@ const install = Compiler => class WidgetClassParser extends Compiler {
       constructor.block.append(functions.call(funcUpdate, constructor.widget))
     }
     cClass.parent.append(func)
+  }
+
+  afterParseWidgetClass(cClass) {
+    this.addWidgetNewMethod(cClass)
+    this.addWidgetDeleteMethod(cClass)
+    this.addWidgetRegisterMethod(cClass)
     this.enableJSX = false
     this.enableDataBinding = false
     this.enableEventBinding = false

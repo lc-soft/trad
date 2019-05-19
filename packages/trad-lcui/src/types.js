@@ -148,9 +148,13 @@ class CLCUINumber extends CLCUIObjectType {
 
 class CLCUIWidget extends CClass {
   constructor() {
-    super('LCUI_Widget')
+    super('Widget')
 
     this.alias = 'Widget'
+    this.namespace = LCUINamespace
+    this.typedef.namespace = LCUINamespace
+    this.typedefPointer.namespace = LCUINamespace
+    this.useNamespaceForMethods = false
   }
 
   install() {
@@ -261,7 +265,7 @@ class CLCUIWidgetMethod extends CMethod {
       that.node.remove()
     }
     this.widget.cClassName = cClass.className
-    if (this.isStatic) {
+    if (this.isStatic || this.methodName === 'delete') {
       return null
     }
     if (cClass instanceof CTypedef) {

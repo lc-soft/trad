@@ -5,6 +5,7 @@ const acornJSX = require('acorn-jsx')
 const TradJSON = require('./src/json')
 const { CBlock, CProgram } = require('../trad')
 const { LiteralParser } = require('./src/literal')
+const { SuperKeywordParser } = require('./src/super')
 const { IdentifierParser } = require('./src/identifier')
 const { ImportParser } = require('./src/import')
 const { ExportDefaultParser, ExportNamedParser } = require('./src/export')
@@ -125,6 +126,7 @@ class Compiler {
     this.program = new CProgram(file)
     this.handlers = {
       Literal: new LiteralParser(this),
+      Super: new SuperKeywordParser(this),
       Identifier: new IdentifierParser(this),
       ImportDeclaration: new ImportParser(this),
       ClassDeclaration: new ClassParser(this),

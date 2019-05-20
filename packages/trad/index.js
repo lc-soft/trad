@@ -207,9 +207,6 @@ class CCallExpression extends CExpression {
   constructor(func, ...args) {
     super('call')
 
-    if (!func) {
-      debugger
-    }
     this.func = func
     this.funcArgs = args
   }

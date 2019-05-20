@@ -67,18 +67,10 @@ class AssignmentExpressionParser extends Parser {
 
 class CallExpressionParser extends Parser {
   parse(input) {
-    const exp = new CCallExpression()
-
-    if (input.callee.type === 'Super') {
-      exp.func = this.parseSuper(input)
-    }
-  }
-
-  parseSuper() {
-    const cClass = this.findContextData(CClass)
-
-    assert(cClass && cClass.superClass, '\'super\' keyword unexpected here')
-    return cClass.superClass.getMethod('constructor')
+    return new CCallExpression(
+      this.compiler.parse(input.callee),
+      input.arguments.map(arg => this.compiler.parse(arg))
+    )
   }
 }
 

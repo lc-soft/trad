@@ -91,7 +91,7 @@ const install = Compiler => class StateBindingParser extends Compiler {
     assert(typeof left === 'undefined', 'object-to-object assignment is not supported')
     left = this.parse(input.left.object)
 
-    const that = this.block.getObject('_this')
+    const that = this.block.getThis()
     const cClass = this.findContextData(CClass)
     const stateStruct = this.parse(input.right)
     const stateType = new CTypedef(stateStruct, `${left.className}StateRec`, false, false)

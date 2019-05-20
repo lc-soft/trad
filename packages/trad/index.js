@@ -1,12 +1,11 @@
 const assert = require('assert')
 const pathModule = require('path')
-
-function capitalize(str) {
-  return str.substr(0, 1).toUpperCase() + str.substr(1)
-}
+const { capitalize, toVariableName } = require('../trad-utils')
 
 // Convert to right value
-function rvalue(value) {
+function rvalue(value, stat) {
+  const block = stat.closest(parent => parent instanceof CBlock)
+
   if (typeof value === 'undefined' || value === null) {
     return new CObject('void', 'NULL', { isPointer: true })
   }
@@ -20,7 +19,11 @@ function rvalue(value) {
     return new CObject('void', value.funcName, { isPointer: true })
   }
   if (value instanceof CCallExpression) {
-    return new CObject(value.func.funcReturnType, value.define().slice(0, -1))
+    let type = value.func.funcReturnType
+    if (block) {
+      type = block.getType(type)
+    }
+    return new CObject(type, value.define().slice(0, -1))
   }
   return value
 }
@@ -190,13 +193,13 @@ class CBinaryExpression extends CExpression {
   }
 
   define() {
-    const left = rvalue(this.left)
-    const right = rvalue(this.right)
+    const left = rvalue(this.left, this)
+    const right = rvalue(this.right, this)
 
     if (left.pointerLevel === right.pointerLevel) {
       return `${left.id} ${this.operator} ${right.id};`
     }
-    if (this.left.pointerLevel < this.right.pointerLevel) {
+    if (left.pointerLevel < right.pointerLevel) {
       return `${left.id} ${this.operator} *${right.id};`
     }
     return `${left.id} ${this.operator} &${right.id};`
@@ -227,7 +230,7 @@ class CCallExpression extends CExpression {
 
   define() {
     const argsStr = this.func.funcArgs.map((declaration, i) => {
-      const arg = rvalue(this.funcArgs[i])
+      const arg = rvalue(this.funcArgs[i], this)
 
       if (declaration.pointerLevel === arg.pointerLevel) {
         return arg.id
@@ -261,26 +264,11 @@ class CUpdateExpression extends CExpression {
   }
 }
 
-class CAssignmentExpression extends CExpression {
+class CAssignmentExpression extends CBinaryExpression {
   constructor(left, right, operator = '=') {
-    super('assignment')
+    super(left, operator, right)
 
-    this.left = left
-    this.right = right
-    this.operator = operator
-  }
-
-  define() {
-    const right = rvalue(this.right)
-    const left = rvalue(this.left)
-
-    if (left.pointerLevel === right.pointerLevel) {
-      return `${left.id} ${this.operator} ${right.id};`
-    }
-    if (left.pointerLevel < right.pointerLevel) {
-      return `${left.id} ${this.operator} *${right.id};`
-    }
-    return `${left.id} ${this.operator} &${right.id};`
+    this.expressionType = 'assignment'
   }
 }
 
@@ -536,7 +524,7 @@ class CMethod extends CFunction {
       return this.meta.funcArgs
     }
     // Insert the _this object as the first argument to this function
-    return [this.block.getObject('_this')].concat(this.meta.funcArgs)
+    return [this.block.getThis()].concat(this.meta.funcArgs)
   }
 
   set funcArgs(args) {
@@ -553,7 +541,7 @@ class CMethod extends CFunction {
   }
 
   bind(cClass) {
-    const that = this.block.getObject('_this')
+    const that = this.block.getThis()
 
     if (that) {
       that.node.remove()
@@ -755,7 +743,7 @@ class CObject extends CIdentifier {
   get pointerLevel() {
     const level = this.isPointer ? 1 : 0
 
-    return level + this.typeDeclaration.pointerLevel
+    return level + this.typeDeclaration ? this.typeDeclaration.pointerLevel : 0
   }
 
   declare() {
@@ -848,8 +836,8 @@ class CClass extends CStruct {
     super(`${name}Rec_`)
 
     this.className = name
-    this.superClass = superClass
     this.useNamespaceForMethods = true
+    this.meta.superClass = superClass
     this.typedefPointer = new CTypedef(this, name, true)
     this.typedef = new CTypedef(this, `${name}Rec`, false, false)
     this.destructor = null
@@ -865,6 +853,20 @@ class CClass extends CStruct {
     return this.meta.isImported
   }
 
+  get superClass() {
+    return this.meta.superClass
+  }
+
+  set superClass(superClass) {
+    if (this.meta.superClass) {
+      this.getSuper().node.remove()
+    }
+    if (superClass) {
+      this.addMember(new CObject(superClass, `_${toVariableName(superClass.className)}`))
+    }
+    this.meta.superClass = superClass
+  }
+
   export() {
     if (!this.isImported) {
       return this.publicMethods.map(method => method.export())
@@ -877,6 +879,40 @@ class CClass extends CStruct {
       return this.getStructDefinition()
     }
     return ''
+  }
+
+  getSuper() {
+    return this.getMember(`_${toVariableName(this.superClass.className)}`)
+  }
+
+  init(obj) {
+    if (obj.pointerLevel > 0) {
+      return new CAssignmentExpression(obj, this.callMethod('new'))
+    }
+    return this.callMethod('init', obj)
+  }
+
+  destroy(obj) {
+    if (obj.pointerLevel > 0) {
+      return this.callMethod('delete', obj)
+    }
+    return this.callMethod('destroy', obj)
+  }
+
+  duplicate(obj) {
+    return this.callMethod('duplicate', obj)
+  }
+
+  operate(left, operator, right) {
+    return this.callMethod('operate', left, operator, right)
+  }
+
+  compare(left, right) {
+    return this.callMethod('compare', left, right)
+  }
+
+  stringify(obj) {
+    return this.callMethod('toString', obj)
   }
 
   get methods() {
@@ -1044,6 +1080,10 @@ class CBlock extends CDeclaration {
       obj = block.body.find(stat => stat instanceof CObject && stat.name === name)
     }
     return obj
+  }
+
+  getThis() {
+    return this.getObject('_this')
   }
 
   getType(name) {

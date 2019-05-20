@@ -1,8 +1,12 @@
+const assert = require('assert')
 const { Parser } = require('./parser')
 
 class IdentifierParser extends Parser {
   parse(input) {
-    return this.block.get(input.name)
+    const id = this.block.get(input.name)
+
+    assert(id, `${input.name} is not defined`)
+    return id
   }
 }
 

@@ -41,7 +41,7 @@ class ClassParser extends Parser {
       'return _this;'
     ])
     func.isStatic = true
-    func.funcReturnType = this.className
+    func.funcReturnType = cClass.className
     return func
   }
 

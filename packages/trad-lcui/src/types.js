@@ -45,36 +45,6 @@ class CLCUIObjectType extends CClass {
     this.addMethod(new CMethod('watch', [cfunc, cptr]))
     this.addMethod(new CMethod('notify'))
   }
-
-  init(obj) {
-    if (obj.pointerLevel > 0) {
-      return new CAssignmentExpression(obj, this.callMethod('new'))
-    }
-    return this.callMethod('init', obj)
-  }
-
-  destroy(obj) {
-    if (obj.pointerLevel > 0) {
-      return this.callMethod('delete', obj)
-    }
-    return this.callMethod('destroy', obj)
-  }
-
-  duplicate(obj) {
-    return this.callMethod('duplicate', obj)
-  }
-
-  operate(left, operator, right) {
-    return this.callMethod('operate', left, operator, right)
-  }
-
-  compare(left, right) {
-    return this.callMethod('compare', left, right)
-  }
-
-  stringify(obj) {
-    return this.callMethod('toString', obj)
-  }
 }
 
 class CLCUIString extends CLCUIObjectType {
@@ -258,7 +228,7 @@ class CLCUIWidgetMethod extends CMethod {
   }
 
   bind(cClass) {
-    let that = this.block.getObject('_this')
+    let that = this.block.getThis()
     let ctype = cClass.name
 
     if (that) {
@@ -300,7 +270,7 @@ class CLCUIAppMethod extends CMethod {
   bind(cClass) {
     super.bind(cClass)
 
-    this.widget = this.block.getObject('_this').selectProperty('widget')
+    this.widget = this.block.getThis().selectProperty('widget')
   }
 }
 

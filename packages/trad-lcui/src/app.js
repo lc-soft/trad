@@ -44,7 +44,7 @@ const install = Compiler => class AppClassParser extends Compiler {
 
   afterParseAppClass(cClass) {
     const constructor = cClass.getMethod('constructor')
-    const that = constructor.block.getObject('_this')
+    const that = constructor.block.getThis()
 
     helper.initUpdateMethod(cClass, types.AppMethod)
     constructor.block.append([

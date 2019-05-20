@@ -94,7 +94,7 @@ const install = Compiler => class PropsBindingParser extends Compiler {
   }
 
   createProps(input, name, structName, isAllocFromStack = true) {
-    const that = this.block.getObject('_this')
+    const that = this.block.getThis()
     const cClass = this.findContextData(CClass)
     const left = this.parse(input.left.object)
     const propsStruct = this.parse(input.right)

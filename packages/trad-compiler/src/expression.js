@@ -1,14 +1,14 @@
 const assert = require('assert')
 const { Parser } = require('./parser')
-const { CType, CClass, CObject, CStruct, CCallExpression } = require('../../trad')
-const { capitalize } = require('../../trad-utils')
+const { capitalize, toVariableName } = require('../../trad-utils')
+const trad = require('../../trad')
 
 class ThisExpressionParser extends Parser {
   parse() {
-    const cClass = this.compiler.findContextData(CClass)
+    const cClass = this.compiler.findContextData(trad.CClass)
 
     assert(cClass, 'the "this" expression must be in the class method')
-    return this.block.getObject('_this')
+    return this.block.getThis()
   }
 }
 
@@ -25,7 +25,7 @@ class MemberExpressionParser extends Parser {
 
 class ObjectExpressionParser extends Parser {
   parse(input) {
-    const cStruct = new CStruct()
+    const cStruct = new trad.CStruct()
 
     input.properties.forEach((item) => {
       assert(item.type === 'Property')
@@ -33,9 +33,9 @@ class ObjectExpressionParser extends Parser {
       const value = this.compiler.parse(item.value)
 
       // FIXME: ObjectExpression is only used as a structure declaration for the time being
-      assert(value instanceof CType, 'invalid object property')
+      assert(value instanceof trad.CType, 'invalid object property')
 
-      cStruct.addMember(new CObject(value, item.key.name))
+      cStruct.addMember(new trad.CObject(value, item.key.name))
     })
     this.block.append(cStruct)
     return cStruct
@@ -58,16 +58,34 @@ class AssignmentExpressionParser extends Parser {
       assert(input.type === 'MemberExpression', 'does not support define an object')
       left = this.compiler.parse(input.object)
       right.setStructName(left.type + capitalize(propName))
-      left = left.addProperty(new CObject(right, propName))
+      left = left.addProperty(new trad.CObject(right, propName))
       left.owner.add(right)
     }
     return left
   }
 }
 
+class NewExpressionParser extends Parser {
+  parse(input) {
+    const type = this.compiler.parse(input.callee)
+
+    assert(
+      type instanceof trad.CType && type.reference instanceof trad.CClass,
+      `${type.name} is not a constructor`
+    )
+
+    const name = this.block.allocObjectName(type.name)
+    const args = input.arguments.map(arg => this.compiler.parse(arg))
+    const left = new trad.CObject(type, toVariableName(name))
+
+    this.block.append([left, left.init(...args)])
+    return left
+  }
+}
+
 class CallExpressionParser extends Parser {
   parse(input) {
-    return new CCallExpression(
+    return new trad.CCallExpression(
       this.compiler.parse(input.callee),
       input.arguments.map(arg => this.compiler.parse(arg))
     )
@@ -79,5 +97,6 @@ module.exports = {
   AssignmentExpressionParser,
   MemberExpressionParser,
   ObjectExpressionParser,
+  NewExpressionParser,
   CallExpressionParser
 }

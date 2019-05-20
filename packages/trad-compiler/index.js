@@ -19,6 +19,7 @@ const {
 } = require('./src/statement')
 const {
   ThisExpressionParser,
+  NewExpressionParser,
   AssignmentExpressionParser,
   MemberExpressionParser,
   ObjectExpressionParser,
@@ -143,6 +144,7 @@ class Compiler {
       AssignmentExpression: new AssignmentExpressionParser(this),
       MemberExpression: new MemberExpressionParser(this),
       ObjectExpression: new ObjectExpressionParser(this),
+      NewExpression: new NewExpressionParser(this),
       CallExpression: new CallExpressionParser(this)
     }
     context.data = this.program

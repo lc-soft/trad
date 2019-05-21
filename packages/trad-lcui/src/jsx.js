@@ -26,7 +26,7 @@ class JSXParserContext {
     const refsStruct = new CStruct(`${refsStructName}_`)
     const refsType = new CTypedef(refsStruct, refsStructName)
 
-    this.cClass.parent.append([refsType, refsStruct])
+    this.cClass.parent.insert(this.cClass.node.index, [refsType, refsStruct])
     this.cClass.addMember(new CObject(refsType, 'refs'))
     return this.that.selectProperty('refs')
   }

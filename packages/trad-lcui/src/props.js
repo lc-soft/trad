@@ -108,8 +108,7 @@ const install = Compiler => class PropsBindingParser extends Compiler {
         propsStruct.addMember(new types.Object(member.type, key, { isAllocFromStack }))
       }
     })
-    cClass.parent.append(propsType)
-    cClass.parent.append(propsStruct)
+    cClass.parent.insert(cClass.node.index, [propsType, propsStruct])
     return that.addProperty(new CObject(propsType, name))
   }
 

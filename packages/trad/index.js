@@ -20,7 +20,8 @@ function rvalue(value, stat) {
   }
   if (value instanceof CCallExpression) {
     let type = value.func.funcReturnType
-    if (block) {
+
+    if (typeof type === 'string' && block) {
       type = block.getType(type)
     }
     return new CObject(type, value.define().slice(0, -1))
@@ -58,8 +59,25 @@ class CNode {
     })
   }
 
+  indexOf(node) {
+    let index = -1
+
+    this.children.some((child, i) => {
+      if (child === node) {
+        index = i
+        return true
+      }
+      return false
+    })
+    return index
+  }
+
   remove() {
     return this.parent ? this.parent.removeChild(this) : false
+  }
+
+  get index() {
+    return this.parent ? this.parent.indexOf(this) : 0
   }
 }
 
@@ -118,9 +136,10 @@ class CCode {
   append(stat) {
     if (stat instanceof Array) {
       stat.forEach(s => this.append(s))
-      return
+      return stat[stat.length - 1]
     }
     this.node.append(stat instanceof CCode ? stat.node : stat)
+    return stat
   }
 
   closest(callback) {
@@ -210,6 +229,9 @@ class CCallExpression extends CExpression {
   constructor(func, ...args) {
     super('call')
 
+    if (func.funcReturnType instanceof CObject) {
+      debugger
+    }
     this.func = func
     this.funcArgs = args
   }
@@ -613,7 +635,7 @@ class CStruct extends CType {
     if (deleteTarget) {
       this.node.removeChild(deleteTarget.node)
     }
-    this.append(member)
+    return this.append(member)
   }
 
   getMember(name) {
@@ -654,7 +676,7 @@ class CTypedef extends CType {
   }
 
   append(stat) {
-    this.reference.append(stat)
+    return this.reference.append(stat)
   }
 
   getMember(name) {
@@ -700,7 +722,7 @@ class CObject extends CIdentifier {
     super(name)
 
     if (typeof type === 'string') {
-      this.typeDeclaration = new CType(type)
+      this.typeDeclaration = createType(type)
     } else if (type instanceof CClass) {
       this.typeDeclaration = type.typedefPointer
     } else {
@@ -743,7 +765,7 @@ class CObject extends CIdentifier {
   get pointerLevel() {
     const level = this.isPointer ? 1 : 0
 
-    return level + this.typeDeclaration ? this.typeDeclaration.pointerLevel : 0
+    return level + (this.typeDeclaration ? this.typeDeclaration.pointerLevel : 0)
   }
 
   declare() {
@@ -930,7 +952,7 @@ class CClass extends CStruct {
   callMethod(name, ...args) {
     const method = this.getMethod(name)
 
-    assert(method, `${this.id}.${name} is not a function`)
+    assert(method, `${this.className}.${name} is not a function`)
     return new CCallExpression(method, ...args)
   }
 
@@ -953,8 +975,7 @@ class CClass extends CStruct {
       oldMethod.node.remove()
     }
     method.bind(this, '_this')
-    this.append(method)
-    return method
+    return this.append(method)
   }
 }
 
@@ -1109,7 +1130,10 @@ class CBlock extends CDeclaration {
       super.append(stat.typedef)
       super.append(stat.typedefPointer)
     }
-    super.append(stat)
+    if (stat instanceof CCallExpression && !stat.func) {
+      debugger
+    }
+    return super.append(stat)
   }
 
   createObject(
@@ -1129,8 +1153,7 @@ class CBlock extends CDeclaration {
 
     const obj = new CObject(typeDeclaration, name, { isPointer, isHidden, value })
 
-    this.append(obj)
-    return obj
+    return this.append(obj)
   }
 
   allocObjectName(baseName) {
@@ -1183,7 +1206,7 @@ class CModule extends CType {
     }
     this.exports[stat.name] = stat
     stat.isImported = true
-    super.append(stat)
+    return super.append(stat)
   }
 }
 
@@ -1201,6 +1224,7 @@ const keywords = {
   'long': true,
   'double': true,
   'int': true,
+  'size_t': true,
   'unsigned': true,
   'char': true,
   'float': true,
@@ -1223,6 +1247,7 @@ const keywords = {
 function createType(name) {
   const ctype = new CType(name)
 
+  // FIXME: cannot parse "void*"
   ctype.name = name.split(' ').map(k => k.trim()).filter(str => !!str).map((keyword) => {
     const handler = keywords[keyword]
 
@@ -1316,11 +1341,12 @@ class CProgram extends CBlock {
   append(stat) {
     if (stat instanceof CInclude) {
       this.addInclude(stat)
+      return stat
     } else if (stat instanceof CModule) {
       this.modules[stat.name] = stat
-    } else {
-      super.append(stat)
+      return stat
     }
+    return super.append(stat)
   }
 
   define() {

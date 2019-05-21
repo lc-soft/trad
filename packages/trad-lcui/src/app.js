@@ -1,6 +1,9 @@
+const assert = require('assert')
 const lib = require('./lib')
 const helper = require('./helper')
 const types = require('./types')
+const functions = require('./functions')
+const trad = require('../../trad')
 
 const install = Compiler => class AppClassParser extends Compiler {
   parse(input) {
@@ -10,6 +13,19 @@ const install = Compiler => class AppClassParser extends Compiler {
       return AppClassParser.prototype[method].call(this, input)
     }
     return super.parse(input)
+  }
+
+  parseCallExpression(input) {
+    const method = this.block.parent
+
+    if (input.callee.type !== 'Super' || this.classParserName !== 'App') {
+      return super.parse(input)
+    }
+    assert(
+      method instanceof trad.CMethod && method.methodName === 'constructor',
+      '\'super\' keyword unexpected here'
+    )
+    return this.block.append(functions.LCUI_Init())
   }
 
   parseClassDeclaration(input) {
@@ -29,8 +45,6 @@ const install = Compiler => class AppClassParser extends Compiler {
     // Add new() and delete() methods after parsing all methods
     cClass.addMethod(parser.createNewMethod())
     cClass.addMethod(parser.createDeleteMethod())
-    // Move Class definition to current position
-    this.block.append(cClass)
     return cClass
   }
 
@@ -46,6 +60,7 @@ const install = Compiler => class AppClassParser extends Compiler {
     const constructor = cClass.getMethod('constructor')
     const that = constructor.block.getThis()
 
+    cClass.getSuper().node.remove()
     helper.initUpdateMethod(cClass, types.AppMethod)
     constructor.block.append([
       that.callMethod('template'),

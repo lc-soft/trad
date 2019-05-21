@@ -83,12 +83,38 @@ class NewExpressionParser extends Parser {
   }
 }
 
+function getPropertyId(input) {
+  let id = input.property.name
+
+  for (let obj = input.object; obj; obj = obj.object) {
+    if (obj.type === 'Super') {
+      id = `super.${id}`
+      break
+    }
+    if (obj.type === 'MemberExpression') {
+      id = `${obj.property.name}.${id}`
+    } else {
+      break
+    }
+  }
+  return id
+}
+
 class CallExpressionParser extends Parser {
   parse(input) {
-    return new trad.CCallExpression(
-      this.compiler.parse(input.callee),
-      input.arguments.map(arg => this.compiler.parse(arg))
-    )
+    const callee = this.compiler.parse(input.callee)
+    const args = input.arguments.map(arg => this.compiler.parse(arg))
+
+    if (input.callee.type === 'Super') {
+      const method = this.block.parent
+
+      assert(method instanceof trad.CMethod && method.methodName === 'constructor', '\'super\' keyword unexpected here')
+      return this.block.append(callee.init(args))
+    }
+    if (!callee) {
+      assert(callee, `${getPropertyId(input.callee)} is not a function`)
+    }
+    return this.block.append(new trad.CCallExpression(callee, args))
   }
 }
 

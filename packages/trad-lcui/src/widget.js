@@ -1,3 +1,4 @@
+const assert = require('assert')
 const lib = require('./lib')
 const types = require('./types')
 const functions = require('./functions')
@@ -17,6 +18,12 @@ class WidgetRegisterFunction extends trad.CFunction {
 }
 
 const install = Compiler => class WidgetClassParser extends Compiler {
+  constructor(...args) {
+    super(...args)
+
+    this.widgetProtoIdentifyName = null
+  }
+
   parse(input) {
     const method = `parse${input.type}`
 
@@ -24,6 +31,20 @@ const install = Compiler => class WidgetClassParser extends Compiler {
       return WidgetClassParser.prototype[method].call(this, input)
     }
     return super.parse(input)
+  }
+
+  parseCallExpression(input) {
+    const method = this.block.parent
+
+    if (input.callee.type !== 'Super' || this.classParserName !== 'Widget') {
+      return super.parse(input)
+    }
+    assert(
+      method instanceof trad.CMethod && method.methodName === 'constructor',
+      '\'super\' keyword unexpected here'
+    )
+    this.block.append(`${this.widgetProtoIdentifyName}.proto->proto->init(${method.widget.id});`)
+    return ''
   }
 
   parseMethodDefinition(input) {
@@ -54,8 +75,6 @@ const install = Compiler => class WidgetClassParser extends Compiler {
     this.beforeParseWidgetClass(cClass)
     this.parseChildren(helper.sortMethodDefinitions(input.body.body))
     this.afterParseWidgetClass(cClass)
-    // Move Class definition to current position
-    this.block.append(cClass)
     return cClass
   }
 
@@ -68,6 +87,7 @@ const install = Compiler => class WidgetClassParser extends Compiler {
     this.parsingWidgetClass = true
     this.classParserName = 'Widget'
     this.classMethodType = types.WidgetMethod
+    this.widgetProtoIdentifyName = `${lib.toIdentifierName(cClass.className)}_class`
     keys.forEach((name) => {
       const oldMethod = cClass.getMethod(name)
 
@@ -107,7 +127,7 @@ const install = Compiler => class WidgetClassParser extends Compiler {
   addWidgetRegisterMethod(cClass) {
     const className = lib.toWidgetTypeName(cClass.className)
     let superClassName = cClass.superClass ? lib.toWidgetTypeName(cClass.superClass.className) : null
-    const proto = `${lib.toIdentifierName(cClass.className)}_class`
+    const proto = this.widgetProtoIdentifyName
     const func = new WidgetRegisterFunction(cClass)
     const funcUpdate = helper.initUpdateMethod(cClass)
     const funcTemplate = cClass.getMethod('template')
@@ -134,6 +154,7 @@ const install = Compiler => class WidgetClassParser extends Compiler {
   }
 
   afterParseWidgetClass(cClass) {
+    cClass.getSuper().node.remove()
     this.addWidgetNewMethod(cClass)
     this.addWidgetDeleteMethod(cClass)
     this.addWidgetRegisterMethod(cClass)

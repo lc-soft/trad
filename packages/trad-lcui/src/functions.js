@@ -16,13 +16,14 @@ const cfunc = new CObject('void', 'func', { isPointer: true })
 const cwidget = new types.Object('Widget', 'widget')
 const csize = new CObject('size_t', `size`)
 
+const cfuncLCUIInit = new CFunction('LCUI_Init', [], 'int')
 const cfuncWidgetAddData = new CFunction('Widget_AddData', [cwidget, cptr, csize], cwidget.typeDeclaration)
 const cfuncWidgetGetData = new CFunction('Widget_GetData', [cwidget, cptr], cwidget.typeDeclaration)
 const cfuncWidgetAddTask = new CFunction('Widget_AddTask', [cwidget, cnum])
 const cfuncWidgetBindEvent = new CFunction('Widget_BindEvent', [cwidget, cstrConst, cfunc, cptr, cptr])
 const cfuncWidgetSetAttribute = new CFunction('Widget_SetAttribute', [cwidget, cstrConst, cptr])
 const cfuncWidgetSetAttributeEx = new CFunction('Widget_SetAttributeEx', [cwidget, cstrConst, cptr, cnum, cptr])
-const cfuncLCUIWidgetNew = new CFunction('LCUIWidget_New', [cstrConst], cwidget)
+const cfuncLCUIWidgetNew = new CFunction('LCUIWidget_New', [cstrConst], cwidget.typeDeclaration)
 const cfuncLCUIWidgetNewPrototype = new CFunction('LCUIWidget_NewPrototype', [cstrConst, cstrConst])
 
 function call(func, ...args) {
@@ -36,6 +37,9 @@ module.exports = {
   },
   update(argument, operator = '++', prefix = true) {
     return new CUpdateExpression(argument, operator, prefix)
+  },
+  LCUI_Init() {
+    return call(cfuncLCUIInit)
   },
   Widget_AddTask(w, taskName='') {
     const task = new CObject('int', `LCUI_WTASK_${taskName.toUpperCase()}`)

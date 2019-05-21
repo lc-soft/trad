@@ -29,7 +29,6 @@ class CLCUIObjectType extends CClass {
     const obj = new CLCUIObject(null, 'obj')
     const cstrConst = new CObject('const char', 'str', { isPointer: true })
     const cstrObj = new CLCUIObject('String', 'str')
-    const cnum = new CObject('int', 'num')
     const cfunc = new CObject('void', 'func', { isPointer: true })
     const cptr = new CObject('void', 'ptr', { isPointer: true })
 
@@ -39,7 +38,7 @@ class CLCUIObjectType extends CClass {
     this.addMethod(new CMethod('new', [], obj.typeDeclaration))
     this.addMethod(new CMethod('delete'))
     this.addMethod(new CMethod('operate', [cstrConst, obj], obj.typeDeclaration))
-    this.addMethod(new CMethod('compare', [obj], cnum))
+    this.addMethod(new CMethod('compare', [obj], 'int'))
     this.addMethod(new CMethod('duplicate', [], obj.typeDeclaration))
     this.addMethod(new CMethod('toString', [], cstrObj.typeDeclaration))
     this.addMethod(new CMethod('watch', [cfunc, cptr]))
@@ -248,8 +247,8 @@ class CLCUIWidgetMethod extends CMethod {
     const moduleClass = `${toIdentifierName(cClass.className)}_class`
     const proto = new CObject('void', `${moduleClass}.proto`, { isPointer: true })
     const size = new CObject('size_t', `sizeof(${ctype})`)
-    const funcAddData = new CFunction('Widget_AddData', [this.widget, proto, size], that)
-    const funcGetData = new CFunction('Widget_GetData', [this.widget, proto], that)
+    const funcAddData = new CFunction('Widget_AddData', [this.widget, proto, size], cClass.typedefPointer)
+    const funcGetData = new CFunction('Widget_GetData', [this.widget, proto], cClass.typedefPointer)
 
     if (this.methodName === 'constructor') {
       this.block.append(new CAssignmentExpression(that, new CCallExpression(funcAddData, this.widget, proto, size)))

@@ -104,8 +104,7 @@ const install = Compiler => class StateBindingParser extends Compiler {
         stateStruct.addMember(new types.Object(member.type, key, { isAllocFromStack: true }))
       }
     })
-    cClass.parent.append(stateType)
-    cClass.parent.append(stateStruct)
+    cClass.parent.insert(cClass.node.index, [stateType, stateStruct])
     return that.addProperty(new CObject(stateType, 'state'))
   }
 

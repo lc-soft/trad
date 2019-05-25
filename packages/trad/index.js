@@ -301,8 +301,6 @@ class CCallExpression extends CExpression {
       }
       return `&${arg.id}`
     }).join(', ')
-
-    console.log(this.callee.funcName, argsStr)
     return `${this.callee.funcName}(${argsStr});`
   }
 }

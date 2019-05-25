@@ -103,9 +103,15 @@ const install = Compiler => class JSXParser extends Compiler {
       return true
     }
     if (value instanceof CObject && value.type === 'String') {
-      this.block.append(
-        functions.Widget_SetAttribute(ctx.widget, attrName, value.value)
-      )
+      if (attrName === 'class') {
+        this.block.append(
+          functions.Widget_AddClass(ctx.widget, value.value)
+        )
+      } else {
+        this.block.append(
+          functions.Widget_SetAttribute(ctx.widget, attrName, value.value)
+        )
+      }
       return true
     }
 

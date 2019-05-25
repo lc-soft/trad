@@ -17,6 +17,7 @@ const cwidget = new types.Object('Widget', 'widget')
 const csize = new CObject('size_t', `size`)
 
 const cfuncLCUIInit = new CFunction('LCUI_Init', [], 'int')
+const cfuncWidgetAddClass = new CFunction('Widget_AddClass', [cwidget, cstrConst])
 const cfuncWidgetAddData = new CFunction('Widget_AddData', [cwidget, cptr, csize], cwidget.typeDeclaration)
 const cfuncWidgetGetData = new CFunction('Widget_GetData', [cwidget, cptr], cwidget.typeDeclaration)
 const cfuncWidgetAddTask = new CFunction('Widget_AddTask', [cwidget, cnum])
@@ -40,6 +41,9 @@ module.exports = {
   },
   LCUI_Init() {
     return call(cfuncLCUIInit)
+  },
+  Widget_AddClass(w, className='') {
+    return call(cfuncWidgetAddClass, w, className)
   },
   Widget_AddTask(w, taskName='') {
     const task = new CObject('int', `LCUI_WTASK_${taskName.toUpperCase()}`)

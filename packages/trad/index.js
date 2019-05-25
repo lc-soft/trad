@@ -19,7 +19,7 @@ function rvalue(value, stat) {
     return new CObject('void', value.funcName, { isPointer: true })
   }
   if (value instanceof CCallExpression) {
-    let type = value.func.funcReturnType
+    let type = value.typeDeclaration
 
     if (typeof type === 'string' && block) {
       type = block.getType(type)
@@ -234,30 +234,44 @@ class CCallExpression extends CExpression {
   constructor(func, ...args) {
     super('call')
 
-    if (func.funcReturnType instanceof CObject) {
-      debugger
+    this.meta.callee = func
+    this.meta.args = args
+  }
+
+  get callee() {
+    const callee = this.meta.callee
+
+    if (callee instanceof CObject) {
+      assert(callee.typeDeclaration instanceof CFunction, `${callee.id} is not a function`)
+      return callee.typeDeclaration
     }
-    this.func = func
-    this.funcArgs = args
+    return callee
+  }
+
+  get args() {
+    if (this.callee instanceof CMethod) {
+      return [this.meta.callee.parent].concat(this.meta.args)
+    }
+    return this.meta.args
   }
 
   get type() {
-    if (this.func.funcReturnType instanceof CType) {
-      return this.func.funcReturnType.name
+    if (this.callee.funcReturnType instanceof CType) {
+      return this.callee.funcReturnType.name
     }
-    return this.func.funcReturnType
+    return this.callee.funcReturnType
   }
 
   get typeDeclaration() {
-    if (this.func.funcReturnType instanceof CType) {
-      return this.func.funcReturnType
+    if (this.callee.funcReturnType instanceof CType) {
+      return this.callee.funcReturnType
     }
-    return this.func.funcReturnType
+    return this.callee.funcReturnType
   }
 
   define() {
-    const argsStr = this.func.funcArgs.map((declaration, i) => {
-      const arg = rvalue(this.funcArgs[i], this)
+    const argsStr = this.callee.funcArgs.map((declaration, i) => {
+      const arg = rvalue(this.args[i], this)
 
       if (declaration.pointerLevel === arg.pointerLevel) {
         return arg.id
@@ -268,7 +282,7 @@ class CCallExpression extends CExpression {
       return `&${arg.id}`
     }).join(', ')
 
-    return `${this.func.funcName}(${argsStr});`
+    return `${this.callee.funcName}(${argsStr});`
   }
 }
 
@@ -832,13 +846,14 @@ class CObject extends CIdentifier {
     if (!ref) {
       return undefined
     }
-    if (ref instanceof CFunction) {
-      return ref
-    }
     if (ref instanceof CObject) {
       prop = new ref.constructor(ref.typeDeclaration, name)
     } else if (ref instanceof CType) {
       prop = new CObject(ref, name)
+    } else if (ref instanceof CFunction) {
+      prop = new CObject(ref, name)
+    } else {
+      assert(0, 'invalid type')
     }
     if (this.typeDeclaration.isPointer) {
       prop.id = `${this.id}->${name}`
@@ -1134,9 +1149,6 @@ class CBlock extends CDeclaration {
     if (stat instanceof CClass) {
       super.append(stat.typedef)
       super.append(stat.typedefPointer)
-    }
-    if (stat instanceof CCallExpression && !stat.func) {
-      debugger
     }
     return super.append(stat)
   }

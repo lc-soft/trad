@@ -48,6 +48,30 @@ const install = Compiler => class AppClassParser extends Compiler {
     return cClass
   }
 
+  initUpdateMethod(cClass) {
+    const func = cClass.addMethod(new types.AppMethod('autoUpdate'))
+    const that = func.block.getThis()
+
+    helper.initUpdateMethod(cClass, types.AppMethod)
+    func.block.append([
+      that.callMethod('update'),
+      `LCUI_SetTimeout(0, ${cClass.getMethod('update').cName}, ${that.id});`
+    ])
+  }
+
+  initRunMethod(cClass) {
+    let func = cClass.getMethod('run')
+
+    assert(!func, 'run() method does not allow overwriting')
+    func = cClass.addMethod(new types.AppMethod('run'))
+    func.funcReturnType = 'int'
+    func.block.append([
+      func.block.getThis().callMethod('autoUpdate'),
+      'return LCUI_Main();'
+    ])
+    this.program.append(new trad.CInclude('LCUI/timer.h', true))
+  }
+
   beforeParseAppClass() {
     this.enableJSX = true
     this.enableDataBinding = true
@@ -61,7 +85,8 @@ const install = Compiler => class AppClassParser extends Compiler {
     const that = constructor.block.getThis()
 
     cClass.getSuper().node.remove()
-    helper.initUpdateMethod(cClass, types.AppMethod)
+    this.initUpdateMethod(cClass)
+    this.initRunMethod(cClass)
     constructor.block.append([
       that.callMethod('template'),
       that.callMethod('update')

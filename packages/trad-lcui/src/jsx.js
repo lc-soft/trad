@@ -54,6 +54,7 @@ const install = Compiler => class JSXParser extends Compiler {
     super(...args)
 
     this.jsxElementDepth = 0
+    this.jsxWidget = null
   }
 
   parseJSXElementRef(ctx) {
@@ -114,7 +115,6 @@ const install = Compiler => class JSXParser extends Compiler {
       }
       return true
     }
-
     return super.parse(input)
   }
 
@@ -153,7 +153,18 @@ const install = Compiler => class JSXParser extends Compiler {
         this.block.append(`Widget_Append(${ctx.widget.id}, ${child.id});`)
       }
     })
+    this.jsxElementDepth -= 1
+    this.jsxWidget = ctx.widget
     return ctx.widget
+  }
+
+  parseJSXText(input) {
+    const text = input.value.trim()
+
+    if (text) {
+      this.block.append(functions.Widget_SetText(this.jsxWidget, text))
+    }
+    return ''
   }
 
   parse(input) {

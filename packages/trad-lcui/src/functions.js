@@ -20,6 +20,7 @@ const cfuncLCUIInit = new CFunction('LCUI_Init', [], 'int')
 const cfuncWidgetAddClass = new CFunction('Widget_AddClass', [cwidget, cstrConst])
 const cfuncWidgetAddData = new CFunction('Widget_AddData', [cwidget, cptr, csize], cwidget.typeDeclaration)
 const cfuncWidgetGetData = new CFunction('Widget_GetData', [cwidget, cptr], cwidget.typeDeclaration)
+const cfuncWidgetSetText = new CFunction('Widget_SetText', [cwidget, cstrConst])
 const cfuncWidgetAddTask = new CFunction('Widget_AddTask', [cwidget, cnum])
 const cfuncWidgetBindEvent = new CFunction('Widget_BindEvent', [cwidget, cstrConst, cfunc, cptr, cptr])
 const cfuncWidgetSetAttribute = new CFunction('Widget_SetAttribute', [cwidget, cstrConst, cptr])
@@ -42,10 +43,10 @@ module.exports = {
   LCUI_Init() {
     return call(cfuncLCUIInit)
   },
-  Widget_AddClass(w, className='') {
+  Widget_AddClass(w, className = '') {
     return call(cfuncWidgetAddClass, w, className)
   },
-  Widget_AddTask(w, taskName='') {
+  Widget_AddTask(w, taskName = '') {
     const task = new CObject('int', `LCUI_WTASK_${taskName.toUpperCase()}`)
     return call(cfuncWidgetAddTask, w, task)
   },
@@ -59,6 +60,9 @@ module.exports = {
     const moduleName = `${toIdentifierName(w.cClassName)}_class`
     const proto = new CObject('void', `${moduleName}.proto`, { isPointer: true })
     return call(cfuncWidgetGetData, w, proto)
+  },
+  Widget_SetText(w, text = '') {
+    return call(cfuncWidgetSetText, w, text)
   },
   Widget_BindEvent(widget, eventName, func, data = null, dataDestructor = null) {
     return call(cfuncWidgetBindEvent, widget, eventName, func, data, dataDestructor)

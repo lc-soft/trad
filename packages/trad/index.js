@@ -46,6 +46,11 @@ class CNode {
   }
 
   insertChild(index, node) {
+    if (node instanceof CNode) {
+      node.remove()
+      // eslint-disable-next-line no-param-reassign
+      node.parent = this
+    }
     this.children.splice(index, 0, node)
   }
 

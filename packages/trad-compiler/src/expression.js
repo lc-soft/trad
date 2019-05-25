@@ -114,7 +114,7 @@ class CallExpressionParser extends Parser {
     if (!callee) {
       assert(callee, `${getPropertyId(input.callee)} is not a function`)
     }
-    return this.block.append(new trad.CCallExpression(callee, args))
+    return this.block.append(new trad.CCallExpression(callee, ...args))
   }
 }
 

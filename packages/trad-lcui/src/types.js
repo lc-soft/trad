@@ -209,7 +209,7 @@ class CLCUIObject extends CObject {
 }
 
 class CLCUIWidgetMethod extends CMethod {
-  constructor(name, args = [], returnType = 'void') {
+  constructor(name, args = [], returnType = '') {
     super(name, args, returnType)
 
     this.widget = new CLCUIObject('Widget', 'w')
@@ -260,7 +260,7 @@ class CLCUIWidgetMethod extends CMethod {
 }
 
 class CLCUIAppMethod extends CMethod {
-  constructor(name, args = [], returnType = 'void') {
+  constructor(name, args = [], returnType = '') {
     super(name, args, returnType)
 
     this.widget = null

@@ -1,19 +1,26 @@
+const assert = require('assert')
 const { Parser } = require('./parser')
 const trad = require('../../trad')
 
 class ReturnStatementParser extends Parser {
   parse(input) {
     const func = this.compiler.findContextData(trad.CFunction)
-    const result = this.compiler.parse(input.argument)
+    const arg = this.compiler.parse(input.argument)
+    let type = ''
 
-    if (result instanceof trad.CObject) {
-      func.block.append(`return ${result.id};`)
-      func.funcReturnType = result.type
-    } else if (typeof result !== 'string') {
-      func.block.append('return;')
-    } else {
-      func.block.append(`return ${result};`)
+    assert(func, 'illegal return statement')
+    if (arg instanceof trad.CObject) {
+      type = arg.type
+    } else if (arg instanceof trad.CCallExpression) {
+      type = arg.type
+      arg.node.remove()
     }
+    assert(
+      !func.funcReturnType || func.funcReturnType === type,
+      'function return value type is different'
+    )
+    func.funcReturnType = type
+    return this.block.append(new trad.CReturnStatment(arg))
   }
 }
 

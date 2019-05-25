@@ -173,6 +173,23 @@ class CStatement extends CCode {
   }
 }
 
+class CReturnStatment extends CStatement {
+  constructor(argument) {
+    super('return')
+
+    this.argument = argument
+  }
+
+  define() {
+    const argument = rvalue(this.argument, this)
+
+    if (argument.id) {
+      return `return ${argument.id};`
+    }
+    return 'return'
+  }
+}
+
 class CIfStatement extends CStatement {
   constructor(test, consequent) {
     super('if')
@@ -249,7 +266,7 @@ class CCallExpression extends CExpression {
   }
 
   get args() {
-    if (this.callee instanceof CMethod) {
+    if (this.callee instanceof CMethod && this.meta.callee.parent instanceof CObject) {
       return [this.meta.callee.parent].concat(this.meta.args)
     }
     return this.meta.args
@@ -270,6 +287,9 @@ class CCallExpression extends CExpression {
   }
 
   define() {
+    if (this.callee.funcArgs.length !== this.args.length) {
+      debugger
+    }
     const argsStr = this.callee.funcArgs.map((declaration, i) => {
       const arg = rvalue(this.args[i], this)
 
@@ -282,6 +302,7 @@ class CCallExpression extends CExpression {
       return `&${arg.id}`
     }).join(', ')
 
+    console.log(this.callee.funcName, argsStr)
     return `${this.callee.funcName}(${argsStr});`
   }
 }
@@ -464,7 +485,7 @@ class CInclude extends CPreprocessorDirective {
 }
 
 class CFunction extends CIdentifier {
-  constructor(name, args = [], returnType = 'void') {
+  constructor(name, args = [], returnType = '') {
     super(name)
 
     this.meta.funcArgs = args
@@ -535,7 +556,7 @@ class CFunction extends CIdentifier {
 }
 
 class CMethod extends CFunction {
-  constructor(name, args = [], returnType = 'void') {
+  constructor(name, args = [], returnType = '') {
     super(name, args, returnType)
 
     this.methodName = name
@@ -1390,6 +1411,7 @@ module.exports = {
   CFunction,
   CMethod,
   CStatement,
+  CReturnStatment,
   CIfStatement,
   CBinaryExpression,
   CCallExpression,

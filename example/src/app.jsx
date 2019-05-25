@@ -5,7 +5,7 @@ import {
   TextView,
   TextEdit
 } from 'lcui'
-//import Progress from './components/progress'
+import Progress from './components/progress'
 
 class MyApp extends App {
   constructor() {
@@ -56,4 +56,6 @@ class MyApp extends App {
   }
 }
 
-export default MyApp
+export function main() {
+	return new MyApp().run()
+}

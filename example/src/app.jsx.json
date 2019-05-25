@@ -1,0 +1,15 @@
+{
+  "includes": [
+    {
+      "path": "app.jsx.h",
+      "inStandardDirectory": false
+    }
+  ],
+  "exports": [
+    {
+      "name": "main",
+      "type": "function",
+      "params": []
+    }
+  ]
+}

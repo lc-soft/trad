@@ -1,0 +1,118 @@
+{
+  "includes": [
+    {
+      "path": "progress.jsx.h",
+      "inStandardDirectory": false
+    }
+  ],
+  "exports": [
+    {
+      "name": "Progress",
+      "type": "class",
+      "namespace": null,
+      "useNamespace": true,
+      "useNamespaceForMethods": true,
+      "superClass": "lcui\\Widget",
+      "body": [
+        {
+          "name": "destructor",
+          "type": "method",
+          "isStatic": false,
+          "params": []
+        },
+        {
+          "name": "constructor",
+          "type": "method",
+          "isStatic": false,
+          "params": []
+        },
+        {
+          "name": "bindProperty",
+          "type": "method",
+          "isStatic": false,
+          "params": [
+            {
+              "name": "name",
+              "type": "object",
+              "isPointer": true,
+              "objectType": "const char"
+            },
+            {
+              "name": "value",
+              "type": "object",
+              "isPointer": false,
+              "objectType": "lcui\\Object"
+            }
+          ]
+        },
+        {
+          "name": "onPropTotalChanged",
+          "type": "method",
+          "isStatic": true,
+          "params": [
+            {
+              "name": "total",
+              "type": "object",
+              "isPointer": false,
+              "objectType": "lcui\\Object"
+            },
+            {
+              "name": "arg",
+              "type": "object",
+              "isPointer": true,
+              "objectType": "void"
+            }
+          ]
+        },
+        {
+          "name": "onPropValueChanged",
+          "type": "method",
+          "isStatic": true,
+          "params": [
+            {
+              "name": "value",
+              "type": "object",
+              "isPointer": false,
+              "objectType": "lcui\\Object"
+            },
+            {
+              "name": "arg",
+              "type": "object",
+              "isPointer": true,
+              "objectType": "void"
+            }
+          ]
+        },
+        {
+          "name": "template",
+          "type": "method",
+          "isStatic": false,
+          "params": []
+        },
+        {
+          "name": "update",
+          "type": "method",
+          "isStatic": false,
+          "params": []
+        },
+        {
+          "name": "new",
+          "type": "method",
+          "isStatic": true,
+          "params": []
+        },
+        {
+          "name": "delete",
+          "type": "method",
+          "isStatic": false,
+          "params": []
+        }
+      ]
+    },
+    {
+      "name": "LCUIWidget_AddProgress",
+      "type": "function",
+      "params": []
+    }
+  ]
+}

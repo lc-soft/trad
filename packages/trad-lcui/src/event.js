@@ -104,12 +104,12 @@ const install = Compiler => class EventBindingParser extends Compiler {
     const attrName = attr.name.name
     const func = this.parse(attr.value)
 
-    if (func instanceof CFunction) {
+    if (func instanceof CObject && func.finalTypeDeclaration instanceof CFunction) {
       assert(
         attrName.indexOf('on') === 0,
         `${func.name} can only be member event handler`
       )
-      this.parseJSXElementEventBinding(ctx, attrName, func)
+      this.parseJSXElementEventBinding(ctx, attrName, func.finalTypeDeclaration)
       return true
     }
     return super.parse(input)

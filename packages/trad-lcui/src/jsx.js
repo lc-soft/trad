@@ -134,7 +134,8 @@ const install = Compiler => class JSXParser extends Compiler {
       if (this.classParserName === 'Widget') {
         ctx.widget = this.findContextData(types.WidgetMethod).widget
       } else if (this.classParserName === 'App') {
-        ctx.widget = ctx.that.addProperty(new types.Object('Widget', 'widget'))
+        ctx.widget = ctx.that.addProperty(new types.Object('Widget', 'view'))
+        this.block.append(functions.assign(ctx.widget, functions.LCUIWidget_New(ctx.type)))
       } else {
         assert(0, `${this.classParserName} does not support JSX`)
       }

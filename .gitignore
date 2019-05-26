@@ -14,3 +14,4 @@ build
 .vs
 .vscode
 node_modules
+example/vendor

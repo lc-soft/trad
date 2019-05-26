@@ -117,11 +117,9 @@ static LCUI_Widget Progress_Template(LCUI_Widget w)
         Progress _this;
 
         _this = Widget_GetData(w, progress_class.proto);
-        Widget_SetAttribute(w, "class", "progress");
-        /* JSXText ignored */
+        Widget_AddClass(w, "progress");
         _this->refs.bar = LCUIWidget_New(NULL);
-        Widget_SetAttribute(_this->refs.bar, "class", "bar");
-        /* JSXText ignored */
+        Widget_AddClass(_this->refs.bar, "bar");
         Widget_Append(w, _this->refs.bar);
         return w;
 }
@@ -147,12 +145,10 @@ void Progress_Update(LCUI_Widget w)
         _number_1 = Object_Operate(_this->props.value, "*", &_number);
         _number_2 = Object_Operate(_number_1, "/", _this->props.total);
         percentage = Object_Duplicate(_number_2);
-        Number_SetValue(percentage, 1);
-        /* UpdateExpression ignored */
         String_Init(&_string, "%");
         percentage_str = Object_ToString(percentage);
         _string_1 = Object_Operate(percentage_str, "+", &_string);
-        Widget_SetStyleString(_this->refs.bar, key_width, _string_1->value.string);
+        Widget_SetStyleString(_this->refs.bar, "width", _string_1->value.string);
 
         Object_Destroy(&_number);
         Object_Delete(_number_1);

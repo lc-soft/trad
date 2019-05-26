@@ -35,7 +35,7 @@ class MyApp extends App {
       <Button onClick={this.onBtnChangeClick}>Change</Button>
       <TextView>Please click button to test progress</TextView>
       <Button onClick={this.onBtnMinusClick}>-</Button>
-      <Button onClick={this.onBtnPlusClick}>>+</Button>
+      <Button onClick={this.onBtnPlusClick}>+</Button>
     </Widget>)
   }
 

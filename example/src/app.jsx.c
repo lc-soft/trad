@@ -12,6 +12,10 @@ typedef struct MyAppRec_ MyAppRec;
 typedef struct MyAppRec_* MyApp;
 typedef struct MyAppStateRec_ MyAppStateRec;
 typedef struct MyAppRefsRec_ MyAppRefsRec;
+typedef void (*MyAppEventHandler)(MyApp, LCUI_WidgetEvent);
+typedef struct MyAppEventWrapperRec_* MyAppEventWrapper;
+typedef struct MyAppEventWrapperRec_ MyAppEventWrapperRec;
+typedef struct MyAppEventWrapperRec_* MyAppEventWrapper;
 
 struct MyAppStateRec_ {
         LCUI_ObjectRec text;
@@ -30,8 +34,14 @@ struct MyAppRefsRec_ {
 struct MyAppRec_ {
         MyAppStateRec state;
         unsigned state_changes;
-        LCUI_Widget widget;
+        LCUI_Widget view;
         MyAppRefsRec refs;
+};
+
+struct MyAppEventWrapperRec_ {
+        MyApp _this;
+        void *data;
+        MyAppEventHandler handler;
 };
 
 
@@ -42,10 +52,11 @@ static void MyApp_OnStateInputChanged(LCUI_Object, void*);
 static void MyApp_OnStateValueChanged(LCUI_Object, void*);
 static void MyApp_OnStateTotalChanged(LCUI_Object, void*);
 static void MyApp_Created(MyApp);
-static void MyApp_OnBtnChangeClick(MyApp);
-static void MyApp_OnBtnMinusClick(MyApp);
-static void MyApp_OnBtnPlusClick(MyApp);
+static void MyApp_OnBtnChangeClick(MyApp, LCUI_WidgetEvent);
+static void MyApp_OnBtnMinusClick(MyApp, LCUI_WidgetEvent);
+static void MyApp_OnBtnPlusClick(MyApp, LCUI_WidgetEvent);
 static LCUI_Widget MyApp_Template(MyApp);
+static void MyApp_DispathWidgetEvent(LCUI_Widget, LCUI_WidgetEvent, void*);
 static void MyApp_AutoUpdate(MyApp);
 static void MyApp_Update(MyApp);
 static int MyApp_Run(MyApp);
@@ -117,12 +128,12 @@ static void MyApp_Created(MyApp _this)
         Number_SetValue(&_this->state.total, 100);
 }
 
-static void MyApp_OnBtnChangeClick(MyApp _this)
+static void MyApp_OnBtnChangeClick(MyApp _this, LCUI_WidgetEvent e)
 {
         Object_Operate(&_this->state.text, "=", &_this->state.input);
 }
 
-static void MyApp_OnBtnMinusClick(MyApp _this)
+static void MyApp_OnBtnMinusClick(MyApp _this, LCUI_WidgetEvent e)
 {
         LCUI_ObjectRec _number;
 
@@ -135,7 +146,7 @@ static void MyApp_OnBtnMinusClick(MyApp _this)
         Object_Destroy(&_number);
 }
 
-static void MyApp_OnBtnPlusClick(MyApp _this)
+static void MyApp_OnBtnPlusClick(MyApp _this, LCUI_WidgetEvent e)
 {
         LCUI_ObjectRec _number;
 
@@ -151,35 +162,56 @@ static void MyApp_OnBtnPlusClick(MyApp _this)
 static LCUI_Widget MyApp_Template(MyApp _this)
 {
         LCUI_Widget textview;
+        MyAppEventWrapper _ev;
         LCUI_Widget textview_1;
+        MyAppEventWrapper _ev_1;
+        MyAppEventWrapper _ev_2;
 
-        /* JSXText ignored */
+        _this->view = LCUIWidget_New(NULL);
         textview = LCUIWidget_New("textview");
-        /* JSXText ignored */
         _this->refs._textedit = LCUIWidget_New("textedit");
-        /* JSXText ignored */
         _this->refs._button = LCUIWidget_New("button");
-        /* JSXElementAttribute ignored */
-        /* JSXText ignored */
-        /* JSXText ignored */
+        _ev = malloc(sizeof(MyAppEventWrapperRec));
+        _ev->_this = _this;
+        _ev->data = NULL;
+        _ev->handler = MyApp_OnBtnChangeClick;
+        Widget_BindEvent(_this->refs._button, "click", MyApp_DispathWidgetEvent, _ev, free);
+        Widget_SetText(_this->refs._textedit, "Change");
         textview_1 = LCUIWidget_New("textview");
-        /* JSXText ignored */
-        /* JSXText ignored */
+        Widget_SetText(_this->refs._button, "Please click button to test progress");
         _this->refs._button_1 = LCUIWidget_New("button");
-        /* JSXElementAttribute ignored */
-        /* JSXText ignored */
-        /* JSXText ignored */
+        _ev_1 = malloc(sizeof(MyAppEventWrapperRec));
+        _ev_1->_this = _this;
+        _ev_1->data = NULL;
+        _ev_1->handler = MyApp_OnBtnMinusClick;
+        Widget_BindEvent(_this->refs._button_1, "click", MyApp_DispathWidgetEvent, _ev_1, free);
+        Widget_SetText(textview_1, "-");
         _this->refs._button_2 = LCUIWidget_New("button");
-        /* JSXElementAttribute ignored */
-        /* JSXText ignored */
-        /* JSXText ignored */
-        Widget_Append(_this->widget, textview);
-        Widget_Append(_this->widget, _this->refs._textedit);
-        Widget_Append(_this->widget, _this->refs._button);
-        Widget_Append(_this->widget, textview_1);
-        Widget_Append(_this->widget, _this->refs._button_1);
-        Widget_Append(_this->widget, _this->refs._button_2);
-        return _this->widget;
+        _ev_2 = malloc(sizeof(MyAppEventWrapperRec));
+        _ev_2->_this = _this;
+        _ev_2->data = NULL;
+        _ev_2->handler = MyApp_OnBtnPlusClick;
+        Widget_BindEvent(_this->refs._button_2, "click", MyApp_DispathWidgetEvent, _ev_2, free);
+        Widget_SetText(_this->refs._button_1, "+");
+        Widget_Append(_this->view, textview);
+        Widget_Append(_this->view, _this->refs._textedit);
+        Widget_Append(_this->view, _this->refs._button);
+        Widget_Append(_this->view, textview_1);
+        Widget_Append(_this->view, _this->refs._button_1);
+        Widget_Append(_this->view, _this->refs._button_2);
+        return _this->view;
+}
+
+static void MyApp_DispathWidgetEvent(LCUI_Widget widget, LCUI_WidgetEvent e, void *arg)
+{
+        MyApp _this;
+        MyAppEventWrapper wrapper;
+
+        wrapper = e->data;
+        _this = wrapper->_this;
+        e->data = wrapper->data;
+        wrapper->handler(_this, e);
+        e->data = wrapper;
 }
 
 static void MyApp_AutoUpdate(MyApp _this)

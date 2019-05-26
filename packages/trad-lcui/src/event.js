@@ -82,7 +82,6 @@ const install = Compiler => class EventBindingParser extends Compiler {
     // Rewrite event handler arguments
     func.funcArgs = [new types.Object('WidgetEvent', 'e')]
     this.block.append([
-      '',
       wrapper,
       `${wrapper.id} = malloc(sizeof(${wrapperClass.typedef.cName}));`,
       `${wrapper.id}->_this = _this;`,
@@ -94,8 +93,7 @@ const install = Compiler => class EventBindingParser extends Compiler {
         ctx.cClass.getMethod('dispathWidgetEvent'),
         wrapper,
         new CFunction('free')
-      ),
-      ''
+      )
     ])
   }
 

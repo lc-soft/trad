@@ -1,6 +1,6 @@
 const assert = require('assert')
 const types = require('./types')
-const { toIdentifierName } = require('./lib')
+const { convertPascalNaming } = require('./lib')
 const functions = require('./functions')
 const { CTypedef, CBinaryExpression, CCallExpression } = require('../../trad')
 
@@ -47,7 +47,7 @@ const install = Compiler => class LCUIBaseParser extends Compiler {
 
     let variable = null
     const typeName = getTypeName(initValue.typeDeclaration)
-    const name = this.block.allocObjectName(baseName ? baseName : `_${toIdentifierName(typeName)}`)
+    const name = this.block.allocObjectName(baseName ? baseName : `_${convertPascalNaming(typeName, '_')}`)
 
     do {
       if (initValue instanceof CCallExpression) {

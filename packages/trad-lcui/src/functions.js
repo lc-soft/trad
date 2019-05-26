@@ -1,6 +1,6 @@
 /* eslint-disable camelcase */
 const types = require('./types')
-const { toIdentifierName } = require('./lib')
+const { convertPascalNaming } = require('./lib')
 const {
   CObject,
   CFunction,
@@ -51,13 +51,13 @@ module.exports = {
     return call(cfuncWidgetAddTask, w, task)
   },
   Widget_AddData(w) {
-    const moduleName = `${toIdentifierName(w.cClassName)}_class`
+    const moduleName = `${convertPascalNaming(w.cClassName, '_')}_class`
     const proto = new CObject('void', `${moduleName}.proto`, { isPointer: true })
     const size = new CObject('size_t', `sizeof(${w.finalTypeDeclaration.name})`)
     return call(cfuncWidgetAddData, w, proto, size)
   },
   Widget_GetData(w) {
-    const moduleName = `${toIdentifierName(w.cClassName)}_class`
+    const moduleName = `${convertPascalNaming(w.cClassName, '_')}_class`
     const proto = new CObject('void', `${moduleName}.proto`, { isPointer: true })
     return call(cfuncWidgetGetData, w, proto)
   },

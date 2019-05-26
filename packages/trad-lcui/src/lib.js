@@ -4,12 +4,8 @@ const widgetTypeDict = {
   Button: 'button'
 }
 
-function toWidgetTypeName(name) {
-  return name.replace(/([A-Z])/g, '-$1').toLowerCase().replace(/^-/, '')
-}
-
-function toIdentifierName(name) {
-  return name.replace(/([A-Z])/g, '_$1').toLowerCase().replace(/^_/, '')
+function convertPascalNaming(name, separator = '-') {
+  return name.replace(/([A-Z])/g, `${separator}$1`).toLowerCase().replace(new RegExp(`^${separator}`), '')
 }
 
 function isFromModule(obj, moduleName) {
@@ -28,12 +24,11 @@ function getWidgetType(node, proto) {
     // eslint-disable-next-line prefer-destructuring
     name = proto.name
   }
-  return toWidgetTypeName(name)
+  return convertPascalNaming(name)
 }
 
 module.exports = {
+  convertPascalNaming,
   getWidgetType,
-  isFromModule,
-  toWidgetTypeName,
-  toIdentifierName
+  isFromModule
 }

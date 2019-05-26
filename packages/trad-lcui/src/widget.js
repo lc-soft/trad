@@ -87,7 +87,7 @@ const install = Compiler => class WidgetClassParser extends Compiler {
     this.parsingWidgetClass = true
     this.classParserName = 'Widget'
     this.classMethodType = types.WidgetMethod
-    this.widgetProtoIdentifyName = `${lib.toIdentifierName(cClass.className)}_class`
+    this.widgetProtoIdentifyName = `${lib.convertPascalNaming(cClass.className, '_')}_class`
     keys.forEach((name) => {
       const oldMethod = cClass.getMethod(name)
 
@@ -104,7 +104,7 @@ const install = Compiler => class WidgetClassParser extends Compiler {
 
     protoClass.addMember(new types.Object('WidgetPrototype', 'proto'))
     cClass.parent.append(protoClass)
-    cClass.parent.createObject(protoClass.typedef, `${lib.toIdentifierName(cClass.className)}_class`)
+    cClass.parent.createObject(protoClass.typedef, `${lib.convertPascalNaming(cClass.className, '_')}_class`)
   }
 
   addWidgetNewMethod(cClass) {
@@ -112,7 +112,7 @@ const install = Compiler => class WidgetClassParser extends Compiler {
     const method = new trad.CMethod('new', [], widget.type)
 
     method.isStatic = true
-    method.block.append(`return LCUIWidget_New("${lib.toWidgetTypeName(cClass.className)}");`)
+    method.block.append(`return LCUIWidget_New("${lib.convertPascalNaming(cClass.className)}");`)
     cClass.addMethod(method)
   }
 
@@ -125,8 +125,8 @@ const install = Compiler => class WidgetClassParser extends Compiler {
   }
 
   addWidgetRegisterMethod(cClass) {
-    const className = lib.toWidgetTypeName(cClass.className)
-    let superClassName = cClass.superClass ? lib.toWidgetTypeName(cClass.superClass.className) : null
+    const className = lib.convertPascalNaming(cClass.className)
+    let superClassName = cClass.superClass ? lib.convertPascalNaming(cClass.superClass.className) : null
     const proto = this.widgetProtoIdentifyName
     const func = new WidgetRegisterFunction(cClass)
     const funcUpdate = helper.initUpdateMethod(cClass)

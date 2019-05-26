@@ -1,5 +1,5 @@
 const assert = require('assert')
-const { toIdentifierName } = require('./lib')
+const { convertPascalNaming } = require('./lib')
 const { cssStyleProperties } = require('./css')
 const {
   CType,
@@ -158,10 +158,9 @@ class CLCUIWidgetStyleProperty extends CLCUIString {
 
   install() {
     const w = new CLCUIObject('Widget', 'w')
-    const cnum = new CObject('int', 'num')
     const cstr = new CObject('const char', 'str', { isPointer: true })
 
-    this.funcSetStyle = new CFunction('Widget_SetStyleString', [w, cnum, cstr])
+    this.funcSetStyle = new CFunction('Widget_SetStyleString', [w, cstr, cstr])
   }
 
   operate(obj, operator, right) {
@@ -169,9 +168,9 @@ class CLCUIWidgetStyleProperty extends CLCUIString {
 
     if (operator === '=') {
       const value = right.selectProperty('value')
-      const key = new CObject('Number', `key_${toIdentifierName(obj.name)}`)
       const cstr = new CObject('const char', `${value.id}.string`, { isPointer: true })
-      return new CCallExpression(this.funcSetStyle, widget, key, cstr)
+
+      return new CCallExpression(this.funcSetStyle, widget, convertPascalNaming(obj.name), cstr)
     }
     return super.operate(obj, operator, right)
   }
@@ -244,7 +243,7 @@ class CLCUIWidgetMethod extends CMethod {
       that = this.block.createObject(cClass.typedefPointer, '_this')
     }
 
-    const moduleClass = `${toIdentifierName(cClass.className)}_class`
+    const moduleClass = `${convertPascalNaming(cClass.className, '_')}_class`
     const proto = new CObject('void', `${moduleClass}.proto`, { isPointer: true })
     const size = new CObject('size_t', `sizeof(${ctype})`)
     const funcAddData = new CFunction('Widget_AddData', [this.widget, proto, size], cClass.typedefPointer)

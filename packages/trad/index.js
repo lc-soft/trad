@@ -750,6 +750,10 @@ class CTypedef extends CType {
     return `typedef ${this.reference.name}${this.isPointer ? '*' : ''} ${this.name};`
   }
 
+  selectProperty(name) {
+    return this.reference.selectProperty(name)
+  }
+
   createReference(name = this.name) {
     return new CTypedef(this.reference, name, this.isPointer)
   }
@@ -1015,6 +1019,27 @@ class CClass extends CStruct {
     }
     method.bind(this, '_this')
     return this.append(method)
+  }
+
+  selectProperty(name) {
+    let prop
+    const ref = this.body.find(m => m instanceof CFunction && m.isStatic && m.name === name)
+
+    if (!ref) {
+      return undefined
+    }
+    if (ref instanceof CObject) {
+      prop = new ref.constructor(ref.typeDeclaration, name)
+    } else if (ref instanceof CType) {
+      prop = new CObject(ref, name)
+    } else if (ref instanceof CFunction) {
+      prop = new CObject(ref, name)
+    } else {
+      assert(0, 'invalid type')
+    }
+    prop.id = ref.cName
+    prop.node.parent = this.node
+    return prop
   }
 }
 
@@ -1339,6 +1364,7 @@ class CProgram extends CBlock {
     super()
 
     this.path = path
+    this.default = null
     this.includes = []
     this.modules = {}
 

@@ -15,6 +15,7 @@ class ExportDefaultParser extends Parser {
   parse(input) {
     const obj = this.compiler.parse(input.declaration)
 
+    this.program.default = obj
     exportObject.call(this, obj)
   }
 }

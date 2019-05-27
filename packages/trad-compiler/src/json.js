@@ -27,6 +27,50 @@ function serializeFunction(func) {
   }
 }
 
+function serializeReference(ref) {
+  const data = { type: 'reference' }
+
+  if (ref.reference instanceof trad.CClass) {
+    if (ref.reference.modulePath === ref.modulePath) {
+      data.reference = ref.reference.className
+    } else {
+      data.reference = ref.reference.typedefPointer.path
+    }
+  } else {
+    if (ref.reference.modulePath === ref.modulePath) {
+      data.reference = ref.reference.name
+    } else {
+      data.reference = ref.reference.path
+    }
+  }
+  return data
+}
+
+function serializeTypedef(type) {
+  if (type.reference instanceof trad.CClass && type.reference.className == type.name) {
+    return serializeReference(type)
+  }
+  return {
+    name: type.name,
+    type: 'typedef',
+    isPointer: type.isPointer,
+    reference: type.reference
+  }
+}
+
+function serializeStruct(cStruct) {
+  return {
+    name: cStruct.cName,
+    type: 'struct',
+    body: cStruct.body.map((stat) => {
+      if (stat instanceof trad.CObject) {
+        return serializeObject(stat)
+      }
+      return ''
+    }).filter(item => item !== '')
+  }
+}
+
 function serializeClass(cClass) {
   return {
     name: cClass.className,
@@ -44,7 +88,29 @@ function serializeClass(cClass) {
   }
 }
 
-function serialize(program) {
+function serialize(stat) {
+  if (stat instanceof trad.CTypedef) {
+    return serializeTypedef(stat)
+  }
+  if (stat instanceof trad.CClass) {
+    return serializeClass(stat)
+  }
+  if (stat instanceof trad.CStruct) {
+    return serializeStruct(stat)
+  }
+  if (stat instanceof trad.CStruct) {
+    return serializeStruct(stat)
+  }
+  if (stat instanceof trad.CFunction) {
+    return serializeFunction(stat)
+  }
+  if (stat instanceof trad.CObject) {
+    return serializeObject(stat)
+  }
+  return ''
+}
+
+function serializeProgram(program) {
   return {
     includes: [
       {
@@ -52,26 +118,13 @@ function serialize(program) {
         inStandardDirectory: false
       }
     ],
-    exports: program.export().map((stat) => {
-      if (stat instanceof trad.CClass) {
-        return serializeClass(stat)
-      }
-      if (stat instanceof trad.CStruct) {
-        return serializeStruct(stat)
-      }
-      if (stat instanceof trad.CFunction) {
-        return serializeFunction(stat)
-      }
-      if (stat instanceof trad.CObject) {
-        return serializeObject(stat)
-      }
-      return ''
-    }).filter(item => item !== '')
+    default: program.default ? serialize(program.default) : null,
+    exports: program.export().map(serialize).filter(item => item !== '')
   }
 }
 
 module.exports = {
   stringify: function (program) {
-    return JSON.stringify(serialize(program), null, 2)
+    return JSON.stringify(serializeProgram(program), null, 2)
   }
 }

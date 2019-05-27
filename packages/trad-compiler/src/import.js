@@ -205,6 +205,14 @@ class ImportParser extends Parser {
     return new trad.CNamespace(body.name)
   }
 
+  loadReference(body) {
+    return this.loadIdentify(body.reference)
+  }
+
+  loadTypedef(body) {
+    return new trad.CTypedef(this.loadIdentify(body.reference), body.name, body.isPointer)
+  }
+
   loadClass(body) {
     const cClass = new trad.CClass(body.name)
 

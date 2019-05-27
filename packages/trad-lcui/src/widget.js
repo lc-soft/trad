@@ -5,18 +5,6 @@ const functions = require('./functions')
 const helper = require('./helper')
 const trad = require('../../trad')
 
-class WidgetRegisterFunction extends trad.CFunction {
-  constructor(cClass) {
-    super(`LCUIWidget_Add${cClass.className}`)
-
-    this.widgetClass = cClass
-  }
-
-  get isExported() {
-    return this.widgetClass.isExported
-  }
-}
-
 const install = Compiler => class WidgetClassParser extends Compiler {
   constructor(...args) {
     super(...args)
@@ -128,7 +116,7 @@ const install = Compiler => class WidgetClassParser extends Compiler {
     const className = lib.convertPascalNaming(cClass.className)
     let superClassName = cClass.superClass ? lib.convertPascalNaming(cClass.superClass.className) : null
     const proto = this.widgetProtoIdentifyName
-    const func = new WidgetRegisterFunction(cClass)
+    const funcInstall = cClass.addMethod(new trad.CMethod('install'))
     const funcUpdate = helper.initUpdateMethod(cClass)
     const funcTemplate = cClass.getMethod('template')
     const constructor = cClass.getMethod('constructor')
@@ -137,20 +125,20 @@ const install = Compiler => class WidgetClassParser extends Compiler {
     if (superClassName === 'widget') {
       superClassName = null
     }
-    func.block.append([
+    funcInstall.isStatic = true
+    funcInstall.block.append([
       `${proto}.proto = ${functions.LCUIWidget_NewPrototype(className, superClassName).define()}`,
       `${proto}.proto->init = ${constructor.funcName};`,
       `${proto}.proto->destroy = ${destructor.funcName};`
     ])
     if (funcUpdate) {
-      func.block.append(`${proto}.proto->runtask = ${funcUpdate.funcName};`)
+      funcInstall.block.append(`${proto}.proto->runtask = ${funcUpdate.funcName};`)
     }
     funcTemplate.isExported = false
     constructor.block.append(functions.call(funcTemplate, constructor.widget))
     if (funcUpdate) {
       constructor.block.append(functions.call(funcUpdate, constructor.widget))
     }
-    cClass.parent.append(func)
   }
 
   afterParseWidgetClass(cClass) {

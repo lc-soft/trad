@@ -18,6 +18,7 @@ class MyApp extends App {
       value: Number,
       total: Number
     }
+    Progress.install()
   }
 
   created() {

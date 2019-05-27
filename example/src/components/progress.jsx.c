@@ -169,8 +169,7 @@ void Progress_Delete(LCUI_Widget w)
         Widget_Destroy(w);
 }
 
-
-void LCUIWidget_AddProgress()
+void Progress_Install()
 {
         progress_class.proto = LCUIWidget_NewPrototype("progress", NULL);
         progress_class.proto->init = Progress_Constructor;

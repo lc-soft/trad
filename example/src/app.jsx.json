@@ -5,6 +5,7 @@
       "inStandardDirectory": false
     }
   ],
+  "default": null,
   "exports": [
     {
       "name": "main",

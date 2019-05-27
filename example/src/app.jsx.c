@@ -74,6 +74,7 @@ static void MyApp_Destructor(MyApp _this)
 static void MyApp_Constructor(MyApp _this)
 {
         LCUI_Init();
+        Progress_Install();
         _this->state_changes = 1;
         String_Init(&_this->state.text, NULL);
         String_Init(&_this->state.input, NULL);

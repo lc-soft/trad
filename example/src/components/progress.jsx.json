@@ -5,7 +5,15 @@
       "inStandardDirectory": false
     }
   ],
+  "default": {
+    "type": "reference",
+    "reference": "Progress"
+  },
   "exports": [
+    {
+      "type": "reference",
+      "reference": "Progress"
+    },
     {
       "name": "Progress",
       "type": "class",
@@ -106,13 +114,14 @@
           "type": "method",
           "isStatic": false,
           "params": []
+        },
+        {
+          "name": "install",
+          "type": "method",
+          "isStatic": true,
+          "params": []
         }
       ]
-    },
-    {
-      "name": "LCUIWidget_AddProgress",
-      "type": "function",
-      "params": []
     }
   ]
 }

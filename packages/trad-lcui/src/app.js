@@ -55,7 +55,7 @@ const install = Compiler => class AppClassParser extends Compiler {
     helper.initUpdateMethod(cClass, types.AppMethod)
     func.block.append([
       that.callMethod('update'),
-      `LCUI_SetTimeout(0, ${cClass.getMethod('update').cName}, ${that.id});`
+      `LCUI_SetTimeout(0, ${cClass.getMethod('autoUpdate').cName}, ${that.id});`
     ])
   }
 

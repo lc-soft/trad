@@ -155,7 +155,10 @@ const install = Compiler => class JSXParser extends Compiler {
       }
     })
     this.jsxElementDepth -= 1
-    this.jsxWidget = ctx.widget
+    this.jsxWidgetStack.pop()
+    if (this.classParserName === 'App' && this.jsxElementDepth < 1) {
+      this.block.append(`Widget_Append(LCUIWidget_GetRoot(), ${ctx.widget.id});`)
+    }
     return ctx.widget
   }
 

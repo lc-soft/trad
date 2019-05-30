@@ -128,14 +128,7 @@ const install = Compiler => class StateBindingParser extends Compiler {
     if (!value || !value.id || !value.parent || value.parent.name !== 'state') {
       return super.parse(input)
     }
-
-    const funcName = getBindingFunctionName(value)
-    const func = ctx.cClass.getMethod(funcName)
-
-    assert(typeof func !== 'undefined', `${funcName} is undefined`)
-    func.block.append(
-      functions.Widget_SetAttributeEx(ctx.widget, attrName, func.funcArgs[0])
-    )
+    this.block.append(functions.Widget_BindProperty(ctx.widget, attrName, value))
     return true
   }
 

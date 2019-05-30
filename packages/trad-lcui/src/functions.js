@@ -24,7 +24,7 @@ const cfuncWidgetSetText = new CFunction('Widget_SetText', [cwidget, cstrConst])
 const cfuncWidgetAddTask = new CFunction('Widget_AddTask', [cwidget, cnum])
 const cfuncWidgetBindEvent = new CFunction('Widget_BindEvent', [cwidget, cstrConst, cfunc, cptr, cptr])
 const cfuncWidgetSetAttribute = new CFunction('Widget_SetAttribute', [cwidget, cstrConst, cptr])
-const cfuncWidgetSetAttributeEx = new CFunction('Widget_SetAttributeEx', [cwidget, cstrConst, cptr, cnum, cptr])
+const cfuncWidgetBindProperty = new CFunction('Widget_BindProperty', [cwidget, cstrConst, cptr])
 const cfuncLCUIWidgetNew = new CFunction('LCUIWidget_New', [cstrConst], cwidget.typeDeclaration)
 const cfuncLCUIWidgetNewPrototype = new CFunction('LCUIWidget_NewPrototype', [cstrConst, cstrConst])
 
@@ -70,8 +70,8 @@ module.exports = {
   Widget_SetAttribute(widget, name, value) {
     return call(cfuncWidgetSetAttribute, widget, name, value)
   },
-  Widget_SetAttributeEx(widget, name, value) {
-    return call(cfuncWidgetSetAttributeEx, widget, name, value, 0, null)
+  Widget_BindProperty(widget, name, value) {
+    return call(cfuncWidgetBindProperty, widget, name, value)
   },
   LCUIWidget_New(type = null) {
     return call(cfuncLCUIWidgetNew, type === 'widget' ? null : type)

@@ -81,6 +81,7 @@ const install = Compiler => class AppClassParser extends Compiler {
   }
 
   afterParseAppClass(cClass) {
+    const created = cClass.getMethod('created')
     const constructor = cClass.getMethod('constructor')
     const that = constructor.block.getThis()
 
@@ -89,7 +90,8 @@ const install = Compiler => class AppClassParser extends Compiler {
     this.initRunMethod(cClass)
     constructor.block.append([
       that.callMethod('template'),
-      that.callMethod('update')
+      that.callMethod('update'),
+      created ? that.callMethod('created') : ''
     ])
     this.enableJSX = false
     this.enableDataBinding = false

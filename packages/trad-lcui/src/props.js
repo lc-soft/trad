@@ -5,8 +5,7 @@ const { capitalize } = require('../../trad-utils')
 const {
   CClass,
   CObject,
-  CTypedef,
-  CCallExpression
+  CTypedef
 } = require('../../trad')
 
 function getBindingFunctionName(target) {

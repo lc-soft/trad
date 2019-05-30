@@ -56,10 +56,12 @@ function addBindingFunction(cClass, target) {
 const install = Compiler => class StateBindingParser extends Compiler {
   initStateBindings() {
     const cClass = this.findContextData(CClass)
+    const superClassName = cClass.superClass.reference.className
     const that = new CObject(this.block.getType(cClass.className), '_this')
     const state = that.selectProperty('state')
     const constructor = cClass.getMethod('constructor')
     const destructor = cClass.getMethod('destructor')
+    const handle = superClassName === 'Widget' ? constructor.widget : constructor.block.getThis()
 
     if (!state) {
       return false
@@ -76,7 +78,7 @@ const install = Compiler => class StateBindingParser extends Compiler {
       destructor.block.append(prop.destroy())
       return { prop, func }
     }).forEach(({ prop, func }) => {
-      constructor.block.append(prop.callMethod('watch', func, constructor.widget))
+      constructor.block.append(prop.callMethod('watch', func, handle))
     })
     return true
   }

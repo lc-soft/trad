@@ -54,7 +54,14 @@ const install = Compiler => class JSXParser extends Compiler {
     super(...args)
 
     this.jsxElementDepth = 0
-    this.jsxWidget = null
+    this.jsxWidgetStack = []
+  }
+
+  get jsxWidget() {
+    if (this.jsxWidgetStack.length < 1) {
+      return null
+    }
+    return this.jsxWidgetStack[this.jsxWidgetStack.length - 1]
   }
 
   parseJSXElementRef(ctx) {
@@ -148,6 +155,7 @@ const install = Compiler => class JSXParser extends Compiler {
       }
       this.block.append(functions.assign(ctx.widget, functions.LCUIWidget_New(ctx.type)))
     }
+    this.jsxWidgetStack.push(ctx.widget)
     ctx.node.attributes.forEach(attr => this.parse({ type: 'JSXElementAttribute', attr, ctx }))
     this.parseChildren(input.children).forEach((child) => {
       if (child && child.type === 'LCUI_Widget') {

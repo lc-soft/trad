@@ -1,4 +1,5 @@
 import LCUI from 'lcui'
+import './progress.css'
 
 class Progress extends LCUI.Widget {
   constructor() {
@@ -18,7 +19,7 @@ class Progress extends LCUI.Widget {
 
   template() {
     return <Widget class="progress">
-      <Widget ref="bar" class="bar" />
+      <Widget ref="bar" class="progress-bar" />
     </Widget>
   }
 }

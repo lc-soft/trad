@@ -4,6 +4,9 @@
 #include <LCUI/gui/widget/button.h>
 #include <LCUI/gui/widget/textview.h>
 #include <LCUI/gui/widget/textedit.h>
+#include <string.h>
+#include <LCUI/gui/css_parser.h>
+#include <stdlib.h>
 #include "progress.jsx.h"
 
 typedef struct ProgressRec_ ProgressRec;
@@ -45,6 +48,13 @@ static void Progress_OnPropTotalChanged(LCUI_Object, void*);
 static void Progress_OnPropValueChanged(LCUI_Object, void*);
 static LCUI_Widget Progress_Template(LCUI_Widget);
 
+const char *progress_css = ".progress {"
+"  height: 16px;"
+"  background-color: #e9ecef;"
+"}"
+".progress-bar {"
+"  background-color: #007bff;"
+"}";
 ProgressClassRec progress_class;
 
 static void Progress_Destructor(LCUI_Widget w)
@@ -119,7 +129,7 @@ static LCUI_Widget Progress_Template(LCUI_Widget w)
         _this = Widget_GetData(w, progress_class.proto);
         Widget_AddClass(w, "progress");
         _this->refs.bar = LCUIWidget_New(NULL);
-        Widget_AddClass(_this->refs.bar, "bar");
+        Widget_AddClass(_this->refs.bar, "progress-bar");
         Widget_Append(w, _this->refs.bar);
         return w;
 }
@@ -175,4 +185,5 @@ void Progress_Install()
         progress_class.proto->init = Progress_Constructor;
         progress_class.proto->destroy = Progress_Destructor;
         progress_class.proto->runtask = Progress_Update;
+        LCUI_LoadCSSString(progress_css, __FILE__);
 }

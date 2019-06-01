@@ -35,6 +35,7 @@ class MyApp extends App {
       <TextEdit value={this.state.input} />
       <Button onClick={this.onBtnChangeClick}>Change</Button>
       <TextView>Please click button to test progress</TextView>
+      <Progress value={this.state.value} total={this.state.total} />
       <Button onClick={this.onBtnMinusClick}>-</Button>
       <Button onClick={this.onBtnPlusClick}>+</Button>
     </Widget>)
@@ -58,5 +59,5 @@ class MyApp extends App {
 }
 
 export function main() {
-	return new MyApp().run()
+  return new MyApp().run()
 }

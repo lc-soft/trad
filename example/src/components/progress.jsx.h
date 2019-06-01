@@ -9,6 +9,7 @@ LCUI_Widget Progress_New();
 void Progress_Delete(LCUI_Widget w);
 void Progress_Install();
 /* Export: LCUI */
+/* Export: progress_css */
 /* Export: progress_class */
 
 #ifdef __cplusplus

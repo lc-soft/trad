@@ -3,7 +3,6 @@ project(example)
 
 set(example_VERSION_MAJOR 1)
 set(example_VERSION_MINOR 0)
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS")
 
 configure_file(
     "${PROJECT_SOURCE_DIR}/include/config.h.in"
@@ -16,4 +15,10 @@ include_directories("${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/../..
 aux_source_directory(src DIR_SRC)
 aux_source_directory(src/components DIR_COMP)
 add_executable(example ${DIR_SRC} ${DIR_COMP})
-target_link_libraries(example LCUI LCUIMain)
+
+if(WIN32)
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS")
+    target_link_libraries(example LCUI LCUIMain)
+else()
+    target_link_libraries(example LCUI)
+endif(WIN32)

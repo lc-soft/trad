@@ -1,5 +1,6 @@
 {
     "cmake.buildDirectory": "${workspaceFolder}/example/build",
     "cmake.sourceDirectory": "${workspaceFolder}/example",
-    "C_Cpp.default.configurationProvider": "vector-of-bool.cmake-tools"
+    "C_Cpp.default.configurationProvider": "vector-of-bool.cmake-tools",
+    "cmake.configureOnOpen": false
 }

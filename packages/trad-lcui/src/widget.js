@@ -63,6 +63,8 @@ const install = Compiler => class WidgetClassParser extends Compiler {
     this.beforeParseWidgetClass(cClass)
     this.parseChildren(helper.sortMethodDefinitions(input.body.body))
     this.afterParseWidgetClass(cClass)
+    // malloc() and free() is declared in <stdlib.h>
+    this.program.addInclude(new trad.CInclude('stdlib.h', true))
     return cClass
   }
 

@@ -2,11 +2,7 @@ const assert = require('assert')
 const types = require('./types')
 const functions = require('./functions')
 const { capitalize } = require('../../trad-utils')
-const {
-  CClass,
-  CObject,
-  CTypedef
-} = require('../../trad')
+const trad = require('../../trad')
 
 function getBindingFunctionName(target) {
   return `onState${capitalize(target.name)}Changed`
@@ -19,7 +15,7 @@ function addBindingFunction(cClass, target) {
 
   const superClassName = cClass.superClass.reference.className
   const that = new types.Object(cClass.typedefPointer, '_this')
-  const arg = new CObject('void', 'arg', { isPointer: true })
+  const arg = new trad.CObject('void', 'arg', { isPointer: true })
   const tmp = new types.Object(null, target.name)
 
   if (superClassName === 'Widget') {
@@ -55,9 +51,9 @@ function addBindingFunction(cClass, target) {
 
 const install = Compiler => class StateBindingParser extends Compiler {
   initStateBindings() {
-    const cClass = this.findContextData(CClass)
+    const cClass = this.findContextData(trad.CClass)
     const superClassName = cClass.superClass.reference.className
-    const that = new CObject(this.block.getType(cClass.className), '_this')
+    const that = new trad.CObject(this.block.getType(cClass.className), '_this')
     const state = that.selectProperty('state')
     const constructor = cClass.getMethod('constructor')
     const destructor = cClass.getMethod('destructor')
@@ -66,9 +62,9 @@ const install = Compiler => class StateBindingParser extends Compiler {
     if (!state) {
       return false
     }
-    assert(state instanceof CObject, 'state must be a object')
+    assert(state instanceof trad.CObject, 'state must be a object')
     // add a counter to check if the widget should be updated
-    cClass.addMember(new CObject('unsigned', 'state_changes'))
+    cClass.addMember(new trad.CObject('unsigned', 'state_changes'))
     constructor.block.append(functions.assign(that.selectProperty('state_changes'), 1))
     state.typeDeclaration.keys().map((name) => {
       const prop = state.selectProperty(name)
@@ -94,9 +90,9 @@ const install = Compiler => class StateBindingParser extends Compiler {
     left = this.parse(input.left.object)
 
     const that = this.block.getThis()
-    const cClass = this.findContextData(CClass)
+    const cClass = this.findContextData(trad.CClass)
     const stateStruct = this.parse(input.right)
-    const stateType = new CTypedef(stateStruct, `${left.className}StateRec`, false, false)
+    const stateType = new trad.CTypedef(stateStruct, `${left.className}StateRec`, false, false)
 
     stateStruct.setStructName(`${left.className}StateRec_`)
     stateStruct.keys().forEach((key) => {
@@ -107,7 +103,7 @@ const install = Compiler => class StateBindingParser extends Compiler {
       }
     })
     cClass.parent.insert(cClass.node.index, [stateType, stateStruct])
-    return that.addProperty(new CObject(stateType, 'state'))
+    return that.addProperty(new trad.CObject(stateType, 'state'))
   }
 
   parseMethodDefinition(input) {

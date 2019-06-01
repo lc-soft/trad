@@ -45,6 +45,8 @@ const install = Compiler => class AppClassParser extends Compiler {
     // Add new() and delete() methods after parsing all methods
     cClass.addMethod(parser.createNewMethod())
     cClass.addMethod(parser.createDeleteMethod())
+    // malloc() and free() is declared in <stdlib.h>
+    this.program.addInclude(new trad.CInclude('stdlib.h', true))
     return cClass
   }
 
@@ -55,7 +57,7 @@ const install = Compiler => class AppClassParser extends Compiler {
     helper.initUpdateMethod(cClass, types.AppMethod)
     func.block.append([
       that.callMethod('update'),
-      `LCUI_SetTimeout(0, ${cClass.getMethod('autoUpdate').cName}, ${that.id});`
+      `LCUI_SetTimeout(0, (TimerCallback)${cClass.getMethod('autoUpdate').cName}, ${that.id});`
     ])
   }
 

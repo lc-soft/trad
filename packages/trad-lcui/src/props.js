@@ -2,11 +2,7 @@ const assert = require('assert')
 const types = require('./types')
 const functions = require('./functions')
 const { capitalize } = require('../../trad-utils')
-const {
-  CClass,
-  CObject,
-  CTypedef
-} = require('../../trad')
+const trad = require('../../trad')
 
 function getBindingFunctionName(target) {
   return `onProp${capitalize(target.name)}Changed`
@@ -19,7 +15,7 @@ function addBindingFunction(cClass, target) {
 
   const superClassName = cClass.superClass.reference.className
   const that = new types.Object(cClass.typedefPointer, '_this')
-  const arg = new CObject('void', 'arg', { isPointer: true })
+  const arg = new trad.CObject('void', 'arg', { isPointer: true })
   const tmp = new types.Object(null, target.name)
   const func = new types.WidgetMethod(name, [tmp, arg])
 
@@ -44,7 +40,7 @@ function createWidgetAtrributeSetter(cClass, props) {
   const func = cClass.addMethod(new types.WidgetMethod('bindProperty'))
 
   func.funcArgs = [
-    new CObject('const char', 'name', { isPointer: true }),
+    new trad.CObject('const char', 'name', { isPointer: true }),
     new types.Object(null, 'value')
   ]
   props.typeDeclaration.keys().forEach((name, i) => {
@@ -64,8 +60,8 @@ function createWidgetAtrributeSetter(cClass, props) {
 
 const install = Compiler => class PropsBindingParser extends Compiler {
   initPropsBindings() {
-    const cClass = this.findContextData(CClass)
-    const that = new CObject(this.block.getType(cClass.className), '_this')
+    const cClass = this.findContextData(trad.CClass)
+    const that = new trad.CObject(this.block.getType(cClass.className), '_this')
     const props = that.selectProperty('props')
     const defaultProps = that.selectProperty('default_props')
     const constructor = cClass.getMethod('constructor')
@@ -74,9 +70,9 @@ const install = Compiler => class PropsBindingParser extends Compiler {
     if (!props) {
       return false
     }
-    assert(props instanceof CObject, 'props must be a object')
+    assert(props instanceof trad.CObject, 'props must be a object')
     // add a counter to check if the widget should be updated
-    cClass.addMember(new CObject('unsigned', 'props_changes'))
+    cClass.addMember(new trad.CObject('unsigned', 'props_changes'))
     constructor.block.append(functions.assign(that.selectProperty('props_changes'), 1))
     props.typeDeclaration.keys().map((key) => {
       const prop = props.selectProperty(key)
@@ -88,16 +84,18 @@ const install = Compiler => class PropsBindingParser extends Compiler {
     }).forEach(({ prop, defaultProp }) => {
       constructor.block.append(functions.assign(prop, defaultProp))
     })
+    // include string.h to use the strcmp() function
+    this.program.append(new trad.CInclude('string.h', true))
     createWidgetAtrributeSetter(cClass, props, defaultProps)
     return true
   }
 
   createProps(input, name, structName, isAllocFromStack = true) {
     const that = this.block.getThis()
-    const cClass = this.findContextData(CClass)
+    const cClass = this.findContextData(trad.CClass)
     const left = this.parse(input.left.object)
     const propsStruct = this.parse(input.right)
-    const propsType = new CTypedef(propsStruct, `${left.className}${structName}`)
+    const propsType = new trad.CTypedef(propsStruct, `${left.className}${structName}`)
 
     propsStruct.setStructName(`${left.className}${structName}_`)
     propsStruct.keys().forEach((key) => {
@@ -108,7 +106,7 @@ const install = Compiler => class PropsBindingParser extends Compiler {
       }
     })
     cClass.parent.insert(cClass.node.index, [propsType, propsStruct])
-    return that.addProperty(new CObject(propsType, name))
+    return that.addProperty(new trad.CObject(propsType, name))
   }
 
   parseAssignmentExpression(input) {

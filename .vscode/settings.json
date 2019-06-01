@@ -2,5 +2,26 @@
     "cmake.buildDirectory": "${workspaceFolder}/example/build",
     "cmake.sourceDirectory": "${workspaceFolder}/example",
     "C_Cpp.default.configurationProvider": "vector-of-bool.cmake-tools",
-    "cmake.configureOnOpen": false
+    "cmake.configureOnOpen": false,
+    "editor.rulers": [
+      78,
+      80
+    ],
+    "files.exclude": {
+      "**/*.lo": true,
+      "**/*.o": true,
+      "**/*.gcno": true
+    },
+    "[c]": {
+      "editor.tabSize": 8,
+      "editor.insertSpaces": false
+    },
+    "[cpp]": {
+      "editor.tabSize": 8,
+      "editor.insertSpaces": false
+    },
+    "[javascript]": {
+      "editor.tabSize": 2,
+      "editor.insertSpaces": true
+    }
 }

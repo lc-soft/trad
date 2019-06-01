@@ -6,7 +6,7 @@ const { capitalize } = require('../../trad-utils')
 const { Parser } = require('./parser')
 
 function getSourceFilePath(file) {
-  let sourceFilePath = null
+  let sourceFilePath = file
   const exts = ['.jsx', '.trad']
 
   exts.some((ext) => {
@@ -19,6 +19,34 @@ function getSourceFilePath(file) {
   return sourceFilePath
 }
 
+class ModuleLoader {
+  constructor(parser) {
+    this.parser = parser
+    this.compiler = parser.compiler
+  }
+
+  load(moduleFilePath) {
+    const moduleDataPath = `${moduleFilePath}.json`
+
+    do {
+      if (fs.existsSync(moduleDataPath)) {
+        const moduleFileStat = fs.statSync(moduleFilePath)
+        const moduleDataFileStat = fs.statSync(moduleDataPath)
+
+        if (moduleFileStat.mtime === moduleDataFileStat.mtime) {
+          break
+        }
+      }
+
+      const compiler = this.compiler.duplicate()
+
+      compiler.compile(moduleFilePath)
+      assert(fs.existsSync(moduleDataPath), 'export file creation failed')
+    } while (0)
+    return JSON.parse(fs.readFileSync(moduleDataPath))
+  }
+}
+
 class ImportParser extends Parser {
   constructor(compiler) {
     super(compiler)
@@ -26,6 +54,9 @@ class ImportParser extends Parser {
     this.exports = {}
     this.modules = Object.assign({}, compiler.ports)
     this.modulesStack = []
+    this.loaders = {}
+    this.loader = new ModuleLoader(this)
+    this.config = Object.assign({rules: []}, compiler.options.module)
   }
 
   get currentModulePath() {
@@ -70,6 +101,27 @@ class ImportParser extends Parser {
     return loader.call(this, target)
   }
 
+  getLoader(modulePath) {
+    let loader = this.loader
+
+    this.config.rules.some((rule) => {
+      if (rule.test.test(modulePath)) {
+        const source = rule.use.loader
+
+        loader = this.loaders[source]
+        if (!loader) {
+          const loaderClass = require(source)
+
+          loader = new loaderClass(this, rule.use.options)
+          this.loaders[source] = loader
+        }
+        return true
+      }
+      return false
+    })
+    return loader
+  }
+
   load(sourcePath) {
     const info = path.parse(sourcePath)
     let source = this.exports[sourcePath]
@@ -104,11 +156,14 @@ class ImportParser extends Parser {
     this.loadIncludes(moduleData.includes)
     if (!sourceName) {
       if (moduleData.default) {
-        return this.loadTarget(null, moduleData.default)
+        source =this.loadTarget(null, moduleData.default)
+      } else {
+        // Load all objects from this module
+        moduleData.exports.forEach((item) => this.loadTarget(moduleDecl, item))
+        source = moduleDecl
       }
-      // Load all objects from this module
-      moduleData.exports.forEach((item) => this.loadTarget(moduleDecl, item))
-      return new trad.CObject(moduleDecl, moduleDecl.name)
+      this.modulesStack.pop()
+      return source
     }
     try {
       // Try to parse it as a built-in type
@@ -147,27 +202,6 @@ class ImportParser extends Parser {
     }
   }
 
-  loadModuleDataFile(moduleFilePath) {
-    const moduleDataPath = `${moduleFilePath}.json`
-
-    do {
-      if (fs.existsSync(moduleDataPath)) {
-        const moduleFileStat = fs.statSync(moduleFilePath)
-        const moduleDataFileStat = fs.statSync(moduleDataPath)
-
-        if (moduleFileStat.mtime === moduleDataFileStat.mtime) {
-          break
-        }
-      }
-
-      const compiler = this.compiler.duplicate()
-
-      compiler.compile(moduleFilePath)
-      assert(fs.existsSync(moduleDataPath), 'export file creation failed')
-    } while (0)
-    return JSON.parse(fs.readFileSync(moduleDataPath))
-  }
-
   loadModule(moduleFilePath) {
     let moduleDecl = this.exports[moduleFilePath]
     let moduleData = this.modules[moduleFilePath]
@@ -176,7 +210,7 @@ class ImportParser extends Parser {
       return moduleDecl
     }
     if (!moduleData) {
-      moduleData = this.loadModuleDataFile(moduleFilePath)
+      moduleData = this.getLoader(moduleFilePath).load(moduleFilePath)
     }
     moduleDecl = new trad.CModule(moduleFilePath, moduleFilePath)
     this.modules[moduleFilePath] = moduleData
@@ -259,9 +293,10 @@ class ImportParser extends Parser {
   parse(input) {
     const source = input.source.value
 
+    this.import(source)
     input.specifiers.forEach((specifier) => {
-      const { name } = specifier.local
       let obj
+      const { name } = specifier.local
 
       if (specifier.type === 'ImportDefaultSpecifier') {
         obj = this.import(source).createReference(name)

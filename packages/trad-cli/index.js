@@ -1,15 +1,32 @@
 /* eslint-disable no-console */
 /* eslint-disable no-shadow */
 
-const fs = require('fs')
 const ports = require('../trad-ports')
 const LCUI = require('../trad-lcui')
 const { Compiler } = require('../trad-compiler')
 
-function compile(file) {
-  const compiler = new (Compiler.extend(LCUI))({ ports })
+// FIXME: refactor trad-compiler module
+// Do you think this configuration is similar to Webpack?
+// Yes, we are waiting for people like you who are familiar with Webpack to
+// help improve the trad-compiler module. If you are familiar with Webpack and
+// have read its code, please consider sharing the excellent part of Webpack
+// with us by submitting pull request
+const config = {
+  ports,
+  module: {
+    rules: [
+      {
+        test: /\.css$/,
+        use: {
+          loader: '../../trad-css-loader'
+        }
+      }
+    ]
+  }
+}
 
-  compiler.compile(file)
+function compile(file) {
+  new (Compiler.extend(LCUI))(config).compile(file)
 }
 
 module.exports = {

@@ -772,6 +772,7 @@ class CObject extends CIdentifier {
     }
     this.id = name
     this.value = value
+    this.initValue = null
     this.isPointer = isPointer
     this.isHidden = isHidden
     this.isDeletable = false
@@ -821,7 +822,13 @@ class CObject extends CIdentifier {
     if (!force && this.isHidden) {
       return ''
     }
-    return `${this.baseType} ${this.isPointer ? '*' : ''}${this.name};`
+
+    const definition = `${this.baseType} ${this.isPointer ? '*' : ''}${this.name}`
+
+    if (this.initValue) {
+      return `${definition} = ${this.initValue};`
+    }
+    return `${definition};`
   }
 
   callMethod(name, ...args) {
@@ -1268,6 +1275,10 @@ class CModule extends CType {
     this.exports[stat.name] = stat
     stat.isImported = true
     return super.append(stat)
+  }
+
+  createReference(name) {
+    return new CObject(this, name)
   }
 }
 

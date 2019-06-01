@@ -85,9 +85,17 @@ const install = Compiler => class AppClassParser extends Compiler {
   afterParseAppClass(cClass) {
     const created = cClass.getMethod('created')
     const constructor = cClass.getMethod('constructor')
+    const styles = helper.findStyles(this.program)
     const that = constructor.block.getThis()
 
     cClass.getSuper().node.remove()
+    styles.forEach((style) => {
+      stat.meta.usedBy = cClass.superClass.path
+      constructor.block.append(functions.LCUI_LoadCSSString(style))
+    })
+    if (styles.length > 0) {
+      this.program.append(new trad.CInclude('LCUI/gui/css_parser.h', true))
+    }
     this.initUpdateMethod(cClass)
     this.initRunMethod(cClass)
     constructor.block.append([

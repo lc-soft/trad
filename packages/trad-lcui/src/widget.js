@@ -118,6 +118,7 @@ const install = Compiler => class WidgetClassParser extends Compiler {
     const className = lib.convertPascalNaming(cClass.className)
     let superClassName = cClass.superClass ? lib.convertPascalNaming(cClass.superClass.className) : null
     const proto = this.widgetProtoIdentifyName
+    const styles = helper.findStyles(this.program)
     const funcInstall = cClass.addMethod(new trad.CMethod('install'))
     const funcUpdate = helper.initUpdateMethod(cClass)
     const funcTemplate = cClass.getMethod('template')
@@ -135,6 +136,13 @@ const install = Compiler => class WidgetClassParser extends Compiler {
     ])
     if (funcUpdate) {
       funcInstall.block.append(`${proto}.proto->runtask = ${funcUpdate.funcName};`)
+    }
+    styles.forEach((style) => {
+      style.meta.usedBy = cClass.superClass.path
+      funcInstall.block.append(functions.LCUI_LoadCSSString(style))
+    })
+    if (styles.length > 0) {
+      this.program.append(new trad.CInclude('LCUI/gui/css_parser.h', true))
     }
     funcTemplate.isExported = false
     constructor.block.append(functions.call(funcTemplate, constructor.widget))

@@ -17,6 +17,7 @@ const cwidget = new types.Object('Widget', 'widget')
 const csize = new CObject('size_t', `size`)
 
 const cfuncLCUIInit = new CFunction('LCUI_Init', [], 'int')
+const cfuncLCUILoadCSSString = new CFunction('LCUI_LoadCSSString', [cstrConst, cstrConst], csize.typeDeclaration)
 const cfuncWidgetAddClass = new CFunction('Widget_AddClass', [cwidget, cstrConst])
 const cfuncWidgetAddData = new CFunction('Widget_AddData', [cwidget, cptr, csize], cwidget.typeDeclaration)
 const cfuncWidgetGetData = new CFunction('Widget_GetData', [cwidget, cptr], cwidget.typeDeclaration)
@@ -42,6 +43,9 @@ module.exports = {
   },
   LCUI_Init() {
     return call(cfuncLCUIInit)
+  },
+  LCUI_LoadCSSString(str, file = new CObject(cstrConst, '__FILE__')) {
+    return call(cfuncLCUILoadCSSString, str, file)
   },
   Widget_AddClass(w, className = '') {
     return call(cfuncWidgetAddClass, w, className)

@@ -20,7 +20,7 @@ class CSSLoader {
         'const char', this.program.allocObjectName(name), { isPointer: true }
       )
 
-      obj.loader = 'trad-css-loader'
+      obj.meta.loader = 'trad-css-loader'
       obj.initValue = data
         .split('\n')
         .filter(line => line.length > 0)

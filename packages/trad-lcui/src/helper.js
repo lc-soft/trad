@@ -3,6 +3,14 @@ const types = require('./types')
 const functions = require('./functions')
 const trad = require('../../trad')
 
+function findStyles(program) {
+  return program.body.filter(
+    stat => stat instanceof trad.CObject
+    && stat.meta.loader === 'trad-css-loader'
+    && !stat.meta.usedBy
+  )
+}
+
 function initUpdateMethod(cClass, MethodClass = types.WidgetMethod) {
   let conditions = []
   let insertIndex = 0
@@ -69,5 +77,6 @@ function sortMethodDefinitions(methods) {
 
 module.exports = {
   initUpdateMethod,
+  findStyles,
   sortMethodDefinitions
 }

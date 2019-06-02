@@ -19,6 +19,7 @@ class CLCUIObjectType extends CClass {
     super('Object')
 
     this.alias = 'Object'
+    this.variablePrefix = 'obj'
     this.namespace = LCUINamespace
     this.typedef.namespace = LCUINamespace
     this.typedefPointer.namespace = LCUINamespace
@@ -51,6 +52,7 @@ class CLCUIString extends CLCUIObjectType {
     super()
 
     this.alias = 'String'
+    this.variablePrefix = 'str'
   }
 
   install() {
@@ -64,9 +66,13 @@ class CLCUIString extends CLCUIObjectType {
     this.addMember(new CFunction('Object_Operate', [obj, cstrConst, obj], obj.typeDeclaration))
   }
 
+  create(value = null) {
+    return new CCallExpression(this.getMember('String_New'), value)
+  }
+
   init(obj, value = null) {
     if (obj.pointerLevel > 0) {
-      return new CAssignmentExpression(obj, new CCallExpression(this.getMember('String_New'), value))
+      return new CAssignmentExpression(obj, this.create(value))
     }
     return new CCallExpression(this.getMember('String_Init'), obj, value)
   }
@@ -85,6 +91,7 @@ class CLCUINumber extends CLCUIObjectType {
     super()
 
     this.alias = 'Number'
+    this.variablePrefix = 'num'
   }
 
   install() {
@@ -99,9 +106,13 @@ class CLCUINumber extends CLCUIObjectType {
     this.addMember(new CFunction('Object_Operate', [obj, cstrConst, obj], obj.typeDeclaration))
   }
 
+  create(value = 0) {
+    return new CCallExpression(this.getMember('Number_New'), value)
+  }
+
   init(obj, value = 0) {
     if (obj.pointerLevel > 0) {
-      return new CAssignmentExpression(obj, new CCallExpression(this.getMember('Number_New'), value))
+      return new CAssignmentExpression(obj, this.create(value))
     }
     return new CCallExpression(this.getMember('Number_Init'), obj, value)
   }
@@ -120,6 +131,7 @@ class CLCUIWidget extends CClass {
     super('Widget')
 
     this.alias = 'Widget'
+    this.variablePrefix = '$'
     this.namespace = LCUINamespace
     this.typedef.namespace = LCUINamespace
     this.typedefPointer.namespace = LCUINamespace
@@ -188,20 +200,20 @@ class CLCUIWidgetStyle extends CClass {
 }
 
 class CLCUIObject extends CObject {
-  constructor(type, name, { isPointer = false, isAllocFromStack = false } = {}) {
+  constructor(type, name, meta = {}) {
     let decl = type
 
     if (typeof type === 'string') {
       decl = declarations[type]
-      assert(typeof type !== 'undefined')
     } else if (!type) {
       decl = declarations.Object
     }
+    assert(typeof decl !== 'undefined')
     if (decl instanceof CClass) {
-      decl = isAllocFromStack ? decl.typedef : decl.typedefPointer
+      decl = meta.isAllocateFromStack ? decl.typedef : decl.typedefPointer
     }
-    super(decl, name, { isPointer })
 
+    super(decl, name, meta)
     // class name in C
     this.cClassName = 'Object'
   }
@@ -229,6 +241,7 @@ class CLCUIWidgetMethod extends CMethod {
     let that = this.block.getThis()
     let ctype = cClass.name
 
+    assert(cClass instanceof CClass)
     if (that) {
       that.node.remove()
     }
@@ -236,12 +249,7 @@ class CLCUIWidgetMethod extends CMethod {
     if (this.isStatic || this.methodName === 'delete') {
       return null
     }
-    if (cClass instanceof CTypedef) {
-      ctype = cClass.reference.cName
-      that = this.block.createObject(cClass, '_this')
-    } else {
-      that = this.block.createObject(cClass.typedefPointer, '_this')
-    }
+    that = this.block.createObject(cClass.typedefPointer, '_this')
 
     const moduleClass = `${convertPascalNaming(cClass.className, '_')}_class`
     const proto = new CObject('void', `${moduleClass}.proto`, { isPointer: true })

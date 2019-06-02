@@ -11,6 +11,7 @@ const { ImportParser } = require('./src/import')
 const { ExportDefaultParser, ExportNamedParser } = require('./src/export')
 const { ClassParser, MethodParser } = require('./src/class')
 const { FunctionParser, FunctionExpressionParser } = require('./src/function')
+const { VariableDeclarationParser } = require('./src/declaration')
 const {
   IfStatementParser,
   BlockStatmentParser,
@@ -23,7 +24,8 @@ const {
   AssignmentExpressionParser,
   MemberExpressionParser,
   ObjectExpressionParser,
-  CallExpressionParser
+  CallExpressionParser,
+  BinaryExpressionParser
 } = require('./src/expression')
 
 class CompilerContext {
@@ -129,19 +131,21 @@ class Compiler {
       Literal: new LiteralParser(this),
       Super: new SuperKeywordParser(this),
       Identifier: new IdentifierParser(this),
+      VariableDeclaration: new VariableDeclarationParser(this),
       ImportDeclaration: new ImportParser(this),
       ClassDeclaration: new ClassParser(this),
       MethodDefinition: new MethodParser(this),
       FunctionDeclaration: new FunctionParser(this),
       FunctionExpression: new FunctionExpressionParser(this),
-      BlockStatement: new BlockStatmentParser(this),
       ExportDefaultDeclaration: new ExportDefaultParser(this),
       ExportNamedDeclaration: new ExportNamedParser(this),
       IfStatement: new IfStatementParser(this),
+      BlockStatement: new BlockStatmentParser(this),
       ReturnStatement: new ReturnStatementParser(this),
       ExpressionStatement: new ExpressionStatementParser(this),
       ThisExpression: new ThisExpressionParser(this),
       AssignmentExpression: new AssignmentExpressionParser(this),
+      BinaryExpression: new BinaryExpressionParser(this),
       MemberExpression: new MemberExpressionParser(this),
       ObjectExpression: new ObjectExpressionParser(this),
       NewExpression: new NewExpressionParser(this),

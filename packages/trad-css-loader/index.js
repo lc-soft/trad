@@ -21,7 +21,7 @@ class CSSLoader {
       )
 
       obj.meta.loader = 'trad-css-loader'
-      obj.initValue = data
+      obj.value = data
         .split('\n')
         .filter(line => line.length > 0)
         .map(line => `${JSON.stringify(line.trimRight())}`)

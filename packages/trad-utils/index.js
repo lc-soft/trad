@@ -6,7 +6,12 @@ function toVariableName(str) {
   return str.replace(/([A-Z])/g, '_$1').toLowerCase().replace(/^_/, '')
 }
 
+function isComparator(operator) {
+  return ['>', '<', '==', '>=', '<='].indexOf(operator) >= 0
+}
+
 module.exports = {
   capitalize,
+  isComparator,
   toVariableName
 }

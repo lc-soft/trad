@@ -38,18 +38,17 @@ const install = Compiler => class EventBindingParser extends Compiler {
       return wrapperClass.reference
     }
 
-    const that = new CObject(ctx.cClass, '_this')
+    const that = new CObject(ctx.cClass.typedefPointer, '_this')
     const handler = this.selectEventHandler(ctx)
     const func = new types.WidgetMethod('dispathWidgetEvent')
 
     wrapperClass = new CClass(className, 'wrapper')
-    wrapperClass.append(new CObject(ctx.cClass, '_this'))
+    wrapperClass.append(new CObject(ctx.cClass.typedefPointer, '_this'))
     wrapperClass.append(new CObject('void', 'data', { isPointer: true }))
     wrapperClass.append(new CObject(handler, 'handler'))
-    ctx.cClass.parent.append(new CTypedef(wrapperClass, className, true))
     ctx.cClass.parent.append(wrapperClass)
 
-    const wrapper = this.block.createObject(className, 'wrapper')
+    const wrapper = this.block.createObject(wrapperClass.typedefPointer, 'wrapper')
 
     func.funcArgs = [
       new types.Object('Widget', 'widget'),
@@ -74,7 +73,7 @@ const install = Compiler => class EventBindingParser extends Compiler {
   parseJSXElementEventBinding(ctx, attrName, func) {
     const wrapperClass = this.selectEventWrapperClass(ctx)
     const wrapperName = this.block.allocObjectName('_ev')
-    const wrapper = new CObject(wrapperClass, wrapperName)
+    const wrapper = new CObject(wrapperClass.typedefPointer, wrapperName)
     const eventName = attrName.substr(2).toLowerCase()
 
     // Event handler should be static

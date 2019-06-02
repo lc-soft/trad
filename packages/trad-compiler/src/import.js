@@ -6,8 +6,8 @@ const { capitalize } = require('../../trad-utils')
 const { Parser } = require('./parser')
 
 function getSourceFilePath(file) {
-  let sourceFilePath = file
-  const exts = ['.jsx', '.trad']
+  let sourceFilePath = null
+  const exts = ['', '.jsx', '.trad']
 
   exts.some((ext) => {
     if (fs.existsSync(`${file}${ext}`)) {

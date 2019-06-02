@@ -78,7 +78,6 @@ const install = Compiler => class AppClassParser extends Compiler {
     this.enableJSX = true
     this.enableDataBinding = true
     this.enableEventBinding = true
-    this.parsingWidgetClass = true
     this.classParserName = 'App'
   }
 
@@ -106,7 +105,6 @@ const install = Compiler => class AppClassParser extends Compiler {
     this.enableJSX = false
     this.enableDataBinding = false
     this.enableEventBinding = false
-    this.parsingWidgetClass = false
     this.classParserName = null
   }
 }

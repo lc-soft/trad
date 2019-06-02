@@ -1,6 +1,6 @@
 const assert = require('assert')
 const { Parser } = require('./parser')
-const { capitalize, toVariableName } = require('../../trad-utils')
+const { capitalize, isComparator } = require('../../trad-utils')
 const trad = require('../../trad')
 
 class ThisExpressionParser extends Parser {
@@ -73,13 +73,7 @@ class NewExpressionParser extends Parser {
       type instanceof trad.CType && type.reference instanceof trad.CClass,
       `${type.name} is not a constructor`
     )
-
-    const name = this.block.allocObjectName(type.name)
-    const args = input.arguments.map(arg => this.compiler.parse(arg))
-    const left = new trad.CObject(type, toVariableName(name))
-
-    this.block.append([left, left.init(...args)])
-    return left
+    return type.create(...input.arguments.map(arg => this.compiler.parse(arg)))
   }
 }
 
@@ -118,11 +112,32 @@ class CallExpressionParser extends Parser {
   }
 }
 
+class BinaryExpressionParser extends Parser {
+  createObject(...args) {
+    return this.compiler.handlers.VariableDeclaration.createObject(...args)
+  }
+
+  parse(input) {
+    let left = this.compiler.parse(input.left)
+    let right = this.compiler.parse(input.right)
+
+    if (!right.id) {
+      right = this.createObject(null, right)
+    }
+    if (isComparator(input.operator)) {
+      return new trad.CBinaryExpression(left.compare(right), input.operator, 0)
+    }
+    right = left.operate(input.operator, right)
+    return this.createObject(null, right)
+  }
+}
+
 module.exports = {
   ThisExpressionParser,
   AssignmentExpressionParser,
   MemberExpressionParser,
   ObjectExpressionParser,
   NewExpressionParser,
-  CallExpressionParser
+  CallExpressionParser,
+  BinaryExpressionParser
 }

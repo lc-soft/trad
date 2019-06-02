@@ -16,8 +16,17 @@
       "useNamespaceForMethods": false
     },
     {
-      "name": "Object",
-      "type": "class",
+      "name": "String",
+      "type": "reference",
+      "reference": "Object",
+      "namespace": "LCUI",
+      "useNamespace": true,
+      "useNamespaceForMethods": false
+    },
+    {
+      "name": "Number",
+      "type": "reference",
+      "reference": "Object",
       "namespace": "LCUI",
       "useNamespace": true,
       "useNamespaceForMethods": false

@@ -74,7 +74,6 @@ const install = Compiler => class WidgetClassParser extends Compiler {
     this.enableJSX = true
     this.enableDataBinding = true
     this.enableEventBinding = true
-    this.parsingWidgetClass = true
     this.classParserName = 'Widget'
     this.classMethodType = types.WidgetMethod
     this.widgetProtoIdentifyName = `${lib.convertPascalNaming(cClass.className, '_')}_class`
@@ -159,7 +158,6 @@ const install = Compiler => class WidgetClassParser extends Compiler {
     this.enableJSX = false
     this.enableDataBinding = false
     this.enableEventBinding = false
-    this.parsingWidgetClass = false
     this.classParserName = null
     this.classMethodType = null
   }

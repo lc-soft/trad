@@ -53,7 +53,7 @@ const install = Compiler => class StateBindingParser extends Compiler {
   initStateBindings() {
     const cClass = this.findContextData(trad.CClass)
     const superClassName = cClass.superClass.reference.className
-    const that = new trad.CObject(this.block.getType(cClass.className), '_this')
+    const that = new trad.CObject(cClass.typedefPointer, '_this')
     const state = that.selectProperty('state')
     const constructor = cClass.getMethod('constructor')
     const destructor = cClass.getMethod('destructor')
@@ -99,7 +99,7 @@ const install = Compiler => class StateBindingParser extends Compiler {
       const member = stateStruct.getMember(key)
 
       if (['String', 'Number'].indexOf(member.type) >= 0) {
-        stateStruct.addMember(new types.Object(member.type, key, { isAllocFromStack: true }))
+        stateStruct.addMember(new types.Object(member.type, key, { isAllocateFromStack: true }))
       }
     })
     cClass.parent.insert(cClass.node.index, [stateType, stateStruct])

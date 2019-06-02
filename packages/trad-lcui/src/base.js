@@ -1,31 +1,22 @@
 const assert = require('assert')
 const types = require('./types')
-const { convertPascalNaming } = require('./lib')
 const functions = require('./functions')
-const { CTypedef, CBinaryExpression, CCallExpression } = require('../../trad')
-
-function isComparator(operator) {
-  return ['>', '<', '==', '>=', '<='].indexOf(operator) >= 0
-}
-
-function getTypeName(type) {
-  let decl = type
-
-  if (decl instanceof CTypedef) {
-    decl = decl.reference
-  }
-  return decl.alias || decl.className || decl.name
-}
+const trad = require('../../trad')
+const { isComparator } = require('../../trad-utils')
 
 function convertObject(obj) {
-    // Rebuild base type to CLCUIObject
-    if (['String', 'Number'].indexOf(obj.type) >= 0) {
-      const value = obj.value
+  // Rebuild base type to CLCUIObject
+  if (['String', 'Number'].indexOf(obj.type) >= 0) {
+    const value = obj.value
 
-      obj = new types.Object(obj.type, obj.id)
-      obj.value = value
-    }
-    return obj
+    obj = new types.Object(obj.type, obj.id, { isAllocateFromStack: !obj.id })
+    obj.value = value
+  }
+  return obj
+}
+
+function createObject(compiler, baseName, initValue) {
+  return compiler.handlers.VariableDeclaration.createObject(baseName, initValue, true)
 }
 
 const install = Compiler => class LCUIBaseParser extends Compiler {
@@ -35,100 +26,36 @@ const install = Compiler => class LCUIBaseParser extends Compiler {
     this.enableJSX = false
     this.enableDataBinding = false
     this.enableEventBinding = false
-    this.parsingWidgetClass = false
+    this.parsingLCUIClass = false
     this.classParserName = null
-  }
-
-  createObject(baseName, initValue) {
-    if (!initValue) {
-      debugger
-    }
-    assert(initValue.typeDeclaration, `unable to infer the type of ${initValue.type}`)
-
-    let variable = null
-    const typeName = getTypeName(initValue.typeDeclaration)
-    const name = this.block.allocObjectName(baseName ? baseName : `_${convertPascalNaming(typeName, '_')}`)
-
-    do {
-      if (initValue instanceof CCallExpression) {
-        variable = new types.Object(typeName, name)
-        this.block.append([
-          variable,
-          functions.assign(variable, initValue)
-        ])
-        break
-      }
-      if (!initValue.id) {
-        variable = new types.Object(typeName, name, { isAllocFromStack: true })
-        this.block.append([
-          variable,
-          variable.init(initValue.value)
-        ])
-        break
-      }
-      if (initValue.pointerLevel > 0) {
-        variable = new types.Object(typeName, name)
-        this.block.append([
-          variable,
-          functions.assign(variable, initValue.duplicate())
-        ])
-        break
-      }
-      variable = new types.Object(typeName, name, { isAllocFromStack: true })
-      this.block.append([
-        variable,
-        variable.operate('=', initValue)
-      ])
-    } while (0)
-    variable.isDeletable = true
-    return variable
   }
 
   parseBinaryExpression(input) {
     let left = this.parse(input.left)
+
+    if (!types.isObject(left)) {
+      return super.parse(input)
+    }
+
     let right = this.parse(input.right)
 
     if (!right.id) {
-      right = this.createObject(null, convertObject(right))
+      right = createObject(this, null, convertObject(right))
     }
     if (types.isString(right) !== types.isString(left)) {
       if (types.isString(left)) {
-        right = this.createObject(`${right.name}_str`, right.stringify())
+        right = createObject(this, `${right.name}_str`, right.stringify())
         this.block.append(right)
       } else {
-        left = this.createObject(`${left.name}_str`, left.stringify())
+        left = createObject(this, `${left.name}_str`, left.stringify())
         this.block.append(left)
       }
     }
     if (isComparator(input.operator)) {
-      return new CBinaryExpression(left.compare(right), input.operator, 0)
+      return new trad.CBinaryExpression(left.compare(right), input.operator, 0)
     }
     right = left.operate(input.operator, right)
-    return this.createObject(null, right)
-  }
-
-  parseVariableDeclaration(inputs) {
-    const variables = inputs.declarations.map((input) => {
-      if (input.init) {
-        const right = this.parse(input.init)
-
-        return this.createObject(input.id.name, convertObject(right))
-      }
-      // FIXME: Design a syntax for typed object declaration
-      assert(0, `unable to infer the type of ${input.id.name}`)
-      return null
-    })
-    return variables[variables.length - 1]
-  }
-
-  parseLiteral(input) {
-
-    if (typeof input.value === 'string') {
-      return this.block.createObject('String', null, { value: input.value, isHidden: true })
-    }
-    if (typeof input.value === 'number') {
-      return this.block.createObject('Number', null, { value: input.value, isHidden: true })
-    }
+    return createObject(this, null, right)
   }
 
   parseAssignmentExpression(input) {

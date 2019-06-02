@@ -61,7 +61,7 @@ function createWidgetAtrributeSetter(cClass, props) {
 const install = Compiler => class PropsBindingParser extends Compiler {
   initPropsBindings() {
     const cClass = this.findContextData(trad.CClass)
-    const that = new trad.CObject(this.block.getType(cClass.className), '_this')
+    const that = new trad.CObject(cClass.typedefPointer, '_this')
     const props = that.selectProperty('props')
     const defaultProps = that.selectProperty('default_props')
     const constructor = cClass.getMethod('constructor')
@@ -90,7 +90,7 @@ const install = Compiler => class PropsBindingParser extends Compiler {
     return true
   }
 
-  createProps(input, name, structName, isAllocFromStack = true) {
+  createProps(input, name, structName, isAllocateFromStack = true) {
     const that = this.block.getThis()
     const cClass = this.findContextData(trad.CClass)
     const left = this.parse(input.left.object)
@@ -102,7 +102,7 @@ const install = Compiler => class PropsBindingParser extends Compiler {
       const member = propsStruct.getMember(key)
 
       if (['String', 'Number'].indexOf(member.type) >= 0) {
-        propsStruct.addMember(new types.Object(member.type, key, { isAllocFromStack }))
+        propsStruct.addMember(new types.Object(member.type, key, { isAllocateFromStack }))
       }
     })
     cClass.parent.insert(cClass.node.index, [propsType, propsStruct])

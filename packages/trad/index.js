@@ -305,6 +305,8 @@ class CCallExpression extends CExpression {
   }
 }
 
+class CNewExpression extends CCallExpression {}
+
 class CUpdateExpression extends CExpression {
   constructor(argument, operator = '++', prefix = true) {
     assert(argument instanceof CObject, 'invalid left-hand side expression in postfix operation')
@@ -382,6 +384,29 @@ class CDeclaration extends CCode {
   }
 }
 
+class CVariableDeclaration extends CDeclaration {
+  constructor(variable, init) {
+    super('variable')
+
+    this.variable = variable
+    this.init = init
+  }
+
+  define() {
+    const v = this.variable
+    const d = `${v.baseType} ${v.isPointer ? '*' : ''}${v.name}`
+
+    if (v.typeDeclaration instanceof CClass) {
+      assert(typeof this.init === 'undefined')
+      return `${d};`
+    }
+    if (typeof this.init === 'undefined') {
+      return `${d};`
+    }
+    return `${d} = ${this.init};`
+  }
+}
+
 class CIdentifier extends CDeclaration {
   constructor(name) {
     super(name)
@@ -426,6 +451,15 @@ class CType extends CIdentifier {
 
     this.isConst = false
     this.isComposite = false
+    this.meta.variablePrefix = name
+  }
+
+  get variablePrefix() {
+    return this.meta.variablePrefix
+  }
+
+  set variablePrefix(prefix) {
+    this.meta.variablePrefix = prefix
   }
 
   // eslint-disable-next-line class-methods-use-this
@@ -441,6 +475,31 @@ class CType extends CIdentifier {
   // eslint-disable-next-line class-methods-use-this
   define() {
     return ''
+  }
+
+  init(obj) {
+    return obj
+  }
+
+  destroy() {
+    return
+  }
+
+  duplicate(obj) {
+    return obj
+  }
+
+  operate(left, operator, right) {
+    return new CBinaryExpression(left, operator, right)
+  }
+
+  compare(left, right) {
+    return `${left.id} - ${right.id}`
+  }
+
+  stringify(obj) {
+    // FIXME: add toString() for basic types, like: int, double, char*
+    assert(0, 'cannot convert to string')
   }
 }
 
@@ -606,7 +665,7 @@ class CMethod extends CFunction {
     if (that) {
       that.node.remove()
     }
-    return this.block.createObject(cClass, '_this', { isHidden: true })
+    return this.block.createObject(cClass.typedefPointer, '_this', { isHidden: true })
   }
 }
 
@@ -754,25 +813,47 @@ class CTypedef extends CType {
     return this.reference.selectProperty(name)
   }
 
+  create(...args) {
+    return this.reference.create(...args)
+  }
+
   createReference(name = this.name) {
     return new CTypedef(this.reference, name, this.isPointer)
   }
 }
 
+class CClassReference extends CTypedef {
+  get variablePrefix() {
+    return this.reference.variablePrefix
+  }
+
+  set variablePrefix(_prefix) {
+    assert(0, 'variablePrefix is readonly')
+  }
+}
+
 class CObject extends CIdentifier {
-  constructor(type, name, { isPointer = false, isHidden = false, value = null } = {}) {
+  constructor(
+    type,
+    name,
+    {
+      isPointer = false,
+      isHidden = false,
+      value = undefined
+    } = {}
+  ) {
     super(name)
 
     if (typeof type === 'string') {
       this.typeDeclaration = createType(type)
     } else if (type instanceof CClass) {
-      this.typeDeclaration = type.typedefPointer
+      // CClass is only allowed through typedef or typedefPointer
+      this.typeDeclaration = type.typedef
     } else {
       this.typeDeclaration = type
     }
     this.id = name
     this.value = value
-    this.initValue = null
     this.isPointer = isPointer
     this.isHidden = isHidden
     this.isDeletable = false
@@ -822,13 +903,7 @@ class CObject extends CIdentifier {
     if (!force && this.isHidden) {
       return ''
     }
-
-    const definition = `${this.baseType} ${this.isPointer ? '*' : ''}${this.name}`
-
-    if (this.initValue) {
-      return `${definition} = ${this.initValue};`
-    }
-    return `${definition};`
+    return new CVariableDeclaration(this, this.value).define()
   }
 
   callMethod(name, ...args) {
@@ -908,10 +983,11 @@ class CClass extends CStruct {
     super(`${name}Rec_`)
 
     this.className = name
+    this.variablePrefix = name
     this.useNamespaceForMethods = true
     this.meta.superClass = superClass
-    this.typedefPointer = new CTypedef(this, name, true)
-    this.typedef = new CTypedef(this, `${name}Rec`, false, false)
+    this.typedefPointer = new CClassReference(this, name, true)
+    this.typedef = new CClassReference(this, `${name}Rec`, false, false)
     this.destructor = null
   }
 
@@ -957,9 +1033,13 @@ class CClass extends CStruct {
     return this.getMember(`_${toVariableName(this.superClass.className)}`)
   }
 
+  create(...args) {
+    return new CNewExpression(this.getMethod('new'), ...args)
+  }
+
   init(obj) {
     if (obj.pointerLevel > 0) {
-      return new CAssignmentExpression(obj, this.callMethod('new'))
+      return new CAssignmentExpression(obj, this.create())
     }
     return this.callMethod('init', obj)
   }
@@ -972,7 +1052,11 @@ class CClass extends CStruct {
   }
 
   duplicate(obj) {
-    return this.callMethod('duplicate', obj)
+    try {
+      return this.callMethod('duplicate', obj)
+    } catch (err) {
+      return obj
+    }
   }
 
   operate(left, operator, right) {
@@ -1207,21 +1291,18 @@ class CBlock extends CDeclaration {
   createObject(
     type,
     name = `_unnamed_object_${this.getObjectCount()}`,
-    { isPointer = false, isHidden = false, value = null } = {}
+    options
   ) {
-    let typeDeclaration = type
+    let decl = type
 
-    if (typeof typeDeclaration === 'string') {
-      typeDeclaration = this.getType(type)
-      if (!typeDeclaration) {
-        typeDeclaration = type
+    if (typeof decl === 'string') {
+      decl = this.getType(type)
+      if (!decl) {
+        decl = type
       }
     }
-    assert(typeDeclaration instanceof CDeclaration)
-
-    const obj = new CObject(typeDeclaration, name, { isPointer, isHidden, value })
-
-    return this.append(obj)
+    assert(decl instanceof CDeclaration)
+    return this.append(new CObject(decl, name, options))
   }
 
   allocObjectName(baseName) {
@@ -1448,8 +1529,10 @@ module.exports = {
   CStatement,
   CReturnStatment,
   CIfStatement,
+  CVariableDeclaration,
   CBinaryExpression,
   CCallExpression,
+  CNewExpression,
   CUpdateExpression,
   CAssignmentExpression
 }

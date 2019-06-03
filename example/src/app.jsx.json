@@ -6,5 +6,11 @@
     }
   ],
   "default": null,
-  "exports": []
+  "exports": [
+    {
+      "name": "main",
+      "type": "function",
+      "params": []
+    }
+  ]
 }

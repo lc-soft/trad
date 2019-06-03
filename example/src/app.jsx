@@ -2,6 +2,8 @@ import {
   App,
   Widget,
   Button,
+  String,
+  Number,
   TextView,
   TextEdit
 } from 'lcui'
@@ -59,5 +61,6 @@ class MyApp extends App {
 }
 
 export function main() {
-  return new MyApp().run()
+  const app = new MyApp()
+  return app.run()
 }

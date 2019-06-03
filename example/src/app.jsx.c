@@ -7,13 +7,13 @@
 #include <LCUI/timer.h>
 #include <stdlib.h>
 #include "components\progress.jsx.h"
+#include "app.jsx.h"
 
 typedef struct MyAppRec_ MyAppRec;
 typedef struct MyAppRec_* MyApp;
 typedef struct MyAppStateRec_ MyAppStateRec;
 typedef struct MyAppRefsRec_ MyAppRefsRec;
 typedef void (*MyAppEventHandler)(MyApp, LCUI_WidgetEvent);
-typedef struct MyAppEventWrapperRec_* MyAppEventWrapper;
 typedef struct MyAppEventWrapperRec_ MyAppEventWrapperRec;
 typedef struct MyAppEventWrapperRec_* MyAppEventWrapper;
 
@@ -63,7 +63,6 @@ static void MyApp_Update(MyApp);
 static int MyApp_Run(MyApp);
 static MyApp MyApp_New();
 static void MyApp_Delete(MyApp);
-static int main();
 
 static void MyApp_Destructor(MyApp _this)
 {
@@ -138,28 +137,28 @@ static void MyApp_OnBtnChangeClick(MyApp _this, LCUI_WidgetEvent e)
 
 static void MyApp_OnBtnMinusClick(MyApp _this, LCUI_WidgetEvent e)
 {
-        LCUI_ObjectRec _number;
+        LCUI_ObjectRec _num;
 
-        Number_Init(&_number, 0);
-        if (Object_Compare(&_this->state.value, &_number) > 0)
+        Number_Init(&_num, 0);
+        if (Object_Compare(&_this->state.value, &_num) > 0)
         {
                 Number_SetValue(&_this->state.value, 10);
         }
 
-        Object_Destroy(&_number);
+        Object_Destroy(&_num);
 }
 
 static void MyApp_OnBtnPlusClick(MyApp _this, LCUI_WidgetEvent e)
 {
-        LCUI_ObjectRec _number;
+        LCUI_ObjectRec _num;
 
-        Number_Init(&_number, 100);
-        if (Object_Compare(&_this->state.value, &_number) < 0)
+        Number_Init(&_num, 100);
+        if (Object_Compare(&_this->state.value, &_num) < 0)
         {
                 Number_SetValue(&_this->state.value, 10);
         }
 
-        Object_Destroy(&_number);
+        Object_Destroy(&_num);
 }
 
 static LCUI_Widget MyApp_Template(MyApp _this)
@@ -263,10 +262,12 @@ static void MyApp_Delete(MyApp _this)
 }
 
 
-static int main()
+int main()
 {
-        MyApp my_app;
+        MyApp app;
 
-        my_app = MyApp_New();
-        return MyApp_Run(my_app);
+        app = MyApp_New();
+        return MyApp_Run(app);
+
+        MyApp_Delete(app);
 }

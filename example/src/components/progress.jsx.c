@@ -137,13 +137,13 @@ static LCUI_Widget Progress_Template(LCUI_Widget w)
 void Progress_Update(LCUI_Widget w)
 {
         Progress _this;
-        LCUI_ObjectRec _number;
-        LCUI_Object _number_1;
-        LCUI_Object _number_2;
+        LCUI_ObjectRec _num;
+        LCUI_Object _num_1;
+        LCUI_Object _num_2;
         LCUI_Object percentage;
-        LCUI_ObjectRec _string;
+        LCUI_ObjectRec _str;
         LCUI_Object percentage_str;
-        LCUI_Object _string_1;
+        LCUI_Object _str_1;
 
         _this = Widget_GetData(w, progress_class.proto);
         if (_this->props_changes < 1)
@@ -151,22 +151,22 @@ void Progress_Update(LCUI_Widget w)
                 return;
         }
         _this->props_changes = 0;
-        Number_Init(&_number, 100);
-        _number_1 = Object_Operate(_this->props.value, "*", &_number);
-        _number_2 = Object_Operate(_number_1, "/", _this->props.total);
-        percentage = Object_Duplicate(_number_2);
-        String_Init(&_string, "%");
+        Number_Init(&_num, 100);
+        _num_1 = Object_Operate(_this->props.value, "*", &_num);
+        _num_2 = Object_Operate(_num_1, "/", _this->props.total);
+        percentage = Object_Duplicate(_num_2);
+        String_Init(&_str, "%");
         percentage_str = Object_ToString(percentage);
-        _string_1 = Object_Operate(percentage_str, "+", &_string);
-        Widget_SetStyleString(_this->refs.bar, "width", _string_1->value.string);
+        _str_1 = Object_Operate(percentage_str, "+", &_str);
+        Widget_SetStyleString(_this->refs.bar, "width", _str_1->value.string);
 
-        Object_Destroy(&_number);
-        Object_Delete(_number_1);
-        Object_Delete(_number_2);
+        Object_Destroy(&_num);
+        Object_Delete(_num_1);
+        Object_Delete(_num_2);
         Object_Delete(percentage);
-        Object_Destroy(&_string);
+        Object_Destroy(&_str);
         Object_Delete(percentage_str);
-        Object_Delete(_string_1);
+        Object_Delete(_str_1);
 }
 
 LCUI_Widget Progress_New()

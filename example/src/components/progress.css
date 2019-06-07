@@ -3,5 +3,6 @@
   background-color: #e9ecef;
 }
 .progress-bar {
+  height: 100%;
   background-color: #007bff;
 }

@@ -8,6 +8,7 @@ import {
   TextEdit
 } from 'lcui'
 import Progress from './components/progress'
+import './app.css'
 
 class MyApp extends App {
   constructor() {
@@ -32,14 +33,18 @@ class MyApp extends App {
   }
 
   template() {
-    return (<Widget>
-      <TextView>{this.state.text}</TextView>
-      <TextEdit value={this.state.input} />
-      <Button onClick={this.onBtnChangeClick}>Change</Button>
-      <TextView>Please click button to test progress</TextView>
-      <Progress value={this.state.value} total={this.state.total} />
-      <Button onClick={this.onBtnMinusClick}>-</Button>
-      <Button onClick={this.onBtnPlusClick}>+</Button>
+    return (<Widget class="example">
+      <TextView class="item">{this.state.text}</TextView>
+      <Widget class="form-control">
+        <TextEdit value={this.state.input} />
+        <Button onClick={this.onBtnChangeClick}>Change</Button>
+      </Widget>
+      <TextView class="item">Please click button to test progress</TextView>
+      <Progress class="item" value={this.state.value} total={this.state.total} />
+      <Widget class="button-group">
+        <Button onClick={this.onBtnMinusClick}>-</Button>
+        <Button onClick={this.onBtnPlusClick}>+</Button>
+      </Widget>
     </Widget>)
   }
 

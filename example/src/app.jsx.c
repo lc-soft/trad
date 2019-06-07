@@ -4,6 +4,7 @@
 #include <LCUI/gui/widget/button.h>
 #include <LCUI/gui/widget/textview.h>
 #include <LCUI/gui/widget/textedit.h>
+#include <LCUI/gui/css_parser.h>
 #include <LCUI/timer.h>
 #include <stdlib.h>
 #include "components\progress.jsx.h"
@@ -64,6 +65,31 @@ static int MyApp_Run(MyApp);
 static MyApp MyApp_New();
 static void MyApp_Delete(MyApp);
 
+const char *app_css = "root {"
+"    background-color: #f6f8fa;"
+"}"
+".example {"
+"    max-width: 480px;"
+"    padding: 25px;"
+"    margin: 25px auto;"
+"    background-color: #fff;"
+"    border: 1px solid #eee;"
+"}"
+".form-control {"
+"    padding: 5px;"
+"    margin: -5px -5px 10px -5px;"
+"}"
+".item {"
+"    margin-bottom: 15px;"
+"}"
+".button-group {"
+"    display: flex;"
+"    justify-content: center;"
+"}"
+".button-group button {"
+"    margin: 0 4px;"
+"}";
+
 static void MyApp_Destructor(MyApp _this)
 {
         Object_Destroy(&_this->state.text);
@@ -85,6 +111,7 @@ static void MyApp_Constructor(MyApp _this)
         Object_Watch(&_this->state.input, MyApp_OnStateInputChanged, _this);
         Object_Watch(&_this->state.value, MyApp_OnStateValueChanged, _this);
         Object_Watch(&_this->state.total, MyApp_OnStateTotalChanged, _this);
+        LCUI_LoadCSSString(app_css, __FILE__);
         MyApp_Template(_this);
         MyApp_Update(_this);
         MyApp_Created(_this);
@@ -142,7 +169,12 @@ static void MyApp_OnBtnMinusClick(MyApp _this, LCUI_WidgetEvent e)
         Number_Init(&_num, 0);
         if (Object_Compare(&_this->state.value, &_num) > 0)
         {
-                Number_SetValue(&_this->state.value, 10);
+                LCUI_ObjectRec _num;
+
+                Number_Init(&_num, 10);
+                Object_Operate(&_this->state.value, "-=", &_num);
+
+                Object_Destroy(&_num);
         }
 
         Object_Destroy(&_num);
@@ -155,7 +187,12 @@ static void MyApp_OnBtnPlusClick(MyApp _this, LCUI_WidgetEvent e)
         Number_Init(&_num, 100);
         if (Object_Compare(&_this->state.value, &_num) < 0)
         {
-                Number_SetValue(&_this->state.value, 10);
+                LCUI_ObjectRec _num;
+
+                Number_Init(&_num, 10);
+                Object_Operate(&_this->state.value, "+=", &_num);
+
+                Object_Destroy(&_num);
         }
 
         Object_Destroy(&_num);
@@ -164,13 +201,19 @@ static void MyApp_OnBtnPlusClick(MyApp _this, LCUI_WidgetEvent e)
 static LCUI_Widget MyApp_Template(MyApp _this)
 {
         LCUI_Widget textview;
+        LCUI_Widget widget;
         MyAppEventWrapper _ev;
         LCUI_Widget textview_1;
+        LCUI_Widget widget_1;
         MyAppEventWrapper _ev_1;
         MyAppEventWrapper _ev_2;
 
         _this->view = LCUIWidget_New(NULL);
+        Widget_AddClass(_this->view, "example");
         textview = LCUIWidget_New("textview");
+        Widget_AddClass(textview, "item");
+        widget = LCUIWidget_New(NULL);
+        Widget_AddClass(widget, "form-control");
         _this->refs._textedit = LCUIWidget_New("textedit");
         Widget_BindProperty(_this->refs._textedit, "value", &_this->state.input);
         _this->refs._button = LCUIWidget_New("button");
@@ -180,11 +223,17 @@ static LCUI_Widget MyApp_Template(MyApp _this)
         _ev->handler = MyApp_OnBtnChangeClick;
         Widget_BindEvent(_this->refs._button, "click", MyApp_DispathWidgetEvent, _ev, free);
         Widget_SetText(_this->refs._button, "Change");
+        Widget_Append(widget, _this->refs._textedit);
+        Widget_Append(widget, _this->refs._button);
         textview_1 = LCUIWidget_New("textview");
+        Widget_AddClass(textview_1, "item");
         Widget_SetText(textview_1, "Please click button to test progress");
         _this->refs._progress = LCUIWidget_New("progress");
+        Widget_AddClass(_this->refs._progress, "item");
         Widget_BindProperty(_this->refs._progress, "value", &_this->state.value);
         Widget_BindProperty(_this->refs._progress, "total", &_this->state.total);
+        widget_1 = LCUIWidget_New(NULL);
+        Widget_AddClass(widget_1, "button-group");
         _this->refs._button_1 = LCUIWidget_New("button");
         _ev_1 = malloc(sizeof(MyAppEventWrapperRec));
         _ev_1->_this = _this;
@@ -199,13 +248,13 @@ static LCUI_Widget MyApp_Template(MyApp _this)
         _ev_2->handler = MyApp_OnBtnPlusClick;
         Widget_BindEvent(_this->refs._button_2, "click", MyApp_DispathWidgetEvent, _ev_2, free);
         Widget_SetText(_this->refs._button_2, "+");
+        Widget_Append(widget_1, _this->refs._button_1);
+        Widget_Append(widget_1, _this->refs._button_2);
         Widget_Append(_this->view, textview);
-        Widget_Append(_this->view, _this->refs._textedit);
-        Widget_Append(_this->view, _this->refs._button);
+        Widget_Append(_this->view, widget);
         Widget_Append(_this->view, textview_1);
         Widget_Append(_this->view, _this->refs._progress);
-        Widget_Append(_this->view, _this->refs._button_1);
-        Widget_Append(_this->view, _this->refs._button_2);
+        Widget_Append(_this->view, widget_1);
         Widget_Append(LCUIWidget_GetRoot(), _this->view);
         return _this->view;
 }

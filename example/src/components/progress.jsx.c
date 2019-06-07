@@ -44,6 +44,7 @@ struct ProgressClassRec_ {
 
 static void Progress_Destructor(LCUI_Widget);
 static void Progress_Constructor(LCUI_Widget);
+static void Progress_BindProperty(LCUI_Widget, const char*, LCUI_Object);
 static void Progress_OnPropTotalChanged(LCUI_Object, void*);
 static void Progress_OnPropValueChanged(LCUI_Object, void*);
 static LCUI_Widget Progress_Template(LCUI_Widget);
@@ -53,6 +54,7 @@ const char *progress_css = ".progress {"
 "  background-color: #e9ecef;"
 "}"
 ".progress-bar {"
+"  height: 100%;"
 "  background-color: #007bff;"
 "}";
 ProgressClassRec progress_class;
@@ -71,7 +73,9 @@ static void Progress_Constructor(LCUI_Widget w)
         Progress _this;
 
         _this = Widget_AddData(w, progress_class.proto, sizeof(struct ProgressRec_));
-        progress_class.proto->proto->init(w);
+        if (progress_class.proto->proto) {
+                progress_class.proto->proto->init(w);
+        }
         _this->props_changes = 1;
         Number_Init(&_this->default_props.total, 0);
         Number_Init(&_this->default_props.value, 0);
@@ -81,7 +85,7 @@ static void Progress_Constructor(LCUI_Widget w)
         Progress_Update(w);
 }
 
-void Progress_BindProperty(LCUI_Widget w, const char *name, LCUI_Object value)
+static void Progress_BindProperty(LCUI_Widget w, const char *name, LCUI_Object value)
 {
         Progress _this;
 
@@ -185,5 +189,6 @@ void Progress_Install()
         progress_class.proto->init = Progress_Constructor;
         progress_class.proto->destroy = Progress_Destructor;
         progress_class.proto->runtask = Progress_Update;
+        progress_class.proto->bindprop = Progress_BindProperty;
         LCUI_LoadCSSString(progress_css, __FILE__);
 }

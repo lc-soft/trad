@@ -1,0 +1,24 @@
+root {
+    background-color: #f6f8fa;
+}
+.example {
+    max-width: 480px;
+    padding: 25px;
+    margin: 25px auto;
+    background-color: #fff;
+    border: 1px solid #eee;
+}
+.form-control {
+    padding: 5px;
+    margin: -5px -5px 10px -5px;
+}
+.item {
+    margin-bottom: 15px;
+}
+.button-group {
+    display: flex;
+    justify-content: center;
+}
+.button-group button {
+    margin: 0 4px;
+}

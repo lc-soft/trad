@@ -39,6 +39,7 @@ function addBindingFunction(cClass, target) {
 function createWidgetAtrributeSetter(cClass, props) {
   const func = cClass.addMethod(new types.WidgetMethod('bindProperty'))
 
+  func.isExported = false
   func.funcArgs = [
     new trad.CObject('const char', 'name', { isPointer: true }),
     new types.Object(null, 'value')

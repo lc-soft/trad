@@ -125,6 +125,7 @@ const install = Compiler => class WidgetClassParser extends Compiler {
     const styles = helper.findStyles(this.program)
     const funcInstall = cClass.addMethod(new trad.CMethod('install'))
     const funcUpdate = helper.initUpdateMethod(cClass)
+    const funcBind = cClass.getMethod('bindProperty')
     const funcTemplate = cClass.getMethod('template')
     const constructor = cClass.getMethod('constructor')
     const destructor = cClass.getMethod('destructor')
@@ -140,6 +141,9 @@ const install = Compiler => class WidgetClassParser extends Compiler {
     ])
     if (funcUpdate) {
       funcInstall.block.append(`${proto}.proto->runtask = ${funcUpdate.funcName};`)
+    }
+    if (funcBind) {
+      funcInstall.block.append(`${proto}.proto->bindprop = ${funcBind.funcName};`)
     }
     styles.forEach((style) => {
       style.meta.usedBy = cClass.superClass.path

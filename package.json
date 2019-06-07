@@ -25,7 +25,8 @@
   "homepage": "https://github.com/lc-soft/trad#readme",
   "dependencies": {
     "acorn": "^6.1.1",
-    "acorn-jsx": "^5.0.1"
+    "acorn-jsx": "^5.0.1",
+    "merge": "^1.2.1"
   },
   "devDependencies": {
     "eslint": "^5.16.0",

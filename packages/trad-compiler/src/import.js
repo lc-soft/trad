@@ -1,22 +1,19 @@
-const path = require('path')
 const fs = require('fs')
+const path = require('path')
 const assert = require('assert')
+const merge = require('merge')
 const trad = require('../../trad')
 const { capitalize } = require('../../trad-utils')
 const { Parser } = require('./parser')
 
-function getSourceFilePath(file) {
-  let sourceFilePath = null
-  const exts = ['', '.jsx', '.trad']
-
-  exts.some((ext) => {
-    if (fs.existsSync(`${file}${ext}`)) {
-      sourceFilePath = `${file}${ext}`
-      return true
-    }
-    return false
-  })
-  return sourceFilePath
+// These configuration items are referenced from Webpack
+const defaults = {
+  module: {
+    rules: []
+  },
+  resolve: {
+    extensions: ['.trad', '.jsx', '.h', '.c']
+  }
 }
 
 class ModuleLoader {
@@ -56,7 +53,7 @@ class ImportParser extends Parser {
     this.modulesStack = []
     this.loaders = {}
     this.loader = new ModuleLoader(this)
-    this.config = Object.assign({rules: []}, compiler.options.module)
+    this.options = merge(defaults, compiler.options)
   }
 
   get currentModulePath() {
@@ -66,8 +63,41 @@ class ImportParser extends Parser {
     return this.program.path
   }
 
-  getAbsolutePath(filePath) {
-    return path.resolve(path.dirname(this.currentModulePath), filePath)
+  // FIXME: support load module from trad_modules and node_modules directory
+  // For example:
+  // resolve('example-module') => './trad_modules/example-module'
+  // resolve('example-module') => './node_modules/trad-example-module'
+  resolve(modulePath) {
+    let filePath
+    let moduleFilePath = modulePath
+
+    if (['/', '.'].indexOf(modulePath.substr(0, 1)) >= 0) {
+      // ./src/test => /path/to/src/test
+      moduleFilePath = path.resolve(path.dirname(this.currentModulePath), modulePath)
+    }
+    if (typeof this.modules[moduleFilePath] !== 'undefined') {
+      return moduleFilePath
+    }
+    if (fs.existsSync(moduleFilePath)) {
+      if (fs.lstatSync(moduleFilePath).isFile()) {
+        return moduleFilePath
+      }
+      // /path/to/src/test => /path/to/src/test/index
+      filePath = path.join(moduleFilePath, 'index')
+    }
+
+    const ext = this.options.resolve.extensions.find((ext) => {
+      filePath = `${moduleFilePath}${ext}`
+      if (typeof this.modules[filePath] !== 'undefined') {
+        return true
+      }
+      return fs.existsSync(filePath) && fs.lstatSync(filePath).isFile()
+    })
+
+    if (typeof ext !== 'undefined') {
+      return `${moduleFilePath}${ext}`
+    }
+    return null
   }
 
   import(moduleName, exportName) {
@@ -104,7 +134,7 @@ class ImportParser extends Parser {
   getLoader(modulePath) {
     let loader = this.loader
 
-    this.config.rules.some((rule) => {
+    this.options.module.rules.some((rule) => {
       if (rule.test.test(modulePath)) {
         const source = rule.use.loader
 
@@ -125,30 +155,24 @@ class ImportParser extends Parser {
   load(sourcePath) {
     const info = path.parse(sourcePath)
     let source = this.exports[sourcePath]
-    let modulePath = info.dir
     let sourceName = info.base
+    let modulePath = info.dir
+    let moduleFilePath = null
     let moduleDecl = null
     let moduleData = null
 
+    // If cached
     if (source) {
       return source
     }
-    if (!info.dir) {
-      modulePath = info.base
-      sourceName = null
+    // If has dirpath
+    if (modulePath && modulePath !== '.' && modulePath !== '..') {
+      moduleFilePath = this.resolve(modulePath)
     }
-
-    let moduleFilePath = modulePath
-
-    if (['/', '.'].indexOf(sourcePath.substr(0, 1)) >= 0) {
-      moduleFilePath = this.getAbsolutePath(sourcePath)
-      moduleFilePath = getSourceFilePath(moduleFilePath)
-      if (moduleFilePath) {
-        sourceName = null
-        modulePath = sourcePath
-      } else {
-        moduleFilePath = modulePath
-      }
+    // If it is not a dirpath, or the dirpath is not a module file
+    if (!moduleFilePath) {
+      sourceName = null
+      moduleFilePath = this.resolve(sourcePath)
     }
     moduleDecl = this.loadModule(moduleFilePath)
     moduleData = this.modules[moduleFilePath]

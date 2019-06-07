@@ -23,6 +23,7 @@ const install = Compiler => class WidgetClassParser extends Compiler {
 
   parseCallExpression(input) {
     const method = this.block.parent
+    const proto = `${this.widgetProtoIdentifyName}.proto->proto`
 
     if (input.callee.type !== 'Super' || this.classParserName !== 'Widget') {
       return super.parse(input)
@@ -31,7 +32,11 @@ const install = Compiler => class WidgetClassParser extends Compiler {
       method instanceof trad.CMethod && method.methodName === 'constructor',
       '\'super\' keyword unexpected here'
     )
-    this.block.append(`${this.widgetProtoIdentifyName}.proto->proto->init(${method.widget.id});`)
+    this.block.append([
+      `if (${proto}) {`,
+      `${proto}->init(${method.widget.id});`,
+      '}'
+    ])
     return ''
   }
 

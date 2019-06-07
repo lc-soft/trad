@@ -1,8 +1,6 @@
-const assert = require('assert')
 const types = require('./types')
-const functions = require('./functions')
 const trad = require('../../trad')
-const { isComparator } = require('../../trad-utils')
+const { isComparator, isAssignment } = require('../../trad-utils')
 
 function convertObject(obj) {
   // Rebuild base type to CLCUIObject
@@ -54,11 +52,19 @@ const install = Compiler => class LCUIBaseParser extends Compiler {
     if (isComparator(input.operator)) {
       return new trad.CBinaryExpression(left.compare(right), input.operator, 0)
     }
+    if (isAssignment(input.operator)) {
+      this.block.append(left.operate(input.operator, right))
+      return undefined
+    }
     right = left.operate(input.operator, right)
     return createObject(this, null, right)
   }
 
   parseAssignmentExpression(input) {
+    if (input.operator !== '=') {
+      return this.parseBinaryExpression(input)
+    }
+
     const left = this.parse(input.left)
 
     if (left && types.isObject(left)) {

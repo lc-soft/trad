@@ -10,8 +10,13 @@ function isComparator(operator) {
   return ['>', '<', '==', '>=', '<='].indexOf(operator) >= 0
 }
 
+function isAssignment(operator) {
+  return operator.charAt(operator.length - 1) === '='
+}
+
 module.exports = {
   capitalize,
+  isAssignment,
   isComparator,
   toVariableName
 }

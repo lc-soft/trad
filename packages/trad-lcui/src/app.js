@@ -89,7 +89,7 @@ const install = Compiler => class AppClassParser extends Compiler {
 
     cClass.getSuper().node.remove()
     styles.forEach((style) => {
-      stat.meta.usedBy = cClass.superClass.path
+      style.meta.usedBy = cClass.superClass.path
       constructor.block.append(functions.LCUI_LoadCSSString(style))
     })
     if (styles.length > 0) {

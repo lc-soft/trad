@@ -4,7 +4,7 @@ const trad = require('../../trad')
 const { toVariableName } = require('../../trad-utils')
 
 class VariableDeclarationParser extends Parser {
-  createObject(baseName, initValue) {
+  declareObject(baseName, initValue) {
     let variable = null
     const type = initValue.typeDeclaration
     const prefix = type ? type.variablePrefix : initValue.type
@@ -30,7 +30,7 @@ class VariableDeclarationParser extends Parser {
   parse(input) {
     const variables = input.declarations.map((input) => {
       if (input.init) {
-        return this.createObject(input.id.name, this.compiler.parse(input.init))
+        return this.declareObject(input.id.name, this.compiler.parse(input.init))
       }
       // FIXME: Design a syntax for typed object declaration
       assert(0, `unable to infer the type of ${input.id.name}`)

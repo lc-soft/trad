@@ -155,6 +155,7 @@ const install = Compiler => class WidgetClassParser extends Compiler {
     funcTemplate.isExported = false
     constructor.block.append(functions.call(funcTemplate, constructor.widget))
     if (funcUpdate) {
+      funcUpdate.block.append(this.jsxTextUpdateMethods.map(name => that.callMethod(name)))
       constructor.block.append(functions.call(funcUpdate, constructor.widget))
     }
   }

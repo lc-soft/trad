@@ -7,12 +7,27 @@ const {
   CObject,
   CNamespace,
   CFunction,
-  CTypedef,
+  CStruct,
   CAssignmentExpression,
   CCallExpression,
   CMethod,
   CModule
 } = require('../../trad')
+
+class CLCUIObjectValue extends CStruct {
+  constructor() {
+    super('ObjectValue')
+
+    this.alias = 'ObjectValue'
+    this.variablePrefix = 'val'
+  }
+
+  install() {
+    this.addMember(new CObject('char', 'string', { isPointer: true }))
+    this.addMember(new CObject('wchar_t', 'wstring', { isPointer: true }))
+    this.addMember(new CObject('double', 'number'))
+  }
+}
 
 class CLCUIObjectType extends CClass {
   constructor() {
@@ -33,7 +48,7 @@ class CLCUIObjectType extends CClass {
     const cfunc = new CObject('void', 'func', { isPointer: true })
     const cptr = new CObject('void', 'ptr', { isPointer: true })
 
-    this.addMember(new CObject('int', 'value'))
+    this.addMember(new CObject(declarations.ObjectValue, 'value'))
     this.addMethod(new CMethod('init'))
     this.addMethod(new CMethod('destroy'))
     this.addMethod(new CMethod('new', [], obj.typeDeclaration))
@@ -296,10 +311,23 @@ function isWidget(obj) {
   return obj.finalTypeDeclaration instanceof CLCUIWidget
 }
 
+  // Rebuild base type to CLCUIObject
+function toObject(obj) {
+  if (typeof obj === 'string') {
+    return new CLCUIObject('String', null, { isAllocateFromStack: true, value: obj })
+  } else if (typeof obj === 'number') {
+    return new CLCUIObject('Number', null, { isAllocateFromStack: true, value: obj })
+  } else if (['String', 'Number'].indexOf(obj.type) >= 0) {
+    return new CLCUIObject(obj.type, obj.id, { isAllocateFromStack: !obj.id, value: obj.value })
+  }
+  return obj
+}
+
 const LCUI = new CModule('lcui', 'lcui')
 const LCUINamespace = new CNamespace('LCUI')
 const declarations = {}
 const types = [
+  new CLCUIObjectValue(),
   new CLCUIObjectType(),
   new CLCUIString(),
   new CLCUINumber(),
@@ -317,6 +345,7 @@ LCUI.append(LCUINamespace)
 
 module.exports = {
   LCUI,
+  toObject,
   isObject,
   isString,
   isNumber,

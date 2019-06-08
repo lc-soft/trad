@@ -952,7 +952,7 @@ class CObject extends CIdentifier {
       return undefined
     }
     if (ref instanceof CObject) {
-      prop = new ref.constructor(ref.typeDeclaration, name)
+      prop = new ref.constructor(ref.typeDeclaration, name, { isPointer: ref.isPointer })
     } else if (ref instanceof CType) {
       prop = new CObject(ref, name)
     } else if (ref instanceof CFunction) {
@@ -1378,6 +1378,7 @@ const keywords = {
   'double': true,
   'int': true,
   'size_t': true,
+  'wchar_t': true,
   'unsigned': true,
   'char': true,
   'float': true,

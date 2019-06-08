@@ -1,33 +1,29 @@
 const assert = require('assert')
 const types = require('./types')
 const functions = require('./functions')
-const {
-  CClass,
-  CStruct,
-  CObject,
-  CTypedef,
-  CIdentifier
-} = require('../../trad')
+const trad = require('../../trad')
+const { capitalize } = require('../../trad-utils')
 const { getWidgetType } = require('./lib')
 
 class JSXParserContext {
-  constructor(compiler, node) {
+  constructor(compiler, input) {
     this.ref = null
     this.widget = null
-    this.node = node
-    this.proto = compiler.block.get(node.name.name)
-    this.type = getWidgetType(node, this.proto)
-    this.cClass = compiler.findContextData(CClass)
+    this.input = input
+    this.node = input.openingElement
+    this.proto = compiler.block.get(this.node.name.name)
+    this.type = getWidgetType(this.node, this.proto)
+    this.cClass = compiler.findContextData(trad.CClass)
     this.that = compiler.block.getThis()
   }
 
   createRefs() {
     const refsStructName = `${this.cClass.className}RefsRec`
-    const refsStruct = new CStruct(`${refsStructName}_`)
-    const refsType = new CTypedef(refsStruct, refsStructName)
+    const refsStruct = new trad.CStruct(`${refsStructName}_`)
+    const refsType = new trad.CTypedef(refsStruct, refsStructName)
 
     this.cClass.parent.insert(this.cClass.node.index, [refsType, refsStruct])
-    this.cClass.addMember(new CObject(refsType, 'refs'))
+    this.cClass.addMember(new trad.CObject(refsType, 'refs'))
     return this.that.selectProperty('refs')
   }
 }
@@ -37,7 +33,7 @@ function allocObjectName(scope, baseName) {
   let name = baseName
 
   scope.body.forEach((stat) => {
-    if (stat instanceof CIdentifier && stat.name === name) {
+    if (stat instanceof trad.CIdentifier && stat.name === name) {
       name = `${baseName}_${i}`
       i += 1
     }
@@ -45,8 +41,12 @@ function allocObjectName(scope, baseName) {
   return name
 }
 
-function allocWidgetObjectName(scope, node, proto, prefix = '') {
-  return allocObjectName(scope, prefix + getWidgetType(node, proto).replace(/-/g, '_'))
+function allocWidgetObjectName(scope, type, prefix = '') {
+  return allocObjectName(scope, prefix + type.replace(/-/g, '_'))
+}
+
+function declareObject(compiler, baseName, initValue) {
+  return compiler.handlers.VariableDeclaration.declareObject(baseName, initValue, true)
 }
 
 const install = Compiler => class JSXParser extends Compiler {
@@ -55,6 +55,8 @@ const install = Compiler => class JSXParser extends Compiler {
 
     this.jsxElementDepth = 0
     this.jsxWidgetStack = []
+    this.jsxWidgetCount = 0
+    this.jsxTextUpdateMethods = []
   }
 
   get jsxWidget() {
@@ -64,11 +66,115 @@ const install = Compiler => class JSXParser extends Compiler {
     return this.jsxWidgetStack[this.jsxWidgetStack.length - 1]
   }
 
-  parseJSXElementRef(ctx) {
+  jsxBeginParseWidget(ctx) {
+    this.jsxWidgetCount += 1
+    this.jsxElementDepth += 1
+    this.jsxParseWidgetRef(ctx)
+    // In the widget class method, the root widget is itself
+    if (this.jsxElementDepth == 1) {
+      if (this.classParserName === 'Widget') {
+        ctx.widget = this.findContextData(types.WidgetMethod).widget
+      } else if (this.classParserName === 'App') {
+        ctx.widget = ctx.that.addProperty(new types.Object('Widget', 'view'))
+        this.block.append(functions.assign(ctx.widget, functions.LCUIWidget_New(ctx.type)))
+      } else {
+        assert(0, `${this.classParserName} does not support JSX`)
+      }
+    } else {
+      if (!ctx.widget) {
+        const name = allocWidgetObjectName(this.block, ctx.type)
+
+        ctx.widget = new types.Object('Widget', name)
+        this.block.append(ctx.widget)
+      }
+      this.block.append(functions.assign(ctx.widget, functions.LCUIWidget_New(ctx.type)))
+    }
+    this.jsxWidgetStack.push(ctx.widget)
+  }
+
+  jsxEndParseWidget(ctx) {
+    this.jsxElementDepth -= 1
+    this.jsxWidgetStack.pop()
+    if (this.classParserName === 'App' && this.jsxElementDepth < 1) {
+      this.block.append(`Widget_Append(LCUIWidget_GetRoot(), ${ctx.widget.id});`)
+    }
+  }
+
+  jsxParseWidgetAttributes(ctx) {
+    ctx.node.attributes.forEach(attr => this.parse({ type: 'JSXElementAttribute', attr, ctx }))
+  }
+
+  jsxParseWidgetChildren(ctx) {
+    const children = this.parseChildren(ctx.input.children)
+    const content = children.filter(child => (
+      child && (
+        typeof child === 'string'
+        || types.isNumber(child) || types.isString(child)
+      )
+    ))
+    const text = content.filter(child => typeof child === 'string')
+
+    children.forEach((child) => {
+      if (child && child.type === 'LCUI_Widget') {
+        this.block.append(`Widget_Append(${ctx.widget.id}, ${child.id});`)
+      }
+    })
+    // If the content is plain text
+    if (content.length === text.length) {
+      if (text.length < 1) {
+        return
+      }
+      this.block.append(functions.Widget_SetText(this.jsxWidget, text.join('')))
+      return
+    }
+
+    let method = null
+    const name = `update${capitalize(ctx.type)}${this.jsxWidgetCount}Text`
+    const superClassName = ctx.cClass.superClass.reference.className
+
+    if (superClassName === 'Widget') {
+      method = ctx.cClass.addMethod(new types.WidgetMethod(name))
+    } else if (superClassName === 'App') {
+      method = ctx.cClass.addMethod(new types.AppMethod(name))
+    } else {
+      assert(0, `${superClassName} does not support creating data bindings`)
+    }
+
+    this.beginParse({ type: 'LCUIWidgetMethodBody' })
+    this.context.data = method.block
+
+    const prop = content.reduce((prev, current) => {
+      let left = types.toObject(prev)
+      let right = types.toObject(current)
+
+      if (!left.id) {
+        left = declareObject(this, null, left)
+      }
+      if (!right.id) {
+        right = declareObject(this, null, right)
+      }
+      if (!types.isString(left)) {
+        left = declareObject(this, `${left.name}_str`, left.stringify())
+        this.block.append(left)
+      }
+      if (!types.isString(right)) {
+        right = declareObject(this, `${right.name}_str`, right.stringify())
+        this.block.append(right)
+      }
+      return declareObject(this, null, left.operate('+', right))
+    }).selectProperty('value').selectProperty('string')
+
+    this.endParse()
+    method.block.append(functions.Widget_SetText(ctx.widget, prop))
+    this.jsxTextUpdateMethods.push(method.name)
+  }
+
+  jsxParseWidgetRef(ctx) {
     let refName = null
     let refs = ctx.that.selectProperty('refs')
 
     ctx.node.attributes.some((attr) => {
+      // If the reference name has been specified in the ref attribute
       if (attr.name.name === 'ref' && attr.value.value) {
         refName = attr.value.value
         return true
@@ -76,26 +182,34 @@ const install = Compiler => class JSXParser extends Compiler {
       return false
     })
     if (!refName) {
+      // If widget attribute has data binding
       ctx.node.attributes.some((attr) => {
         const value = this.parse(attr.value)
 
-        if (value instanceof CObject && value.type === 'String') {
+        if (value instanceof trad.CObject && value.type === 'String') {
           return false
         }
         if (!refs) {
           refs = ctx.createRefs()
         }
-        refName = allocWidgetObjectName(refs.typeDeclaration, ctx.node, ctx.proto, '_')
+        refName = allocWidgetObjectName(refs.typeDeclaration, ctx.type, '_')
         return true
       })
-      if (!refName) {
-        return
+    }
+    // If widget content has data binding
+    if (!refName) {
+      if (ctx.input.children.some(child => child.type === 'JSXExpressionContainer')) {
+        if (!refs) {
+          refs = ctx.createRefs()
+        }
+        refName = allocWidgetObjectName(refs.typeDeclaration, ctx.type, '_')
+      } else {
+        return false
       }
     }
     if (!refs) {
       refs = ctx.createRefs()
     }
-
     ctx.ref = refs.selectProperty(refName)
     assert(!ctx.ref, `"${refName}" reference already exists`)
     ctx.ref = refs.addProperty(new types.Object('Widget', refName))
@@ -110,7 +224,7 @@ const install = Compiler => class JSXParser extends Compiler {
     if (attrName === 'ref') {
       return true
     }
-    if (value instanceof CObject && value.type === 'String') {
+    if (value instanceof trad.CObject && value.type === 'String') {
       if (attrName === 'class') {
         this.block.append(
           functions.Widget_AddClass(ctx.widget, value.value)
@@ -130,53 +244,18 @@ const install = Compiler => class JSXParser extends Compiler {
   }
 
   parseJSXElement(input) {
-    const ctx = new JSXParserContext(this, input.openingElement)
+    const ctx = new JSXParserContext(this, input)
 
     assert(ctx.cClass, 'JSX code must be in class method function')
-
-    this.jsxElementDepth += 1
-    this.parseJSXElementRef(ctx)
-    // In the widget class method, the root widget is itself
-    if (this.jsxElementDepth == 1) {
-      if (this.classParserName === 'Widget') {
-        ctx.widget = this.findContextData(types.WidgetMethod).widget
-      } else if (this.classParserName === 'App') {
-        ctx.widget = ctx.that.addProperty(new types.Object('Widget', 'view'))
-        this.block.append(functions.assign(ctx.widget, functions.LCUIWidget_New(ctx.type)))
-      } else {
-        assert(0, `${this.classParserName} does not support JSX`)
-      }
-    } else {
-      if (!ctx.widget) {
-        const name = allocWidgetObjectName(this.block, ctx.node, ctx.proto)
-
-        ctx.widget = new types.Object('Widget', name)
-        this.block.append(ctx.widget)
-      }
-      this.block.append(functions.assign(ctx.widget, functions.LCUIWidget_New(ctx.type)))
-    }
-    this.jsxWidgetStack.push(ctx.widget)
-    ctx.node.attributes.forEach(attr => this.parse({ type: 'JSXElementAttribute', attr, ctx }))
-    this.parseChildren(input.children).forEach((child) => {
-      if (child && child.type === 'LCUI_Widget') {
-        this.block.append(`Widget_Append(${ctx.widget.id}, ${child.id});`)
-      }
-    })
-    this.jsxElementDepth -= 1
-    this.jsxWidgetStack.pop()
-    if (this.classParserName === 'App' && this.jsxElementDepth < 1) {
-      this.block.append(`Widget_Append(LCUIWidget_GetRoot(), ${ctx.widget.id});`)
-    }
+    this.jsxBeginParseWidget(ctx)
+    this.jsxParseWidgetAttributes(ctx)
+    this.jsxParseWidgetChildren(ctx)
+    this.jsxEndParseWidget(ctx)
     return ctx.widget
   }
 
   parseJSXText(input) {
-    const text = input.value.trim()
-
-    if (text) {
-      this.block.append(functions.Widget_SetText(this.jsxWidget, text))
-    }
-    return ''
+    return input.value.trim()
   }
 
   parse(input) {

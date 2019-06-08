@@ -51,11 +51,12 @@ const install = Compiler => class AppClassParser extends Compiler {
   }
 
   initUpdateMethod(cClass) {
-    const func = cClass.addMethod(new types.AppMethod('autoUpdate'))
-    const that = func.block.getThis()
+    const funcAutoUpdate = cClass.addMethod(new types.AppMethod('autoUpdate'))
+    const funcUpdate = helper.initUpdateMethod(cClass, types.AppMethod)
+    const that = funcAutoUpdate.block.getThis()
 
-    helper.initUpdateMethod(cClass, types.AppMethod)
-    func.block.append([
+    funcUpdate.block.append(this.jsxTextUpdateMethods.map(name => that.callMethod(name)))
+    funcAutoUpdate.block.append([
       that.callMethod('update'),
       `LCUI_SetTimeout(0, (TimerCallback)${cClass.getMethod('autoUpdate').cName}, ${that.id});`
     ])

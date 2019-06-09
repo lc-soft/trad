@@ -6,8 +6,8 @@ class Progress extends LCUI.Widget {
     super()
 
     this.props = {
-      total: Number,
-      value: Number
+      total: 100,
+      value: 0
     }
   }
 

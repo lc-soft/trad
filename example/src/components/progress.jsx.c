@@ -44,6 +44,8 @@ struct ProgressClassRec_ {
 
 static void Progress_Destructor(LCUI_Widget);
 static void Progress_Constructor(LCUI_Widget);
+static void Progress_InitProps(Progress);
+static void Progress_DestroyProps(Progress);
 static void Progress_BindProperty(LCUI_Widget, const char*, LCUI_Object);
 static void Progress_OnPropTotalChanged(LCUI_Object, void*);
 static void Progress_OnPropValueChanged(LCUI_Object, void*);
@@ -64,8 +66,7 @@ static void Progress_Destructor(LCUI_Widget w)
         Progress _this;
 
         _this = Widget_GetData(w, progress_class.proto);
-        _this->props.total = NULL;
-        _this->props.value = NULL;
+        Progress_DestroyProps(_this);
 }
 
 static void Progress_Constructor(LCUI_Widget w)
@@ -73,16 +74,28 @@ static void Progress_Constructor(LCUI_Widget w)
         Progress _this;
 
         _this = Widget_AddData(w, progress_class.proto, sizeof(struct ProgressRec_));
-        if (progress_class.proto->proto) {
+        if (progress_class.proto->proto)
+        {
                 progress_class.proto->proto->init(w);
         }
+        Progress_InitProps(_this);
+        Progress_Template(w);
+        Progress_Update(w);
+}
+
+static void Progress_InitProps(Progress _this)
+{
         _this->props_changes = 1;
-        Number_Init(&_this->default_props.total, 0);
+        Number_Init(&_this->default_props.total, 100);
         Number_Init(&_this->default_props.value, 0);
         _this->props.total = &_this->default_props.total;
         _this->props.value = &_this->default_props.value;
-        Progress_Template(w);
-        Progress_Update(w);
+}
+
+static void Progress_DestroyProps(Progress _this)
+{
+        _this->props.total = NULL;
+        _this->props.value = NULL;
 }
 
 static void Progress_BindProperty(LCUI_Widget w, const char *name, LCUI_Object value)
@@ -135,6 +148,7 @@ static LCUI_Widget Progress_Template(LCUI_Widget w)
         _this->refs.bar = LCUIWidget_New(NULL);
         Widget_AddClass(_this->refs.bar, "progress-bar");
         Widget_Append(w, _this->refs.bar);
+
         return w;
 }
 

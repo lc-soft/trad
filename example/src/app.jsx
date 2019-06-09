@@ -16,30 +16,25 @@ class MyApp extends App {
 
     // Define internal state data
     this.state = {
-      text: String,
-      input: String,
-      value: Number,
-      total: Number
+      text: 'World',
+      input: 'World',
+      value: 50,
+      total: 100
     }
     Progress.install()
   }
 
-  created() {
-    // Initialize state
-    this.state.text = 'Hello, World!'
-    this.state.input = 'Hello, World!'
-    this.state.value = 50
-    this.state.total = 100
-  }
-
   template() {
     return (<Widget class="example">
-      <TextView class="item">{this.state.text}</TextView>
+      <TextView class="item">Hello, {this.state.text}!</TextView>
       <Widget class="form-control">
-        <TextEdit value={this.state.input} />
+        <TextEdit ref="input" value={this.state.input} />
         <Button onClick={this.onBtnChangeClick}>Change</Button>
       </Widget>
-      <TextView class="item">Please click button to test progress</TextView>
+      <TextView class="item">
+        Please click button to test progress
+        ({this.state.value / this.state.total * 100 + '%'})
+      </TextView>
       <Progress class="item" value={this.state.value} total={this.state.total} />
       <Widget class="button-group">
         <Button onClick={this.onBtnMinusClick}>-</Button>
@@ -49,7 +44,7 @@ class MyApp extends App {
   }
 
   onBtnChangeClick() {
-    this.state.text = this.state.input
+    //this.state.text = this.refs.input.value
   }
 
   onBtnMinusClick() {
@@ -67,5 +62,6 @@ class MyApp extends App {
 
 export function main() {
   const app = new MyApp()
+
   return app.run()
 }

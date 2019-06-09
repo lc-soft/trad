@@ -35,6 +35,18 @@
           "params": []
         },
         {
+          "name": "initProps",
+          "type": "method",
+          "isStatic": false,
+          "params": []
+        },
+        {
+          "name": "destroyProps",
+          "type": "method",
+          "isStatic": false,
+          "params": []
+        },
+        {
           "name": "bindProperty",
           "type": "method",
           "isStatic": false,

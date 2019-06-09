@@ -51,25 +51,37 @@ const install = Compiler => class StateBindingParser extends Compiler {
     const state = that.selectProperty('state')
     const constructor = cClass.getMethod('constructor')
     const destructor = cClass.getMethod('destructor')
+    let funcInit = cClass.getMethod('initState')
+    let funcDestroy = cClass.getMethod('DestroyState')
     const handle = superClassName === 'Widget' ? constructor.widget : constructor.block.getThis()
 
     if (!state) {
       return false
     }
     assert(state instanceof trad.CObject, 'state must be a object')
-    // add a counter to check if the widget should be updated
+    assert(typeof funcInit === 'undefined', 'initState() method does not allow overwriting')
+    assert(typeof funcDestroy === 'undefined', 'destroyState() method does not allow overwriting')
+    funcInit = new trad.CMethod('initState')
+    funcDestroy = new trad.CMethod('destroyState')
+    funcInit.isExported = false
+    funcDestroy.isExported = false
+    cClass.addMethod(funcInit)
+    cClass.addMethod(funcDestroy)
+    // Add a counter to check if the widget should be updated
     cClass.addMember(new trad.CObject('unsigned', 'state_changes'))
-    constructor.block.append(functions.assign(that.selectProperty('state_changes'), 1))
+    funcInit.block.append(functions.assign(that.selectProperty('state_changes'), 1))
     state.typeDeclaration.keys().map((name) => {
       const prop = state.selectProperty(name)
       const func = addBindingFunction(cClass, prop)
 
-      constructor.block.append(prop.init())
-      destructor.block.append(prop.destroy())
+      funcInit.block.append(prop.init())
+      funcDestroy.block.append(prop.destroy())
       return { prop, func }
     }).forEach(({ prop, func }) => {
-      constructor.block.append(prop.callMethod('watch', func, handle))
+      funcInit.block.append(prop.callMethod('watch', func, handle))
     })
+    constructor.block.append(functions.call(funcInit, constructor.block.getThis()))
+    destructor.block.append(functions.call(funcDestroy, destructor.block.getThis()))
     return true
   }
 

@@ -67,24 +67,36 @@ const install = Compiler => class PropsBindingParser extends Compiler {
     const defaultProps = that.selectProperty('default_props')
     const constructor = cClass.getMethod('constructor')
     const destructor = cClass.getMethod('destructor')
+    let funcInit = cClass.getMethod('initProps')
+    let funcDestroy = cClass.getMethod('DestroyProps')
 
     if (!props) {
       return false
     }
     assert(props instanceof trad.CObject, 'props must be a object')
+    assert(typeof funcInit === 'undefined', 'initProps() method does not allow overwriting')
+    assert(typeof funcDestroy === 'undefined', 'destroyProps() method does not allow overwriting')
+    funcInit = new trad.CMethod('initProps')
+    funcDestroy = new trad.CMethod('destroyProps')
+    funcInit.isExported = false
+    funcDestroy.isExported = false
+    cClass.addMethod(funcInit)
+    cClass.addMethod(funcDestroy)
     // add a counter to check if the widget should be updated
     cClass.addMember(new trad.CObject('unsigned', 'props_changes'))
-    constructor.block.append(functions.assign(that.selectProperty('props_changes'), 1))
+    funcInit.block.append(functions.assign(that.selectProperty('props_changes'), 1))
     props.typeDeclaration.keys().map((key) => {
       const prop = props.selectProperty(key)
       const defaultProp = defaultProps.selectProperty(key)
 
-      constructor.block.append(defaultProp.init())
-      destructor.block.append(functions.assign(prop, null))
+      funcInit.block.append(defaultProp.init())
+      funcDestroy.block.append(functions.assign(prop, null))
       return { prop, defaultProp }
     }).forEach(({ prop, defaultProp }) => {
-      constructor.block.append(functions.assign(prop, defaultProp))
+      funcInit.block.append(functions.assign(prop, defaultProp))
     })
+    constructor.block.append(functions.call(funcInit, constructor.block.getThis()))
+    destructor.block.append(functions.call(funcDestroy, destructor.block.getThis()))
     // include string.h to use the strcmp() function
     this.program.append(new trad.CInclude('string.h', true))
     createWidgetAtrributeSetter(cClass, props, defaultProps)

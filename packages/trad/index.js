@@ -178,6 +178,10 @@ class CReturnStatment extends CStatement {
     super('return')
 
     this.argument = argument
+    if (this.argument instanceof CObject) {
+      // Let caller destroy the variable
+      this.argument.isDeletable = false
+    }
   }
 
   define() {

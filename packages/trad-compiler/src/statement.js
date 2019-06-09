@@ -5,15 +5,20 @@ const trad = require('../../trad')
 class ReturnStatementParser extends Parser {
   parse(input) {
     const func = this.compiler.findContextData(trad.CFunction)
-    const arg = this.compiler.parse(input.argument)
+    let arg = this.compiler.parse(input.argument)
     let type = ''
 
     assert(func, 'illegal return statement')
     if (arg instanceof trad.CObject) {
       type = arg.type
     } else if (arg instanceof trad.CCallExpression) {
-      type = arg.type
-      arg.node.remove()
+      const right = arg
+
+      type = right.type
+      right.node.remove()
+      // Create a temporary variable to store the return value
+      arg = this.block.createObject(type, 'ret')
+      this.block.append(new trad.CAssignmentExpression(arg, right))
     }
     assert(
       !func.funcReturnType || func.funcReturnType === type,

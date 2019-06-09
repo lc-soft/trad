@@ -1,14 +1,44 @@
+const assert = require('assert')
 const types = require('./types')
-const helper = require('./helper')
+const functions = require('./functions')
 const trad = require('../../trad')
 
 function declareObject(compiler, baseName, initValue, block = compiler.block) {
   return compiler.handlers.VariableDeclaration.declareObject(baseName, initValue, block)
 }
 
-function selectComputedProps(that, cClass) {
-  let props = that.selectProperty('computed_props')
-  const structName = `${cClass.className}ComputedPropsRec`
+function initComputedProps(cClass) {
+  const that = new trad.CObject(cClass.typedefPointer, '_this')
+  const props = that.selectProperty('computed_props')
+  const constructor = cClass.getMethod('constructor')
+  const destructor = cClass.getMethod('destructor')
+  let funcInit = cClass.getMethod('initProps')
+  let funcDestroy = cClass.getMethod('DestroyProps')
+
+  if (!props) {
+    return false
+  }
+  assert(typeof funcInit === 'undefined', 'initComputedProps() method does not allow overwriting')
+  assert(typeof funcDestroy === 'undefined', 'destroyComputedProps() method does not allow overwriting')
+  funcInit = new trad.CMethod('initComputedProps')
+  funcDestroy = new trad.CMethod('DestroyComputedProps')
+  funcInit.isExported = false
+  funcDestroy.isExported = false
+  cClass.addMethod(funcInit)
+  cClass.addMethod(funcDestroy)
+  props.typeDeclaration.keys().map((key) => {
+    const prop = props.selectProperty(key)
+
+    funcInit.block.append(prop.init())
+    funcDestroy.block.append(prop.destroy())
+  })
+  constructor.block.append(functions.call(funcInit, constructor.block.getThis()))
+  destructor.block.append(functions.call(funcDestroy, destructor.block.getThis()))
+}
+
+function selectComputedProps(ctx) {
+  let props = ctx.that.selectProperty('computed_props')
+  const structName = `${ctx.cClass.className}ComputedPropsRec`
 
   if (props) {
     return props
@@ -16,8 +46,8 @@ function selectComputedProps(that, cClass) {
   props = new trad.CStruct(`${structName}_`)
   const type = new trad.CTypedef(props, structName, false, false)
 
-  cClass.parent.insert(cClass.node.index, [type, props])
-  return that.addProperty(new trad.CObject(type, 'computed_props'))
+  ctx.cClass.parent.insert(ctx.cClass.node.index, [type, props])
+  return ctx.that.addProperty(new trad.CObject(type, 'computed_props'))
 }
 
 const install = Compiler => class ComputedPropertyParser extends Compiler {
@@ -28,17 +58,26 @@ const install = Compiler => class ComputedPropertyParser extends Compiler {
       return exp
     }
 
-    const that = this.block.getThis()
-    const cClass = that.typeDeclaration.reference
-    const props = selectComputedProps(that, cClass)
+    const cClass = this.jsxWidgetContext.cClass
+    const props = selectComputedProps(this.jsxWidgetContext)
     const name = `_expr_${exp.expressionId}`
     const type = exp.typeDeclaration.reference
     const prop = props.addProperty(new types.ComputedProperty(type, name))
-    const method = helper.createMethod(cClass, `computeProperty${exp.expressionId}`)
+    const method = cClass.addMethod(new trad.CMethod(`computeProperty${exp.expressionId}`))
     const tmp = declareObject(this, 'tmp', exp, method.block)
 
     method.block.append(prop.operate('=', tmp))
+    this.jsxComputedPropertyMethods.push(method.name)
     return prop
+  }
+
+  parseMethodDefinition(input) {
+    const func = super.parse(input)
+
+    if (this.enableDataBinding && func.name === 'template') {
+      initComputedProps(this.findContextData(trad.CClass))
+    }
+    return func
   }
 
   parse(input) {

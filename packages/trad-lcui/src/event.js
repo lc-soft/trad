@@ -30,7 +30,7 @@ const install = Compiler => class EventBindingParser extends Compiler {
   }
 
   selectEventWrapperClass() {
-    const ctx = this.jsxContext
+    const ctx = this.jsxWidgetContext
     const className = `${ctx.cClass.className}EventWrapper`
     let wrapperClass = this.block.getType(className)
 
@@ -72,7 +72,7 @@ const install = Compiler => class EventBindingParser extends Compiler {
   }
 
   parseJSXElementEventBinding(attrName, func) {
-    const ctx = this.jsxContext
+    const ctx = this.jsxWidgetContext
     const wrapperClass = this.selectEventWrapperClass()
     const wrapperName = this.block.allocObjectName('_ev')
     const wrapper = new CObject(wrapperClass.typedefPointer, wrapperName)

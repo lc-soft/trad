@@ -55,6 +55,7 @@ const install = Compiler => class AppClassParser extends Compiler {
     const funcUpdate = helper.initUpdateMethod(cClass, types.AppMethod)
     const that = funcAutoUpdate.block.getThis()
 
+    funcUpdate.block.append(this.jsxComputedPropertyMethods.map(name => that.callMethod(name)))
     funcUpdate.block.append(this.jsxTextUpdateMethods.map(name => that.callMethod(name)))
     funcAutoUpdate.block.append([
       that.callMethod('update'),

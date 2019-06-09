@@ -14,6 +14,14 @@ const {
   CModule
 } = require('../../trad')
 
+class JSXExpressionContainer extends CCallExpression {
+  constructor(id, method, ...args) {
+    super(method, ...args)
+
+    this.expressionId = id
+  }
+}
+
 class CLCUIObjectValue extends CStruct {
   constructor() {
     super('ObjectValue')
@@ -234,6 +242,12 @@ class CLCUIObject extends CObject {
   }
 }
 
+class ComputedProperty extends CLCUIObject {
+  constructor(type, name) {
+    super(type, name, { isAllocateFromStack: true })
+  }
+}
+
 class CLCUIWidgetMethod extends CMethod {
   constructor(name, args = [], returnType = '') {
     super(name, args, returnType)
@@ -311,7 +325,7 @@ function isWidget(obj) {
   return obj.finalTypeDeclaration instanceof CLCUIWidget
 }
 
-  // Rebuild base type to CLCUIObject
+// Rebuild base type to CLCUIObject
 function toObject(obj) {
   if (typeof obj === 'string') {
     return new CLCUIObject('String', null, { isAllocateFromStack: true, value: obj })
@@ -352,5 +366,7 @@ module.exports = {
   isWidget,
   AppMethod: CLCUIAppMethod,
   WidgetMethod: CLCUIWidgetMethod,
-  Object: CLCUIObject
+  Object: CLCUIObject,
+  ComputedProperty,
+  JSXExpressionContainer
 }

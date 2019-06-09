@@ -3,7 +3,7 @@ const trad = require('../../trad')
 const { isComparator, isAssignment } = require('../../trad-utils')
 
 function declareObject(compiler, baseName, initValue) {
-  return compiler.handlers.VariableDeclaration.declareObject(baseName, initValue, true)
+  return compiler.handlers.VariableDeclaration.declareObject(baseName, initValue)
 }
 
 const install = Compiler => class LCUIBaseParser extends Compiler {

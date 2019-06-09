@@ -29,7 +29,8 @@ const install = Compiler => class EventBindingParser extends Compiler {
     return handler
   }
 
-  selectEventWrapperClass(ctx) {
+  selectEventWrapperClass() {
+    const ctx = this.jsxContext
     const className = `${ctx.cClass.className}EventWrapper`
     let wrapperClass = this.block.getType(className)
 
@@ -70,8 +71,9 @@ const install = Compiler => class EventBindingParser extends Compiler {
     return wrapperClass
   }
 
-  parseJSXElementEventBinding(ctx, attrName, func) {
-    const wrapperClass = this.selectEventWrapperClass(ctx)
+  parseJSXElementEventBinding(attrName, func) {
+    const ctx = this.jsxContext
+    const wrapperClass = this.selectEventWrapperClass()
     const wrapperName = this.block.allocObjectName('_ev')
     const wrapper = new CObject(wrapperClass.typedefPointer, wrapperName)
     const eventName = attrName.substr(2).toLowerCase()
@@ -97,7 +99,7 @@ const install = Compiler => class EventBindingParser extends Compiler {
   }
 
   parseJSXElementAttribute(input) {
-    const { attr, ctx } = input
+    const { attr } = input
     const attrName = attr.name.name
     const func = this.parse(attr.value)
 
@@ -106,7 +108,7 @@ const install = Compiler => class EventBindingParser extends Compiler {
         attrName.indexOf('on') === 0,
         `${func.name} can only be member event handler`
       )
-      this.parseJSXElementEventBinding(ctx, attrName, func.finalTypeDeclaration)
+      this.parseJSXElementEventBinding(attrName, func.finalTypeDeclaration)
       return true
     }
     return super.parse(input)

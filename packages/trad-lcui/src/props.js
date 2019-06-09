@@ -133,19 +133,6 @@ const install = Compiler => class PropsBindingParser extends Compiler {
     return func
   }
 
-  parseJSXElementAttribute(input) {
-    const { attr, ctx } = input
-    const attrName = attr.name.name
-    const value = this.parse(attr.value)
-
-    // If this object is Literal, or not a member of props
-    if (!value || !value.id || !value.parent || value.parent.name !== 'props') {
-      return super.parse(input)
-    }
-    this.block.append(functions.Widget_BindProperty(ctx.widget, attrName, value))
-    return true
-  }
-
   parse(input) {
     const method = `parse${input.type}`
 

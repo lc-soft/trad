@@ -5,6 +5,7 @@ const WidgetClassParser = require('./src/widget')
 const StateBindingParser = require('./src/state')
 const PropsBindingParser = require('./src/props')
 const EventBindingParser = require('./src/event')
+const ComputedPropertyParser = require('./src/computed')
 
 function mixin(base, ...plugins) {
   let cls = base
@@ -21,6 +22,7 @@ function install(Compiler) {
     JSXParser,
     WidgetClassParser,
     AppClassParser,
+    ComputedPropertyParser,
     EventBindingParser,
     StateBindingParser,
     PropsBindingParser,

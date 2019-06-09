@@ -4,23 +4,26 @@ const trad = require('../../trad')
 const { toVariableName } = require('../../trad-utils')
 
 class VariableDeclarationParser extends Parser {
-  declareObject(baseName, initValue) {
+  declareObject(baseName, initValue, block = this.block) {
     let variable = null
     const type = initValue.typeDeclaration
     const prefix = type ? type.variablePrefix : initValue.type
-    const name = this.block.allocObjectName(baseName ? baseName : `_${toVariableName(prefix, '_')}`)
+    const name = block.allocObjectName(baseName ? baseName : `_${toVariableName(prefix, '_')}`)
 
+    if (!initValue.typeDeclaration) {
+      debugger
+    }
     assert(initValue.typeDeclaration, `unable to infer the type of ${initValue.type}`)
     do {
-      variable = this.block.createObject(type, name)
+      variable = block.createObject(type, name)
       if (initValue instanceof trad.CCallExpression) {
-        this.block.append(new trad.CAssignmentExpression(variable, initValue))
+        block.append(new trad.CAssignmentExpression(variable, initValue))
       } else if (!initValue.id) {
-        this.block.append(variable.init(initValue.value))
+        block.append(variable.init(initValue.value))
       } else if (initValue.pointerLevel > 0) {
-        this.block.append(new trad.CAssignmentExpression(variable, initValue.duplicate()))
+        block.append(new trad.CAssignmentExpression(variable, initValue.duplicate()))
       } else {
-        this.block.append(variable.operate('=', initValue))
+        block.append(variable.operate('=', initValue))
       }
     } while (0)
     variable.isDeletable = true

@@ -71,6 +71,22 @@ function getMethodOrder(method) {
   return 1
 }
 
+function createMethod(cClass, name, { args = [], isStatic = false, isExported = null } = {}) {
+  let func = null
+  const superClassName = cClass.superClass.reference.className
+
+  if (superClassName === 'Widget') {
+    func = new types.WidgetMethod(name, args)
+  } else if (superClassName === 'App') {
+    func = new types.AppMethod(name, args)
+  } else {
+    assert(0, `${superClassName} does not support creating data bindings`)
+  }
+  func.isExported = isExported
+  func.isStatic = isStatic
+  return cClass.addMethod(func)
+}
+
 function sortMethodDefinitions(methods) {
   return methods.slice().sort((a, b) => getMethodOrder(a) - getMethodOrder(b))
 }
@@ -78,5 +94,6 @@ function sortMethodDefinitions(methods) {
 module.exports = {
   initUpdateMethod,
   findStyles,
+  createMethod,
   sortMethodDefinitions
 }

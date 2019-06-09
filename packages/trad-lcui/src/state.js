@@ -1,5 +1,6 @@
 const assert = require('assert')
 const types = require('./types')
+const helper = require('./helper')
 const functions = require('./functions')
 const { capitalize } = require('../../trad-utils')
 const trad = require('../../trad')
@@ -17,19 +18,12 @@ function addBindingFunction(cClass, target) {
   const that = new types.Object(cClass.typedefPointer, '_this')
   const arg = new trad.CObject('void', 'arg', { isPointer: true })
   const tmp = new types.Object(null, target.name)
+  const func = helper.createMethod(cClass, name, {
+    isExported: false,
+    isStatic: true,
+    args: [tmp, arg]
+  })
 
-  if (superClassName === 'Widget') {
-    func = new types.WidgetMethod(name, [tmp, arg])
-  } else if (superClassName === 'App') {
-    func = new types.AppMethod(name, [tmp, arg])
-  } else {
-    assert(0, `${superClassName} does not support creating data bindings`)
-  }
-
-  // Reset function arguments for Object_Watch()
-  func.isStatic = true
-  func.isExported = false
-  cClass.addMethod(func)
   if (superClassName === 'Widget') {
     func.block.append([
       that,
@@ -113,19 +107,6 @@ const install = Compiler => class StateBindingParser extends Compiler {
       this.initStateBindings()
     }
     return func
-  }
-
-  parseJSXElementAttribute(input) {
-    const { attr, ctx } = input
-    const attrName = attr.name.name
-    const value = this.parse(attr.value)
-
-    // If this object is Literal, or not a member of state
-    if (!value || !value.id || !value.parent || value.parent.name !== 'state') {
-      return super.parse(input)
-    }
-    this.block.append(functions.Widget_BindProperty(ctx.widget, attrName, value))
-    return true
   }
 
   parse(input) {

@@ -2,6 +2,7 @@ const assert = require('assert')
 const types = require('./types')
 const functions = require('./functions')
 const trad = require('../../trad')
+const helper = require('./helper')
 const { capitalize } = require('../../trad-utils')
 const { getWidgetType } = require('./lib')
 
@@ -45,8 +46,8 @@ function allocWidgetObjectName(scope, type, prefix = '') {
   return allocObjectName(scope, prefix + type.replace(/-/g, '_'))
 }
 
-function declareObject(compiler, baseName, initValue) {
-  return compiler.handlers.VariableDeclaration.declareObject(baseName, initValue, true)
+function declareObject(compiler, baseName, initValue, block = compiler.block) {
+  return compiler.handlers.VariableDeclaration.declareObject(baseName, initValue, block)
 }
 
 const install = Compiler => class JSXParser extends Compiler {
@@ -56,6 +57,7 @@ const install = Compiler => class JSXParser extends Compiler {
     this.jsxElementDepth = 0
     this.jsxWidgetStack = []
     this.jsxWidgetCount = 0
+    this.jsxExpressionsCount = 0
     this.jsxTextUpdateMethods = []
   }
 
@@ -66,10 +68,12 @@ const install = Compiler => class JSXParser extends Compiler {
     return this.jsxWidgetStack[this.jsxWidgetStack.length - 1]
   }
 
-  jsxBeginParseWidget(ctx) {
+  jsxBeginParseWidget() {
+    const ctx = this.jsxContext
+
     this.jsxWidgetCount += 1
     this.jsxElementDepth += 1
-    this.jsxParseWidgetRef(ctx)
+    this.jsxParseWidgetRef()
     // In the widget class method, the root widget is itself
     if (this.jsxElementDepth == 1) {
       if (this.classParserName === 'Widget') {
@@ -92,7 +96,9 @@ const install = Compiler => class JSXParser extends Compiler {
     this.jsxWidgetStack.push(ctx.widget)
   }
 
-  jsxEndParseWidget(ctx) {
+  jsxEndParseWidget() {
+    const ctx = this.jsxContext
+
     this.jsxElementDepth -= 1
     this.jsxWidgetStack.pop()
     if (this.classParserName === 'App' && this.jsxElementDepth < 1) {
@@ -100,17 +106,20 @@ const install = Compiler => class JSXParser extends Compiler {
     }
   }
 
-  jsxParseWidgetAttributes(ctx) {
-    ctx.node.attributes.forEach(attr => this.parse({ type: 'JSXElementAttribute', attr, ctx }))
+  jsxParseWidgetAttributes() {
+    this.jsxContext.node.attributes.forEach(attr => this.parse({
+      type: 'JSXElementAttribute', attr
+    }))
   }
 
-  jsxParseWidgetChildren(ctx) {
+  jsxParseWidgetChildren() {
+    const ctx = this.jsxContext
     const children = this.parseChildren(ctx.input.children)
     const content = children.filter(child => (
-      child && (
-        typeof child === 'string'
-        || types.isNumber(child) || types.isString(child)
-      )
+      typeof child === 'string'
+      || child instanceof types.JSXExpressionContainer
+      || child instanceof trad.CCallExpression
+      || types.isObject(child)
     ))
     const text = content.filter(child => typeof child === 'string')
 
@@ -128,17 +137,7 @@ const install = Compiler => class JSXParser extends Compiler {
       return
     }
 
-    let method = null
-    const name = `update${capitalize(ctx.type)}${this.jsxWidgetCount}Text`
-    const superClassName = ctx.cClass.superClass.reference.className
-
-    if (superClassName === 'Widget') {
-      method = ctx.cClass.addMethod(new types.WidgetMethod(name))
-    } else if (superClassName === 'App') {
-      method = ctx.cClass.addMethod(new types.AppMethod(name))
-    } else {
-      assert(0, `${superClassName} does not support creating data bindings`)
-    }
+    const method = helper.createMethod(ctx.cClass, `update${capitalize(ctx.type)}${this.jsxWidgetCount}Text`)
 
     this.beginParse({ type: 'LCUIWidgetMethodBody' })
     this.context.data = method.block
@@ -169,7 +168,8 @@ const install = Compiler => class JSXParser extends Compiler {
     this.jsxTextUpdateMethods.push(method.name)
   }
 
-  jsxParseWidgetRef(ctx) {
+  jsxParseWidgetRef() {
+    const ctx = this.jsxContext
     let refName = null
     let refs = ctx.that.selectProperty('refs')
 
@@ -217,7 +217,8 @@ const install = Compiler => class JSXParser extends Compiler {
   }
 
   parseJSXElementAttribute(input) {
-    const { attr, ctx } = input
+    const { attr } = input
+    const ctx = this.jsxContext
     const value = this.parse(attr.value)
     const attrName = attr.name.name
 
@@ -225,37 +226,45 @@ const install = Compiler => class JSXParser extends Compiler {
       return true
     }
     if (value instanceof trad.CObject && value.type === 'String') {
-      if (attrName === 'class') {
-        this.block.append(
-          functions.Widget_AddClass(ctx.widget, value.value)
-        )
-      } else {
-        this.block.append(
-          functions.Widget_SetAttribute(ctx.widget, attrName, value.value)
-        )
-      }
+      this.block.append(functions.Widget_SetAttribute(ctx.widget, attrName, value.value))
       return true
     }
     return super.parse(input)
   }
 
   parseJSXExpressionContainer(input) {
-    return this.parse(input.expression)
+    const ctx = this.jsxContext
+    const name = `computeExpression${++this.jsxExpressionsCount}`
+    const method = helper.createMethod(ctx.cClass, name, { isExported: false })
+
+    this.beginParse({ type: 'LCUIWidgetMethodBody' })
+    this.context.data = method.block
+
+    const exp = this.parse(input.expression)
+
+    this.endParse()
+    if (input.expression.type == 'MemberExpression') {
+      method.node.remove()
+      return exp
+    }
+    method.block.append(new trad.CReturnStatment(exp))
+    method.funcReturnType = exp.typeDeclaration
+    return new types.JSXExpressionContainer(this.jsxExpressionsCount, method, ctx.that)
   }
 
   parseJSXElement(input) {
-    const ctx = new JSXParserContext(this, input)
+    this.jsxContext = new JSXParserContext(this, input)
 
-    assert(ctx.cClass, 'JSX code must be in class method function')
-    this.jsxBeginParseWidget(ctx)
-    this.jsxParseWidgetAttributes(ctx)
-    this.jsxParseWidgetChildren(ctx)
-    this.jsxEndParseWidget(ctx)
-    return ctx.widget
+    assert(this.jsxContext.cClass, 'JSX code must be in class method function')
+    this.jsxBeginParseWidget()
+    this.jsxParseWidgetAttributes()
+    this.jsxParseWidgetChildren()
+    this.jsxEndParseWidget()
+    return this.jsxContext.widget
   }
 
   parseJSXText(input) {
-    return input.value.trim()
+    return input.value.replace(/\s+/g, ' ')
   }
 
   parse(input) {

@@ -72,6 +72,9 @@ module.exports = {
     return call(cfuncWidgetBindEvent, widget, eventName, func, data, dataDestructor)
   },
   Widget_SetAttribute(widget, name, value) {
+    if (name === 'class') {
+      return call(cfuncWidgetAddClass, widget, value)
+    }
     return call(cfuncWidgetSetAttribute, widget, name, value)
   },
   Widget_BindProperty(widget, name, value) {

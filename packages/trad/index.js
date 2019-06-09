@@ -581,7 +581,11 @@ class CFunction extends CIdentifier {
       output.push('static')
     }
     if (this.funcReturnType) {
-      output.push(this.funcReturnType)
+      if (this.funcReturnType instanceof CType) {
+        output.push(this.funcReturnType.cName)
+      } else {
+        output.push(this.funcReturnType)
+      }
     } else {
       output.push('void')
     }

@@ -183,10 +183,10 @@ class CReturnStatment extends CStatement {
   define() {
     const argument = rvalue(this.argument, this)
 
-    if (argument.id) {
+    if (typeof this.argument !== 'undefined' && argument.id) {
       return `return ${argument.id};`
     }
-    return 'return'
+    return 'return;'
   }
 }
 
@@ -195,12 +195,22 @@ class CIfStatement extends CStatement {
     super('if')
 
     this.test = test
-    this.consequent = consequent
+    if (consequent) {
+      this.consequent = consequent
+    } else {
+      this.consequent = new CBlock()
+    }
+    this.append(this.consequent)
   }
 
   define() {
+    let test = this.test
+
+    if (typeof test !== 'string') {
+      test = this.test.define().slice(0, -1)
+    }
     return [
-      `if (${this.test.define().slice(0, -1)})`,
+      `if (${test})`,
       this.consequent.define()
     ]
   }
@@ -1161,8 +1171,10 @@ function formatBlocks(blocks) {
 }
 
 class CBlock extends CDeclaration {
-  constructor() {
+  constructor(content) {
     super('block')
+
+    this.append(content)
   }
 
   export() {
@@ -1198,11 +1210,20 @@ class CBlock extends CDeclaration {
     const deletions = []
     const classMethods = []
     const staticFunctions = []
+    let returnStat = undefined
     const body = this.body.filter((stat) => {
       if (typeof stat === 'string') {
+        if (stat.indexOf('return') === 0) {
+          returnStat = stat
+          return false
+        }
         return true
       }
       if (typeof stat === 'undefined' || stat.isImported) {
+        return false
+      }
+      if (stat instanceof CReturnStatment) {
+        returnStat = stat.define()
         return false
       }
       if (stat instanceof CType) {
@@ -1237,7 +1258,8 @@ class CBlock extends CDeclaration {
       mapDefinitions(objects),
       mapDefinitions(classMethods),
       mapDefinitions(body),
-      mapDefinitions(deletions)
+      mapDefinitions(deletions),
+      [returnStat]
     ]
     if (this.parent) {
       return [

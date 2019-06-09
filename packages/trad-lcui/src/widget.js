@@ -32,11 +32,7 @@ const install = Compiler => class WidgetClassParser extends Compiler {
       method instanceof trad.CMethod && method.methodName === 'constructor',
       '\'super\' keyword unexpected here'
     )
-    this.block.append([
-      `if (${proto}) {`,
-      `${proto}->init(${method.widget.id});`,
-      '}'
-    ])
+    this.block.append(new trad.CIfStatement(proto, new trad.CBlock(`${proto}->init(${method.widget.id});`)))
     return ''
   }
 

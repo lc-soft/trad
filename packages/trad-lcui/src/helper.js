@@ -41,12 +41,8 @@ function initUpdateMethod(cClass, MethodClass = types.WidgetMethod) {
     return false
   })
 
-  const lines = [
-    `if (${conditions.join(' && ')})`,
-    '{',
-    'return;',
-    '}'
-  ]
+  const ifStat = new trad.CIfStatement(conditions.join(' && '), new trad.CBlock(new trad.CReturnStatment()))
+  const lines = [ifStat]
 
   if (stateChanges) {
     lines.push(functions.assign(stateChanges, 0))

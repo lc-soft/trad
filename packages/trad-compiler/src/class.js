@@ -1,17 +1,11 @@
 const assert = require('assert')
 const { Parser } = require('./parser')
-const {
-  CInclude,
-  CObject,
-  CClass,
-  CType,
-  CMethod
-} = require('../../trad')
+const trad = require('../../trad')
 
 class MethodParser extends Parser {
   parse(input) {
-    const cClass = this.compiler.findContextData(CClass)
-    const method = new CMethod(input.key.name)
+    const cClass = this.compiler.findContextData(trad.CClass)
+    const method = new trad.CMethod(input.key.name)
 
     this.context = this.compiler.context
     this.context.data = method
@@ -24,21 +18,20 @@ class MethodParser extends Parser {
 class ClassParser extends Parser {
   createNewMethod() {
     const cClass = this.context.data
-    const func = new CMethod('new')
-    const that = new CObject(cClass.typedefPointer, '_this')
+    const func = new trad.CMethod('new')
+    const that = new trad.CObject(cClass.typedefPointer, '_this')
     const constructor = cClass.getMethod('constructor')
 
     assert(constructor, 'constructor() must be defined')
     func.block.append([
       that.define(),
-      '',
-      `_this = malloc(sizeof(${cClass.typedef.name}));`,
-      'if (_this == NULL)',
-      '{',
-      'return NULL;',
-      '}',
-      `${constructor.funcName}(_this);`,
-      'return _this;'
+      `${that.id} = malloc(sizeof(${cClass.typedef.name}));`,
+      new trad.CIfStatement(
+        `${that.id} == NULL`,
+        new trad.CBlock(new trad.CReturnStatment(null))
+      ),
+      that.callMethod('constructor'),
+      new trad.CReturnStatment(that)
     ])
     func.isStatic = true
     func.funcReturnType = cClass.typedefPointer
@@ -47,7 +40,7 @@ class ClassParser extends Parser {
 
   createDeleteMethod() {
     const cClass = this.context.data
-    const func = new CMethod('delete')
+    const func = new trad.CMethod('delete')
     const destructor = cClass.getMethod('destructor')
 
     assert(destructor, 'destructor() must be defined')
@@ -60,17 +53,17 @@ class ClassParser extends Parser {
 
   parseDeclaration(input) {
     const { name } = input.id
-    const cClass = new CClass(name)
+    const cClass = new trad.CClass(name)
     let hasConstructor = false
     let hasDestructor = false
 
     if (input.superClass) {
       const superClass = this.compiler.parse(input.superClass)
 
-      if (superClass instanceof CType) {
+      if (superClass instanceof trad.CType) {
         cClass.superClass = superClass
       } else {
-        assert(superClass.typeDeclaration instanceof CType, `${superClass.id} is not a type`)
+        assert(superClass.typeDeclaration instanceof trad.CType, `${superClass.id} is not a type`)
         cClass.superClass = superClass.typeDeclaration
       }
     }
@@ -86,10 +79,10 @@ class ClassParser extends Parser {
     })
     // Class must have constructor() and destructor() methods
     if (!hasConstructor) {
-      cClass.addMethod(new CMethod('constructor'))
+      cClass.addMethod(new trad.CMethod('constructor'))
     }
     if (!hasDestructor) {
-      cClass.addMethod(new CMethod('destructor'))
+      cClass.addMethod(new trad.CMethod('destructor'))
     }
     this.context = this.compiler.context
     this.context.data = cClass
@@ -106,7 +99,7 @@ class ClassParser extends Parser {
     cClass.addMethod(this.createNewMethod())
     cClass.addMethod(this.createDeleteMethod())
     // malloc() and free() is declared in <stdlib.h>
-    this.program.addInclude(new CInclude('stdlib.h', true))
+    this.program.addInclude(new trad.CInclude('stdlib.h', true))
     return cClass
   }
 }

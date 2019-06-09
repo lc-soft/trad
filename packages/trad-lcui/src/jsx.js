@@ -247,6 +247,8 @@ const install = Compiler => class JSXParser extends Compiler {
       method.node.remove()
       return exp
     }
+    // Caller will destroy this variable
+    exp.isDeletable = false
     method.block.append(new trad.CReturnStatment(exp))
     method.funcReturnType = exp.typeDeclaration
     return new types.JSXExpressionContainer(this.jsxExpressionsCount, method, ctx.that)

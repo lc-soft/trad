@@ -26,9 +26,8 @@ class ReturnStatementParser extends Parser {
 
 class IfStatementParser extends Parser {
   parse(input) {
-    const stat = new trad.CIfStatement()
+    const stat = new trad.CIfStatement(this.compiler.parse(input.test))
 
-    stat.test = this.compiler.parse(input.test)
     this.compiler.block.append(stat)
     this.context = this.compiler.context
     this.context.data = stat

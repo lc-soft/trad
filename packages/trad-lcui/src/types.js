@@ -93,7 +93,7 @@ class CLCUIString extends CLCUIObjectType {
     return new CCallExpression(this.getMember('String_New'), value)
   }
 
-  init(obj, value = null) {
+  init(obj, value = typeof obj.value !== 'undefined' ? obj.value : null) {
     if (obj.pointerLevel > 0) {
       return new CAssignmentExpression(obj, this.create(value))
     }
@@ -133,7 +133,7 @@ class CLCUINumber extends CLCUIObjectType {
     return new CCallExpression(this.getMember('Number_New'), value)
   }
 
-  init(obj, value = 0) {
+  init(obj, value = typeof obj.value !== 'undefined' ? obj.value: 0) {
     if (obj.pointerLevel > 0) {
       return new CAssignmentExpression(obj, this.create(value))
     }

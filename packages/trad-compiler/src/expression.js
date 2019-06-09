@@ -30,12 +30,18 @@ class ObjectExpressionParser extends Parser {
     input.properties.forEach((item) => {
       assert(item.type === 'Property')
 
+      let type
       const value = this.compiler.parse(item.value)
 
-      // FIXME: ObjectExpression is only used as a structure declaration for the time being
-      assert(value instanceof trad.CType, 'invalid object property')
-
-      cStruct.addMember(new trad.CObject(value, item.key.name))
+      if (value instanceof trad.CType) {
+        type = value
+      } else if (value instanceof trad.CObject && ['String', 'Number'].indexOf(value.type) >= 0) {
+        type = value.typeDeclaration
+      } else {
+        // FIXME: ObjectExpression is only used as a structure declaration for the time being
+        assert(0, 'invalid object property')
+      }
+      cStruct.addMember(new trad.CObject(type, item.key.name, { value: value.value }))
     })
     this.block.append(cStruct)
     return cStruct

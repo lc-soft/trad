@@ -414,7 +414,7 @@ class CVariableDeclaration extends CDeclaration {
       assert(typeof this.init === 'undefined')
       return `${d};`
     }
-    if (typeof this.init === 'undefined') {
+    if (typeof this.init === 'undefined' || v.parent instanceof CStruct) {
       return `${d};`
     }
     return `${d} = ${this.init};`
@@ -970,7 +970,10 @@ class CObject extends CIdentifier {
       return undefined
     }
     if (ref instanceof CObject) {
-      prop = new ref.constructor(ref.typeDeclaration, name, { isPointer: ref.isPointer })
+      prop = new ref.constructor(ref.typeDeclaration, name, {
+        isPointer: ref.isPointer,
+        value: ref.value
+      })
     } else if (ref instanceof CType) {
       prop = new CObject(ref, name)
     } else if (ref instanceof CFunction) {

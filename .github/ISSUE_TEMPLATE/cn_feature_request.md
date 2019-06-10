@@ -1,9 +1,8 @@
 ---
-name: 功能请求及建议
-about: 请求添加新功能，或者提交改进建议
+name: 功能需求
+about: 给新的功能提供想法和建议
 title: 一句话描述清楚你的需求
-labels: enhancement, good first issue
-assignees: lc-soft
+labels: enhancement
 
 ---
 
@@ -32,19 +31,20 @@ assignees: lc-soft
 
 希望谁来负责这个需求？
 
-- [x] 我
+- [x] 不知道
+- [ ] 我
 - [ ] 其他贡献者
-- [ ] 不知道
 - [ ] 项目维护者
 
 **协助**
 
 为完成该需求，我会提供这些帮助：
 
-- [ ] 贡献与此需求相关的帮助文档、测试用例，例如：新语法的说明文档及示例代码
-- [ ] 实现某个新功能请求或修复某些 bug，如果有的话，请附上 issue id
+- [ ] 贡献与此需求相关的文档
+- [ ] 贡献与此需求相关的测试用例
+- [ ] 实现某个功能需求或修复某些 bug
 - [ ] 撰写一篇文章介绍此项目的使用方法
-- [ ] 支付相应报酬，在 [Bountysource](https://www.bountysource.com) 上为此 issue 设置悬赏，或在 [OpenCollective](https://opencollective.com/) 上为此项目提供捐赠
-- [ ] 花十秒钟用键盘贡献一句“好人一生平安”
+- [ ] 在 [IssueHunt](https://issuehunt.io/r/lc-soft/trad) 上为此 issue 设置悬赏
+- [ ] 在 [OpenCollective](https://opencollective.com/lc-soft/trad) 上为此项目提供捐赠
 - [ ] 花五秒钟用键盘贡献一句“谢谢”
-- [x] 不提供帮助
+- [x] 不提供任何帮助

@@ -74,11 +74,11 @@ const install = Compiler => class StateBindingParser extends Compiler {
       const prop = state.selectProperty(name)
       const func = addBindingFunction(cClass, prop)
 
-      funcInit.block.append(prop.init())
-      funcDestroy.block.append(prop.destroy())
+      funcInit.block.append(prop.binding.init())
+      funcDestroy.block.append(prop.binding.destroy())
       return { prop, func }
     }).forEach(({ prop, func }) => {
-      funcInit.block.append(prop.callMethod('watch', func, handle))
+      funcInit.block.append(prop.binding.callMethod('watch', func, handle))
     })
     constructor.block.append(functions.call(funcInit, constructor.block.getThis()))
     destructor.block.append(functions.call(funcDestroy, destructor.block.getThis()))

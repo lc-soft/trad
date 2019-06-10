@@ -29,8 +29,8 @@ function initComputedProps(cClass) {
   props.typeDeclaration.keys().map((key) => {
     const prop = props.selectProperty(key)
 
-    funcInit.block.append(prop.init())
-    funcDestroy.block.append(prop.destroy())
+    funcInit.block.append(prop.binding.init())
+    funcDestroy.block.append(prop.binding.destroy())
   })
   constructor.block.append(functions.call(funcInit, constructor.block.getThis()))
   destructor.block.append(functions.call(funcDestroy, destructor.block.getThis()))
@@ -66,7 +66,7 @@ const install = Compiler => class ComputedPropertyParser extends Compiler {
     const method = cClass.addMethod(new trad.CMethod(`computeProperty${exp.expressionId}`))
     const tmp = declareObject(this, 'tmp', exp, method.block)
 
-    method.block.append(prop.operate('=', tmp))
+    method.block.append(prop.binding.operate('=', tmp))
     this.jsxComputedPropertyMethods.push(method.name)
     return prop
   }

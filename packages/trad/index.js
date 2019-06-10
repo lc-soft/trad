@@ -301,9 +301,6 @@ class CCallExpression extends CExpression {
   }
 
   define() {
-    if (this.callee.funcArgs.length !== this.args.length) {
-      debugger
-    }
     const argsStr = this.callee.funcArgs.map((declaration, i) => {
       const arg = rvalue(this.args[i], this)
 
@@ -815,6 +812,10 @@ class CTypedef extends CType {
     return this.isExported ? '' : this.getTypeDefinition()
   }
 
+  create(...args) {
+    return this.reference.create(...args)
+  }
+
   getTypeDefinition() {
     if (this.reference instanceof CFunction) {
       const func = this.reference
@@ -829,10 +830,6 @@ class CTypedef extends CType {
 
   selectProperty(name) {
     return this.reference.selectProperty(name)
-  }
-
-  create(...args) {
-    return this.reference.create(...args)
   }
 
   createReference(name = this.name) {
@@ -875,6 +872,11 @@ class CObject extends CIdentifier {
     this.isPointer = isPointer
     this.isHidden = isHidden
     this.isDeletable = false
+    if (this.finalTypeDeclaration instanceof CClass) {
+      this.binding = this.finalTypeDeclaration.bind(this)
+    } else {
+      this.binding = false
+    }
   }
 
   get baseType() {
@@ -924,34 +926,6 @@ class CObject extends CIdentifier {
     return new CVariableDeclaration(this, this.value).define()
   }
 
-  callMethod(name, ...args) {
-    return this.finalTypeDeclaration.callMethod(name, this, ...args)
-  }
-
-  init(...args) {
-    return this.finalTypeDeclaration.init(this, ...args)
-  }
-
-  duplicate() {
-    return this.finalTypeDeclaration.duplicate(this)
-  }
-
-  operate(operator, right) {
-    return this.finalTypeDeclaration.operate(this, operator, right)
-  }
-
-  compare(right) {
-    return this.finalTypeDeclaration.compare(this, right)
-  }
-
-  destroy() {
-    return this.finalTypeDeclaration.destroy(this)
-  }
-
-  stringify() {
-    return this.finalTypeDeclaration.stringify(this)
-  }
-
   addProperty(prop) {
     assert(prop instanceof CObject, `${prop.name} property must be CObject`)
     assert(!this.typeDeclaration.getMember(prop.name), `${prop.name} property already exists`)
@@ -999,6 +973,61 @@ class CObject extends CIdentifier {
   }
 }
 
+class CBinding {
+  constructor(cThis, cClass) {
+    this.cThis = cThis
+    this.cClass = cClass
+  }
+
+  callMethod(name, ...args) {
+    const method = this.cClass.getMethod(name)
+
+    assert(method, `${this.cThis.id}.${name} is not a function`)
+    if (method.isStatic) {
+      return new CCallExpression(method, ...args)
+    }
+    return new CCallExpression(method, this.cThis, ...args)
+  }
+
+  get() {
+    return this.cThis
+  }
+
+  init(...args) {
+    if (this.cThis.pointerLevel > 0) {
+      return new CAssignmentExpression(obj, this.cClass.create(...args))
+    }
+    return this.callMethod('init', ...args)
+  }
+
+  destroy() {
+    if (this.cThis.pointerLevel > 0) {
+      return this.callMethod('delete')
+    }
+    return this.callMethod('destroy')
+  }
+
+  compare(right) {
+    return this.callMethod('compare', right)
+  }
+
+  operate(operator, right) {
+    return this.callMethod('operate', operator, right)
+  }
+
+  stringify() {
+    return this.callMethod('toString')
+  }
+
+  duplicate() {
+    try {
+      return this.callMethod('duplicate')
+    } catch (err) {
+      return this.cThis
+    }
+  }
+}
+
 class CClass extends CStruct {
   constructor(name, superClass) {
     super(`${name}Rec_`)
@@ -1009,7 +1038,6 @@ class CClass extends CStruct {
     this.meta.superClass = superClass
     this.typedefPointer = new CClassReference(this, name, true)
     this.typedef = new CClassReference(this, `${name}Rec`, false, false)
-    this.destructor = null
   }
 
   set isImported(isImported) {
@@ -1036,6 +1064,14 @@ class CClass extends CStruct {
     this.meta.superClass = superClass
   }
 
+  bind(cThis) {
+    return new CBinding(cThis, this)
+  }
+
+  create(...args) {
+    return new CNewExpression(this.getMethod('new'), ...args)
+  }
+
   export() {
     if (!this.isImported) {
       return this.publicMethods.map(method => method.export())
@@ -1054,44 +1090,6 @@ class CClass extends CStruct {
     return this.getMember(`_${toVariableName(this.superClass.className)}`)
   }
 
-  create(...args) {
-    return new CNewExpression(this.getMethod('new'), ...args)
-  }
-
-  init(obj) {
-    if (obj.pointerLevel > 0) {
-      return new CAssignmentExpression(obj, this.create())
-    }
-    return this.callMethod('init', obj)
-  }
-
-  destroy(obj) {
-    if (obj.pointerLevel > 0) {
-      return this.callMethod('delete', obj)
-    }
-    return this.callMethod('destroy', obj)
-  }
-
-  duplicate(obj) {
-    try {
-      return this.callMethod('duplicate', obj)
-    } catch (err) {
-      return obj
-    }
-  }
-
-  operate(left, operator, right) {
-    return this.callMethod('operate', left, operator, right)
-  }
-
-  compare(left, right) {
-    return this.callMethod('compare', left, right)
-  }
-
-  stringify(obj) {
-    return this.callMethod('toString', obj)
-  }
-
   get methods() {
     return this.body.filter(stat => stat instanceof CMethod)
   }
@@ -1102,13 +1100,6 @@ class CClass extends CStruct {
 
   get privateMethods() {
     return this.methods.filter(method => !method.isExported)
-  }
-
-  callMethod(name, ...args) {
-    const method = this.getMethod(name)
-
-    assert(method, `${this.className}.${name} is not a function`)
-    return new CCallExpression(method, ...args)
   }
 
   getMethod(name) {
@@ -1247,7 +1238,7 @@ class CBlock extends CDeclaration {
       }
       if (stat instanceof CObject) {
         if (stat.isDeletable) {
-          deletions.push(stat.destroy())
+          deletions.push(stat.binding.destroy())
         }
         objects.push(stat)
         return false
@@ -1553,6 +1544,7 @@ module.exports = {
   CType,
   CTypedef,
   CObject,
+  CBinding,
   CModule,
   CProgram,
   CBlock,

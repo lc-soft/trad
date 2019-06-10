@@ -19,11 +19,11 @@ class VariableDeclarationParser extends Parser {
       if (initValue instanceof trad.CCallExpression) {
         block.append(new trad.CAssignmentExpression(variable, initValue))
       } else if (!initValue.id) {
-        block.append(variable.init(initValue.value))
+        block.append(variable.binding.init(initValue.value))
       } else if (initValue.pointerLevel > 0) {
-        block.append(new trad.CAssignmentExpression(variable, initValue.duplicate()))
+        block.append(new trad.CAssignmentExpression(variable, initValue.binding.duplicate()))
       } else {
-        block.append(variable.operate('=', initValue))
+        block.append(variable.binding.operate('=', initValue))
       }
     } while (0)
     variable.isDeletable = true

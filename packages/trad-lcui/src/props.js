@@ -89,7 +89,7 @@ const install = Compiler => class PropsBindingParser extends Compiler {
       const prop = props.selectProperty(key)
       const defaultProp = defaultProps.selectProperty(key)
 
-      funcInit.block.append(defaultProp.init(prop.value || 0))
+      funcInit.block.append(defaultProp.binding.init(prop.value || 0))
       funcDestroy.block.append(functions.assign(prop, null))
       return { prop, defaultProp }
     }).forEach(({ prop, defaultProp }) => {

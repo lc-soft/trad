@@ -5,6 +5,7 @@ const {
   CType,
   CClass,
   CObject,
+  CBinding,
   CNamespace,
   CFunction,
   CStruct,
@@ -70,6 +71,27 @@ class CLCUIObjectType extends CClass {
   }
 }
 
+class CLCUIStringBinding extends CBinding {
+  create(value = typeof this.cThis.value !== 'undefined' ? this.cThis.value : null) {
+    return new CCallExpression(this.cClass.getMember('String_New'), value)
+  }
+
+  init(value = typeof this.cThis.value !== 'undefined' ? this.cThis.value : null) {
+    if (this.cThis.pointerLevel > 0) {
+      return new CAssignmentExpression(this.cThis, this.create(value))
+    }
+    return new CCallExpression(this.cClass.getMember('String_Init'), this.cThis, value)
+  }
+
+  operate(operator, right) {
+    // if right object is literal
+    if (operator === '=' && !right.id) {
+      return new CCallExpression(this.cClass.getMember('String_SetValue'), this.cThis, right.value)
+    }
+    return new CCallExpression(this.cClass.getMember('Object_Operate'), this.cThis, operator, right)
+  }
+}
+
 class CLCUIString extends CLCUIObjectType {
   constructor() {
     super()
@@ -89,23 +111,29 @@ class CLCUIString extends CLCUIObjectType {
     this.addMember(new CFunction('Object_Operate', [obj, cstrConst, obj], obj.typeDeclaration))
   }
 
-  create(value = null) {
-    return new CCallExpression(this.getMember('String_New'), value)
+  bind(cThis) {
+    return new CLCUIStringBinding(cThis, this)
+  }
+}
+
+class CLCUINumberBinding extends CBinding {
+  create(value = typeof this.cThis.value !== 'undefined' ? this.cThis.value : 0) {
+    return new CCallExpression(this.cClass.getMember('Number_New'), value)
   }
 
-  init(obj, value = typeof obj.value !== 'undefined' ? obj.value : null) {
-    if (obj.pointerLevel > 0) {
-      return new CAssignmentExpression(obj, this.create(value))
+  init(value = typeof this.cThis.value !== 'undefined' ? this.cThis.value : 0) {
+    if (this.cThis.pointerLevel > 0) {
+      return new CAssignmentExpression(this.cThis, this.create(value))
     }
-    return new CCallExpression(this.getMember('String_Init'), obj, value)
+    return new CCallExpression(this.cClass.getMember('Number_Init'), this.cThis, value)
   }
 
-  operate(left, operator, right) {
+  operate(operator, right) {
     // if right object is literal
     if (operator === '=' && !right.id) {
-      return new CCallExpression(this.getMember('String_SetValue'), left, right.value)
+      return new CCallExpression(this.cClass.getMember('Number_SetValue'), this.cThis, right.value)
     }
-    return new CCallExpression(this.getMember('Object_Operate'), left, operator, right)
+    return new CCallExpression(this.cClass.getMember('Object_Operate'), this.cThis, operator, right)
   }
 }
 
@@ -129,23 +157,8 @@ class CLCUINumber extends CLCUIObjectType {
     this.addMember(new CFunction('Object_Operate', [obj, cstrConst, obj], obj.typeDeclaration))
   }
 
-  create(value = 0) {
-    return new CCallExpression(this.getMember('Number_New'), value)
-  }
-
-  init(obj, value = typeof obj.value !== 'undefined' ? obj.value: 0) {
-    if (obj.pointerLevel > 0) {
-      return new CAssignmentExpression(obj, this.create(value))
-    }
-    return new CCallExpression(this.getMember('Number_Init'), obj, value)
-  }
-
-  operate(left, operator, right) {
-    // if right object is literal
-    if (operator === '=' && !right.id) {
-      return new CCallExpression(this.getMember('Number_SetValue'), left, right.value)
-    }
-    return new CCallExpression(this.getMember('Object_Operate'), left, operator, right)
+  bind(cThis) {
+    return new CLCUINumberBinding(cThis, this)
   }
 }
 
@@ -184,6 +197,28 @@ class CLCUIWidgetPrototype extends CType {
   }
 }
 
+class CLCUIWidgetStylePropertyBinding extends CBinding {
+  constructor(cThis, cClass) {
+    super(cThis, cClass)
+
+    const w = new CLCUIObject('Widget', 'w')
+    const cstr = new CObject('const char', 'str', { isPointer: true })
+
+    this.funcSetStyle = new CFunction('Widget_SetStyleString', [w, cstr, cstr])
+  }
+
+  operate(operator, right) {
+    const widget = this.cThis.closest(isWidget)
+
+    if (operator === '=') {
+      return new CCallExpression(this.funcSetStyle, widget,
+        convertPascalNaming(this.cThis.name),
+        right.selectProperty('value').selectProperty('string'))
+    }
+    return super.operate(this.cThis, operator, right)
+  }
+}
+
 class CLCUIWidgetStyleProperty extends CLCUIString {
   constructor() {
     super('LCUI_Style')
@@ -191,23 +226,8 @@ class CLCUIWidgetStyleProperty extends CLCUIString {
     this.funcSetStyle = null
   }
 
-  install() {
-    const w = new CLCUIObject('Widget', 'w')
-    const cstr = new CObject('const char', 'str', { isPointer: true })
-
-    this.funcSetStyle = new CFunction('Widget_SetStyleString', [w, cstr, cstr])
-  }
-
-  operate(obj, operator, right) {
-    const widget = obj.closest(isWidget)
-
-    if (operator === '=') {
-      const value = right.selectProperty('value')
-      const cstr = new CObject('const char', `${value.id}.string`, { isPointer: true })
-
-      return new CCallExpression(this.funcSetStyle, widget, convertPascalNaming(obj.name), cstr)
-    }
-    return super.operate(obj, operator, right)
+  bind(cThis) {
+    return new CLCUIWidgetStylePropertyBinding(cThis, this)
   }
 }
 

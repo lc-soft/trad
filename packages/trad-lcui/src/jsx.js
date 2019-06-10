@@ -161,14 +161,14 @@ const install = Compiler => class JSXParser extends Compiler {
         right = declareObject(this, null, right)
       }
       if (!types.isString(left)) {
-        left = declareObject(this, `${left.name}_str`, left.stringify())
+        left = declareObject(this, `${left.name}_str`, left.binding.stringify())
         this.block.append(left)
       }
       if (!types.isString(right)) {
-        right = declareObject(this, `${right.name}_str`, right.stringify())
+        right = declareObject(this, `${right.name}_str`, right.binding.stringify())
         this.block.append(right)
       }
-      return declareObject(this, null, left.operate('+', right))
+      return declareObject(this, null, left.binding.operate('+', right))
     }).selectProperty('value').selectProperty('string')
 
     this.endParse()

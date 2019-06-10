@@ -55,10 +55,10 @@ const install = Compiler => class AppClassParser extends Compiler {
     const funcUpdate = helper.initUpdateMethod(cClass, types.AppMethod)
     const that = funcAutoUpdate.block.getThis()
 
-    funcUpdate.block.append(this.jsxComputedPropertyMethods.map(name => that.callMethod(name)))
-    funcUpdate.block.append(this.jsxTextUpdateMethods.map(name => that.callMethod(name)))
+    funcUpdate.block.append(this.jsxComputedPropertyMethods.map(name => that.binding.callMethod(name)))
+    funcUpdate.block.append(this.jsxTextUpdateMethods.map(name => that.binding.callMethod(name)))
     funcAutoUpdate.block.append([
-      that.callMethod('update'),
+      that.binding.callMethod('update'),
       `LCUI_SetTimeout(0, (TimerCallback)${cClass.getMethod('autoUpdate').cName}, ${that.id});`
     ])
   }
@@ -70,7 +70,7 @@ const install = Compiler => class AppClassParser extends Compiler {
     func = cClass.addMethod(new types.AppMethod('run'))
     func.funcReturnType = 'int'
     func.block.append([
-      func.block.getThis().callMethod('autoUpdate'),
+      func.block.getThis().binding.callMethod('autoUpdate'),
       'return LCUI_Main();'
     ])
     this.program.append(new trad.CInclude('LCUI/timer.h', true))
@@ -100,9 +100,9 @@ const install = Compiler => class AppClassParser extends Compiler {
     this.initUpdateMethod(cClass)
     this.initRunMethod(cClass)
     constructor.block.append([
-      that.callMethod('template'),
-      that.callMethod('update'),
-      created ? that.callMethod('created') : ''
+      that.binding.callMethod('template'),
+      that.binding.callMethod('update'),
+      created ? that.binding.callMethod('created') : ''
     ])
     this.enableJSX = false
     this.enableDataBinding = false

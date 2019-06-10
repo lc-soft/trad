@@ -30,7 +30,7 @@ class ClassParser extends Parser {
         `${that.id} == NULL`,
         new trad.CBlock(new trad.CReturnStatment(null))
       ),
-      that.callMethod('constructor'),
+      that.binding.callMethod('constructor'),
       new trad.CReturnStatment(that)
     ])
     func.isStatic = true

@@ -31,21 +31,21 @@ const install = Compiler => class LCUIBaseParser extends Compiler {
     }
     if (types.isString(right) !== types.isString(left)) {
       if (types.isString(left)) {
-        right = declareObject(this, `${right.name}_str`, right.stringify())
+        right = declareObject(this, `${right.name}_str`, right.binding.stringify())
         this.block.append(right)
       } else {
-        left = declareObject(this, `${left.name}_str`, left.stringify())
+        left = declareObject(this, `${left.name}_str`, left.binding.stringify())
         this.block.append(left)
       }
     }
     if (isComparator(input.operator)) {
-      return new trad.CBinaryExpression(left.compare(right), input.operator, 0)
+      return new trad.CBinaryExpression(left.binding.compare(right), input.operator, 0)
     }
     if (isAssignment(input.operator)) {
-      this.block.append(left.operate(input.operator, right))
+      this.block.append(left.binding.operate(input.operator, right))
       return undefined
     }
-    right = left.operate(input.operator, right)
+    right = left.binding.operate(input.operator, right)
     return declareObject(this, null, right)
   }
 
@@ -60,7 +60,7 @@ const install = Compiler => class LCUIBaseParser extends Compiler {
       let right = this.parse(input.right)
 
       right = types.toObject(right)
-      this.block.append(left.operate('=', right))
+      this.block.append(left.binding.operate('=', right))
       return left
     }
     return super.parse(input)

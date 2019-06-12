@@ -74,7 +74,7 @@ const install = Compiler => class ComputedPropertyParser extends Compiler {
   parseMethodDefinition(input) {
     const func = super.parse(input)
 
-    if (this.enableDataBinding && func.name === 'template') {
+    if (!input.declare && this.enableDataBinding && func.name === 'template') {
       initComputedProps(this.findContextData(trad.CClass))
     }
     return func

@@ -42,9 +42,13 @@ const install = Compiler => class WidgetClassParser extends Compiler {
     }
 
     const cClass = this.findContextData(trad.CClass)
-    const method = new types.WidgetMethod(input.key.name)
 
-    cClass.addMethod(method)
+    if (input.declare) {
+      return cClass.addMethod(new types.WidgetMethod(input.key.name))
+    }
+
+    const method = cClass.getMethod(input.key.name)
+
     this.context.data = method
     this.parseChildren([input.value])
     return method
@@ -61,7 +65,7 @@ const install = Compiler => class WidgetClassParser extends Compiler {
       return super.parse(input)
     }
     this.block.append(cClass)
-    this.beforeParseWidgetClass(cClass)
+    this.beforeParseWidgetClass(cClass, input)
     this.parseChildren(helper.sortMethodDefinitions(input.body.body))
     this.afterParseWidgetClass(cClass)
     // malloc() and free() is declared in <stdlib.h>
@@ -69,19 +73,19 @@ const install = Compiler => class WidgetClassParser extends Compiler {
     return cClass
   }
 
-  beforeParseWidgetClass(cClass) {
+  beforeParseWidgetClass(cClass, input) {
     const keys = ['constructor', 'destructor']
-
     this.enableJSX = true
     this.enableDataBinding = true
     this.enableEventBinding = true
     this.classParserName = 'Widget'
     this.classMethodType = types.WidgetMethod
     this.widgetProtoIdentifyName = `${lib.convertPascalNaming(cClass.className, '_')}_class`
+    this.handlers.ClassDeclaration.parseBody(cClass, input.body)
     keys.forEach((name) => {
       const oldMethod = cClass.getMethod(name)
 
-      if (oldMethod) {
+      if (!(oldMethod instanceof types.WidgetMethod)) {
         const method = new types.WidgetMethod(name)
 
         method.block = oldMethod.block

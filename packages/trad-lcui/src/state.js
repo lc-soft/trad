@@ -118,7 +118,7 @@ const install = Compiler => class StateBindingParser extends Compiler {
   parseMethodDefinition(input) {
     const func = super.parse(input)
 
-    if (this.enableDataBinding && func.name === 'constructor') {
+    if (!input.declare && this.enableDataBinding && func.name === 'constructor') {
       this.initStateBindings()
     }
     return func

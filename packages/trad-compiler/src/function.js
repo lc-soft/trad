@@ -6,6 +6,9 @@ class FunctionExpressionParser extends Parser {
   parse(input) {
     const func = this.compiler.findContextData(CFunction)
 
+    if (!func) {
+      debugger
+    }
     assert(func instanceof CFunction, `${input.type} must be in a function`)
     this.compiler.parseChildren([input.body])
     return func

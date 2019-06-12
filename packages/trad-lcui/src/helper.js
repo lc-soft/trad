@@ -59,12 +59,12 @@ function getMethodOrder(method) {
     return 0
   }
   if (method.key.name === 'template') {
-    return 2
+    return 1
   }
   if (method.key.name === 'update') {
-    return 3
+    return 2
   }
-  return 1
+  return 3
 }
 
 function createMethod(cClass, name, { args = [], isStatic = false, isExported = null } = {}) {

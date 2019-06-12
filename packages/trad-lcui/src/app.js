@@ -40,6 +40,7 @@ const install = Compiler => class AppClassParser extends Compiler {
     }
     this.block.append(cClass)
     this.beforeParseAppClass()
+    parser.parseBody(cClass, input.body)
     this.parseChildren(helper.sortMethodDefinitions(input.body.body))
     this.afterParseAppClass(cClass)
     // Add new() and delete() methods after parsing all methods

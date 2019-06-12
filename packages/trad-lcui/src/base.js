@@ -60,7 +60,7 @@ const install = Compiler => class LCUIBaseParser extends Compiler {
       let right = this.parse(input.right)
 
       right = types.toObject(right)
-      this.block.append(left.binding.operate('=', right))
+      this.block.append(left.binding.operate('=', right.binding.get()))
       return left
     }
     return super.parse(input)

@@ -628,13 +628,16 @@ class CFunction extends CIdentifier {
 }
 
 class CMethod extends CFunction {
-  constructor(name, args = [], returnType = '') {
+  constructor(name, args = [], returnType = '', {
+    isStatic = false,
+    // The value of isExported is inherited from its class
+    isExported = null
+  } = {}) {
     super(name, args, returnType)
 
     this.methodName = name
-    // The value of isExported is inherited from its class
-    this.isExported = null
-    this.isStatic = false
+    this.isExported = isExported
+    this.isStatic = isStatic
   }
 
   get isExported() {
@@ -877,6 +880,8 @@ class CObject extends CIdentifier {
     } else {
       this.binding = false
     }
+    // Object extra info
+    this.extra = {}
   }
 
   get baseType() {
@@ -961,6 +966,7 @@ class CObject extends CIdentifier {
       prop.id = `${this.id}.${name}`
     }
     prop.node.parent = this.node
+    prop.extra = ref.extra
     return prop
   }
 
@@ -1122,6 +1128,10 @@ class CClass extends CStruct {
     }
     method.bind(this, '_this')
     return this.append(method)
+  }
+
+  createMethod(name, args = [], returnType, meta) {
+    return this.addMethod(new CMethod(name, args, returnType, meta))
   }
 
   selectProperty(name) {

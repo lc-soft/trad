@@ -3,15 +3,24 @@ const { Parser } = require('./parser')
 const trad = require('../../trad')
 
 class MethodParser extends Parser {
-  parse(input) {
-    const cClass = this.compiler.findContextData(trad.CClass)
-    const method = new trad.CMethod(input.key.name)
+  parseDefinition(input, cClass) {
+    const method = cClass.getMethod(input.key.name)
 
     this.context = this.compiler.context
     this.context.data = method
-    cClass.addMethod(method)
     this.compiler.parseChildren([input.value])
     return method
+  }
+
+  parse(input) {
+    const cClass = this.compiler.findContextData(trad.CClass)
+
+    if (input.declare) {
+      const args = this.compiler.parseChildren(input.value.params)
+
+      return cClass.createMethod(input.key.name, args, '', { isStatic: input.static })
+    }
+    return this.parseDefinition(input, cClass)
   }
 }
 
@@ -54,8 +63,6 @@ class ClassParser extends Parser {
   parseDeclaration(input) {
     const { name } = input.id
     const cClass = new trad.CClass(name)
-    let hasConstructor = false
-    let hasDestructor = false
 
     if (input.superClass) {
       const superClass = this.compiler.parse(input.superClass)
@@ -67,32 +74,28 @@ class ClassParser extends Parser {
         cClass.superClass = superClass.typeDeclaration
       }
     }
-    input.body.body.forEach((node) => {
-      if (node.type !== 'MethodDefinition') {
-        return
-      }
-      if (node.key.name === 'constructor') {
-        hasConstructor = true
-      } else if (node.key.name === 'destructor') {
-        hasDestructor = true
-      }
-    })
-    // Class must have constructor() and destructor() methods
-    if (!hasConstructor) {
-      cClass.addMethod(new trad.CMethod('constructor'))
-    }
-    if (!hasDestructor) {
-      cClass.addMethod(new trad.CMethod('destructor'))
-    }
     this.context = this.compiler.context
     this.context.data = cClass
     return cClass
+  }
+
+  parseBody(cClass, input) {
+    // Pre-parse class method declaration
+    this.compiler.parseChildren(input.body.map(m => Object.assign({ declare: true }, m)))
+    // Class must have constructor() and destructor() methods
+    if (!cClass.getMethod('constructor')) {
+      cClass.createMethod('constructor')
+    }
+    if (!cClass.getMethod('destructor')) {
+      cClass.createMethod('destructor')
+    }
   }
 
   parse(input) {
     const cClass = this.parseDeclaration(input)
 
     this.block.append(cClass)
+    this.parseBody(cClass, input)
     // Parse the body of each class method
     this.compiler.parseChildren(input.body.body)
     // Add new() and delete() methods after parsing all methods

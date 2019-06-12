@@ -221,6 +221,7 @@ const install = Compiler => class JSXParser extends Compiler {
     ctx.ref = refs.selectProperty(refName)
     assert(!ctx.ref, `"${refName}" reference already exists`)
     ctx.ref = refs.addProperty(new types.Object('Widget', refName))
+    ctx.ref.extra.widgetClassName = ctx.proto ? ctx.proto.name : 'Widget'
     ctx.widget = new types.Object('Widget', ctx.ref.id)
   }
 

@@ -9,6 +9,7 @@ const {
   CNamespace,
   CFunction,
   CStruct,
+  CBlock,
   CAssignmentExpression,
   CCallExpression,
   CMethod,
@@ -176,6 +177,7 @@ class CLCUIWidget extends CClass {
 
   install() {
     this.addMember(new CLCUIObject('WidgetStyle', 'style'))
+    this.addMember(new CLCUIObject('WidgetProperty', 'value'))
   }
 }
 
@@ -194,6 +196,38 @@ class CLCUIWidgetPrototype extends CType {
 
     this.isPointer = true
     this.alias = 'WidgetPrototype'
+  }
+}
+
+class CLCUIWidgetPropertyBinding extends CBinding {
+  get() {
+    const w = new CLCUIObject('Widget', 'w')
+    const cstr = new CObject('const char', 'str', { isPointer: true })
+    const funcName = `${this.cThis.parent.extra.widgetClassName}_GetProperty`
+    const func = new CFunction(funcName, [w, cstr], declarations.Object.typedefPointer)
+    const block = this.cThis.closest(stat => stat instanceof CBlock)
+    const name = block.allocObjectName(`prop_${this.cThis.name}`)
+    const prop = new CLCUIObject(null, name, { isAllocateFromStack: false })
+
+    block.append([
+      prop,
+      new CAssignmentExpression(prop,
+        new CCallExpression(func, this.cThis.parent, this.cThis.name))
+    ])
+    return prop
+  }
+}
+
+class CLCUIWidgetProperty extends CLCUIObjectType {
+  constructor() {
+    super()
+
+    this.alias = 'WidgetProperty'
+    this.variablePrefix = 'prop'
+  }
+
+  bind(cThis) {
+    return new CLCUIWidgetPropertyBinding(cThis, this)
   }
 }
 
@@ -223,7 +257,6 @@ class CLCUIWidgetStyleProperty extends CLCUIString {
   constructor() {
     super('LCUI_Style')
     this.alias = 'WidgetStyleProperty'
-    this.funcSetStyle = null
   }
 
   bind(cThis) {
@@ -259,6 +292,7 @@ class CLCUIObject extends CObject {
     super(decl, name, meta)
     // class name in C
     this.cClassName = 'Object'
+    this.extra.widgetClassName = null
   }
 }
 
@@ -369,6 +403,7 @@ const types = [
   new CLCUIWidgetStyleProperty(),
   new CLCUIWidgetPrototype(),
   new CLCUIWidgetEvent(),
+  new CLCUIWidgetProperty(),
   new CLCUIWidget()
 ]
 

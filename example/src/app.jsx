@@ -44,7 +44,7 @@ class MyApp extends App {
   }
 
   onBtnChangeClick() {
-    //this.state.text = this.refs.input.value
+    this.state.text = this.refs.input.value
   }
 
   onBtnMinusClick() {

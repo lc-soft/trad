@@ -42,14 +42,14 @@ struct ProgressClassRec_ {
 };
 
 
-static void Progress_Destructor(LCUI_Widget);
 static void Progress_Constructor(LCUI_Widget);
+static LCUI_Widget Progress_Template(LCUI_Widget);
+static void Progress_Destructor(LCUI_Widget);
 static void Progress_InitProps(Progress);
 static void Progress_DestroyProps(Progress);
 static void Progress_BindProperty(LCUI_Widget, const char*, LCUI_Object);
 static void Progress_OnPropTotalChanged(LCUI_Object, void*);
 static void Progress_OnPropValueChanged(LCUI_Object, void*);
-static LCUI_Widget Progress_Template(LCUI_Widget);
 
 const char *progress_css = ".progress {"
 "  height: 16px;"
@@ -60,14 +60,6 @@ const char *progress_css = ".progress {"
 "  background-color: #007bff;"
 "}";
 ProgressClassRec progress_class;
-
-static void Progress_Destructor(LCUI_Widget w)
-{
-        Progress _this;
-
-        _this = Widget_GetData(w, progress_class.proto);
-        Progress_DestroyProps(_this);
-}
 
 static void Progress_Constructor(LCUI_Widget w)
 {
@@ -81,6 +73,62 @@ static void Progress_Constructor(LCUI_Widget w)
         Progress_InitProps(_this);
         Progress_Template(w);
         Progress_Update(w);
+}
+
+void Progress_Update(LCUI_Widget w)
+{
+        Progress _this;
+        LCUI_ObjectRec _num;
+        LCUI_Object _num_1;
+        LCUI_Object _num_2;
+        LCUI_Object percentage;
+        LCUI_ObjectRec _str;
+        LCUI_Object percentage_str;
+        LCUI_Object _str_1;
+
+        _this = Widget_GetData(w, progress_class.proto);
+        if (_this->props_changes < 1)
+        {
+                return;
+        }
+        _this->props_changes = 0;
+        Number_Init(&_num, 100);
+        _num_1 = Object_Operate(_this->props.value, "*", &_num);
+        _num_2 = Object_Operate(_num_1, "/", _this->props.total);
+        percentage = Object_Duplicate(_num_2);
+        String_Init(&_str, "%");
+        percentage_str = Object_ToString(percentage);
+        _str_1 = Object_Operate(percentage_str, "+", &_str);
+        Widget_SetStyleString(_this->refs.bar, "width", _str_1->value.string);
+
+        Object_Destroy(&_num);
+        Object_Delete(_num_1);
+        Object_Delete(_num_2);
+        Object_Delete(percentage);
+        Object_Destroy(&_str);
+        Object_Delete(percentage_str);
+        Object_Delete(_str_1);
+}
+
+static LCUI_Widget Progress_Template(LCUI_Widget w)
+{
+        Progress _this;
+
+        _this = Widget_GetData(w, progress_class.proto);
+        Widget_AddClass(w, "progress");
+        _this->refs.bar = LCUIWidget_New(NULL);
+        Widget_AddClass(_this->refs.bar, "progress-bar");
+        Widget_Append(w, _this->refs.bar);
+
+        return w;
+}
+
+static void Progress_Destructor(LCUI_Widget w)
+{
+        Progress _this;
+
+        _this = Widget_GetData(w, progress_class.proto);
+        Progress_DestroyProps(_this);
 }
 
 static void Progress_InitProps(Progress _this)
@@ -137,54 +185,6 @@ static void Progress_OnPropValueChanged(LCUI_Object value, void *arg)
         _this = Widget_GetData(w, progress_class.proto);
         ++_this->props_changes;
         Widget_AddTask(w, LCUI_WTASK_USER);
-}
-
-static LCUI_Widget Progress_Template(LCUI_Widget w)
-{
-        Progress _this;
-
-        _this = Widget_GetData(w, progress_class.proto);
-        Widget_AddClass(w, "progress");
-        _this->refs.bar = LCUIWidget_New(NULL);
-        Widget_AddClass(_this->refs.bar, "progress-bar");
-        Widget_Append(w, _this->refs.bar);
-
-        return w;
-}
-
-void Progress_Update(LCUI_Widget w)
-{
-        Progress _this;
-        LCUI_ObjectRec _num;
-        LCUI_Object _num_1;
-        LCUI_Object _num_2;
-        LCUI_Object percentage;
-        LCUI_ObjectRec _str;
-        LCUI_Object percentage_str;
-        LCUI_Object _str_1;
-
-        _this = Widget_GetData(w, progress_class.proto);
-        if (_this->props_changes < 1)
-        {
-                return;
-        }
-        _this->props_changes = 0;
-        Number_Init(&_num, 100);
-        _num_1 = Object_Operate(_this->props.value, "*", &_num);
-        _num_2 = Object_Operate(_num_1, "/", _this->props.total);
-        percentage = Object_Duplicate(_num_2);
-        String_Init(&_str, "%");
-        percentage_str = Object_ToString(percentage);
-        _str_1 = Object_Operate(percentage_str, "+", &_str);
-        Widget_SetStyleString(_this->refs.bar, "width", _str_1->value.string);
-
-        Object_Destroy(&_num);
-        Object_Delete(_num_1);
-        Object_Delete(_num_2);
-        Object_Delete(percentage);
-        Object_Destroy(&_str);
-        Object_Delete(percentage_str);
-        Object_Delete(_str_1);
 }
 
 LCUI_Widget Progress_New()

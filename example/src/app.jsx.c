@@ -55,18 +55,18 @@ struct MyAppEventWrapperRec_ {
 };
 
 
-static void MyApp_Destructor(MyApp);
 static void MyApp_Constructor(MyApp);
+static LCUI_Widget MyApp_Template(MyApp);
+static void MyApp_OnBtnChangeClick(MyApp, LCUI_WidgetEvent);
+static void MyApp_OnBtnMinusClick(MyApp, LCUI_WidgetEvent);
+static void MyApp_OnBtnPlusClick(MyApp, LCUI_WidgetEvent);
+static void MyApp_Destructor(MyApp);
 static void MyApp_InitState(MyApp);
 static void MyApp_DestroyState(MyApp);
 static void MyApp_OnStateTextChanged(LCUI_Object, void*);
 static void MyApp_OnStateInputChanged(LCUI_Object, void*);
 static void MyApp_OnStateValueChanged(LCUI_Object, void*);
 static void MyApp_OnStateTotalChanged(LCUI_Object, void*);
-static void MyApp_OnBtnChangeClick(MyApp, LCUI_WidgetEvent);
-static void MyApp_OnBtnMinusClick(MyApp, LCUI_WidgetEvent);
-static void MyApp_OnBtnPlusClick(MyApp, LCUI_WidgetEvent);
-static LCUI_Widget MyApp_Template(MyApp);
 static void MyApp_UpdateTextview2Text(MyApp);
 static void MyApp_DispathWidgetEvent(LCUI_Widget, LCUI_WidgetEvent, void*);
 static LCUI_Object MyApp_ComputeExpression6(MyApp);
@@ -105,12 +105,6 @@ const char *app_css = "root {"
 "    margin: 0 4px;"
 "}";
 
-static void MyApp_Destructor(MyApp _this)
-{
-        MyApp_DestroyState(_this);
-        MyApp_DestroyComputedProps(_this);
-}
-
 static void MyApp_Constructor(MyApp _this)
 {
         LCUI_Init();
@@ -120,99 +114,6 @@ static void MyApp_Constructor(MyApp _this)
         LCUI_LoadCSSString(app_css, __FILE__);
         MyApp_Template(_this);
         MyApp_Update(_this);
-}
-
-static void MyApp_InitState(MyApp _this)
-{
-        _this->state_changes = 1;
-        String_Init(&_this->state.text, "World");
-        String_Init(&_this->state.input, "World");
-        Number_Init(&_this->state.value, 50);
-        Number_Init(&_this->state.total, 100);
-        Object_Watch(&_this->state.text, MyApp_OnStateTextChanged, _this);
-        Object_Watch(&_this->state.input, MyApp_OnStateInputChanged, _this);
-        Object_Watch(&_this->state.value, MyApp_OnStateValueChanged, _this);
-        Object_Watch(&_this->state.total, MyApp_OnStateTotalChanged, _this);
-}
-
-static void MyApp_DestroyState(MyApp _this)
-{
-        Object_Destroy(&_this->state.text);
-        Object_Destroy(&_this->state.input);
-        Object_Destroy(&_this->state.value);
-        Object_Destroy(&_this->state.total);
-}
-
-static void MyApp_OnStateTextChanged(LCUI_Object text, void *arg)
-{
-        MyApp _this;
-
-        _this = arg;
-        ++_this->state_changes;
-}
-
-static void MyApp_OnStateInputChanged(LCUI_Object input, void *arg)
-{
-        MyApp _this;
-
-        _this = arg;
-        ++_this->state_changes;
-}
-
-static void MyApp_OnStateValueChanged(LCUI_Object value, void *arg)
-{
-        MyApp _this;
-
-        _this = arg;
-        ++_this->state_changes;
-}
-
-static void MyApp_OnStateTotalChanged(LCUI_Object total, void *arg)
-{
-        MyApp _this;
-
-        _this = arg;
-        ++_this->state_changes;
-}
-
-static void MyApp_OnBtnChangeClick(MyApp _this, LCUI_WidgetEvent e)
-{
-}
-
-static void MyApp_OnBtnMinusClick(MyApp _this, LCUI_WidgetEvent e)
-{
-        LCUI_ObjectRec _num;
-
-        Number_Init(&_num, 0);
-        if (Object_Compare(&_this->state.value, &_num) > 0)
-        {
-                LCUI_ObjectRec _num;
-
-                Number_Init(&_num, 10);
-                Object_Operate(&_this->state.value, "-=", &_num);
-
-                Object_Destroy(&_num);
-        }
-
-        Object_Destroy(&_num);
-}
-
-static void MyApp_OnBtnPlusClick(MyApp _this, LCUI_WidgetEvent e)
-{
-        LCUI_ObjectRec _num;
-
-        Number_Init(&_num, 100);
-        if (Object_Compare(&_this->state.value, &_num) < 0)
-        {
-                LCUI_ObjectRec _num;
-
-                Number_Init(&_num, 10);
-                Object_Operate(&_this->state.value, "+=", &_num);
-
-                Object_Destroy(&_num);
-        }
-
-        Object_Destroy(&_num);
 }
 
 static LCUI_Widget MyApp_Template(MyApp _this)
@@ -272,6 +173,110 @@ static LCUI_Widget MyApp_Template(MyApp _this)
         Widget_Append(LCUIWidget_GetRoot(), _this->view);
 
         return _this->view;
+}
+
+static void MyApp_OnBtnChangeClick(MyApp _this, LCUI_WidgetEvent e)
+{
+        LCUI_Object prop_value;
+
+        prop_value = TextEdit_GetProperty(_this->refs.input, "value");
+	prop_value = Object_ToString(prop_value);
+        Object_Operate(&_this->state.text, "=", prop_value);
+}
+
+static void MyApp_OnBtnMinusClick(MyApp _this, LCUI_WidgetEvent e)
+{
+        LCUI_ObjectRec _num;
+
+        Number_Init(&_num, 0);
+        if (Object_Compare(&_this->state.value, &_num) > 0)
+        {
+                LCUI_ObjectRec _num;
+
+                Number_Init(&_num, 10);
+                Object_Operate(&_this->state.value, "-=", &_num);
+
+                Object_Destroy(&_num);
+        }
+
+        Object_Destroy(&_num);
+}
+
+static void MyApp_OnBtnPlusClick(MyApp _this, LCUI_WidgetEvent e)
+{
+        LCUI_ObjectRec _num;
+
+        Number_Init(&_num, 100);
+        if (Object_Compare(&_this->state.value, &_num) < 0)
+        {
+                LCUI_ObjectRec _num;
+
+                Number_Init(&_num, 10);
+                Object_Operate(&_this->state.value, "+=", &_num);
+
+                Object_Destroy(&_num);
+        }
+
+        Object_Destroy(&_num);
+}
+
+static void MyApp_Destructor(MyApp _this)
+{
+        MyApp_DestroyState(_this);
+        MyApp_DestroyComputedProps(_this);
+}
+
+static void MyApp_InitState(MyApp _this)
+{
+        _this->state_changes = 1;
+        String_Init(&_this->state.text, "World");
+        String_Init(&_this->state.input, "World");
+        Number_Init(&_this->state.value, 50);
+        Number_Init(&_this->state.total, 100);
+        Object_Watch(&_this->state.text, MyApp_OnStateTextChanged, _this);
+        Object_Watch(&_this->state.input, MyApp_OnStateInputChanged, _this);
+        Object_Watch(&_this->state.value, MyApp_OnStateValueChanged, _this);
+        Object_Watch(&_this->state.total, MyApp_OnStateTotalChanged, _this);
+}
+
+static void MyApp_DestroyState(MyApp _this)
+{
+        Object_Destroy(&_this->state.text);
+        Object_Destroy(&_this->state.input);
+        Object_Destroy(&_this->state.value);
+        Object_Destroy(&_this->state.total);
+}
+
+static void MyApp_OnStateTextChanged(LCUI_Object text, void *arg)
+{
+        MyApp _this;
+
+        _this = arg;
+        ++_this->state_changes;
+}
+
+static void MyApp_OnStateInputChanged(LCUI_Object input, void *arg)
+{
+        MyApp _this;
+
+        _this = arg;
+        ++_this->state_changes;
+}
+
+static void MyApp_OnStateValueChanged(LCUI_Object value, void *arg)
+{
+        MyApp _this;
+
+        _this = arg;
+        ++_this->state_changes;
+}
+
+static void MyApp_OnStateTotalChanged(LCUI_Object total, void *arg)
+{
+        MyApp _this;
+
+        _this = arg;
+        ++_this->state_changes;
 }
 
 static void MyApp_UpdateTextview2Text(MyApp _this)

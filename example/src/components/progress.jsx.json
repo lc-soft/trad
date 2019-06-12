@@ -23,13 +23,25 @@
       "superClass": "lcui\\Widget",
       "body": [
         {
-          "name": "destructor",
+          "name": "constructor",
           "type": "method",
           "isStatic": false,
           "params": []
         },
         {
-          "name": "constructor",
+          "name": "update",
+          "type": "method",
+          "isStatic": false,
+          "params": []
+        },
+        {
+          "name": "template",
+          "type": "method",
+          "isStatic": false,
+          "params": []
+        },
+        {
+          "name": "destructor",
           "type": "method",
           "isStatic": false,
           "params": []
@@ -102,18 +114,6 @@
               "objectType": "void"
             }
           ]
-        },
-        {
-          "name": "template",
-          "type": "method",
-          "isStatic": false,
-          "params": []
-        },
-        {
-          "name": "update",
-          "type": "method",
-          "isStatic": false,
-          "params": []
         },
         {
           "name": "new",

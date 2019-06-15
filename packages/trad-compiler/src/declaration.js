@@ -10,9 +10,7 @@ class VariableDeclarationParser extends Parser {
     const prefix = type ? type.variablePrefix : initValue.type
     const name = block.allocObjectName(baseName ? baseName : `_${toVariableName(prefix, '_')}`)
 
-    if (!initValue.typeDeclaration) {
-      debugger
-    }
+    // FIXME: It doesn't tell which line of code is wrong, we need friendly error output
     assert(initValue.typeDeclaration, `unable to infer the type of ${initValue.type}`)
     do {
       variable = block.createObject(type, name)

@@ -1,2 +1,2 @@
 #!/usr/bin/env node
-require('../src/tradc.js')
+require('../packages/trad-cli/tradc')

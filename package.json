@@ -11,6 +11,7 @@
   },
   "scripts": {
     "tradc": "node ./bin/tradc",
+    "build:example": "node ./bin/tradc example/src/app.jsx",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

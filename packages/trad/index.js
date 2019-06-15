@@ -1,3 +1,5 @@
+// FIXME: This file includes too many class declaration, needs to refactor
+
 const assert = require('assert')
 const pathModule = require('path')
 const { capitalize, toVariableName } = require('../trad-utils')
@@ -199,6 +201,7 @@ class CIfStatement extends CStatement {
     super('if')
 
     this.test = test
+    this.meta.alternate = null
     if (consequent) {
       this.consequent = consequent
     } else {
@@ -207,16 +210,38 @@ class CIfStatement extends CStatement {
     this.append(this.consequent)
   }
 
+  set alternate(alternate) {
+    this.meta.alternate = alternate
+    this.append(alternate)
+  }
+
+  get alternate() {
+    return this.meta.alternate
+  }
+
+  get isAlternate() {
+    return this.parent instanceof CIfStatement
+  }
+
   define() {
+    const lines = []
     let test = this.test
 
     if (typeof test !== 'string') {
       test = this.test.define().slice(0, -1)
     }
-    return [
-      `if (${test})`,
-      this.consequent.define()
-    ]
+    if (test) {
+      lines.push(`${this.isAlternate ? 'else ' : ''}if (${test})`)
+    }
+    lines.push(this.consequent.define())
+    if (this.alternate) {
+      if (this.alternate instanceof CIfStatement) {
+        lines.push(this.alternate.define())
+      } else {
+        lines.push('else', this.alternate.define())
+      }
+    }
+    return lines
   }
 }
 
@@ -878,7 +903,7 @@ class CObject extends CIdentifier {
     if (this.finalTypeDeclaration instanceof CClass) {
       this.binding = this.finalTypeDeclaration.bind(this)
     } else {
-      this.binding = false
+      this.binding = null
     }
     // Object extra info
     this.extra = {}

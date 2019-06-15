@@ -33,10 +33,20 @@ class IfStatementParser extends Parser {
   parse(input) {
     const stat = new trad.CIfStatement(this.compiler.parse(input.test))
 
-    this.compiler.block.append(stat)
+    if (!stat.isAlternate) {
+      this.compiler.block.append(stat)
+    }
     this.context = this.compiler.context
     this.context.data = stat
-    stat.consequent = this.compiler.parse(input.consequent)
+    stat.consequent = this.compiler.parseWithContext(input.consequent)
+    if (input.alternate) {
+      stat.alternate = this.compiler.parseWithContext(input.alternate)
+    }
+    // Move to the after of the temporary variables generated when parsing test of if statement
+    if (!stat.isAlternate) {
+      this.compiler.block.append(stat)
+    }
+    return stat
   }
 }
 

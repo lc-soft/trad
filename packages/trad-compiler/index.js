@@ -96,6 +96,15 @@ class Compiler {
     return ''
   }
 
+  parseWithContext(input) {
+    let result
+
+    this.beginParse(input)
+    result = this.parse(input)
+    this.endParse()
+    return result
+  }
+
   beginParse(input) {
     const context = new CompilerContext(input)
 
@@ -114,13 +123,7 @@ class Compiler {
   }
 
   parseChildren(children) {
-    const results = children.map((input) => {
-      this.beginParse(input)
-      const result = this.parse(input)
-      this.endParse()
-      return result
-    })
-    return results
+    return children.map(input => this.parseWithContext(input))
   }
 
   parseProgram(input, file) {

@@ -19,7 +19,14 @@ class MemberExpressionParser extends Parser {
     if (!obj) {
       assert(obj, `${input.property.name} is undefined`)
     }
-    return obj.selectProperty(input.property.name)
+
+    const prop = obj.selectProperty(input.property.name)
+
+    // FIXME: This is a temporary solution, we need to rethink what time to call binding.get () method
+    if (prop && prop.binding) {
+      return prop.binding.get(this.block)
+    }
+    return prop
   }
 }
 

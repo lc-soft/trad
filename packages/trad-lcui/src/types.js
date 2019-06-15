@@ -200,15 +200,16 @@ class CLCUIWidgetPrototype extends CType {
 }
 
 class CLCUIWidgetPropertyBinding extends CBinding {
-  get() {
+  // FIXME: This implementation is not elegant enough, we need to redesign the C object binding workflow
+  get(block) {
     const w = new CLCUIObject('Widget', 'w')
     const cstr = new CObject('const char', 'str', { isPointer: true })
     const funcName = `${this.cThis.parent.extra.widgetClassName}_GetProperty`
     const func = new CFunction(funcName, [w, cstr], declarations.Object.typedefPointer)
-    const block = this.cThis.closest(stat => stat instanceof CBlock)
     const name = block.allocObjectName(`prop_${this.cThis.name}`)
     const prop = new CLCUIObject(null, name, { isAllocateFromStack: false })
 
+    prop.isDeletable = true
     block.append([
       prop,
       new CAssignmentExpression(prop,
@@ -245,6 +246,7 @@ class CLCUIWidgetStylePropertyBinding extends CBinding {
     const widget = this.cThis.closest(isWidget)
 
     if (operator === '=') {
+      assert(right.id, 'the right value must be a named variable')
       return new CCallExpression(this.funcSetStyle, widget,
         convertPascalNaming(this.cThis.name),
         right.selectProperty('value').selectProperty('string'))

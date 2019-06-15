@@ -12,8 +12,14 @@ root {
     padding: 5px;
     margin: -5px -5px 10px -5px;
 }
-.item {
-    margin-bottom: 15px;
+.form-control textedit:focus {
+    z-index: 1;
+}
+.form-control button {
+    margin-left: -1px;
+}
+.mb-2 {
+    margin-bottom: 16px;
 }
 .button-group {
     display: flex;

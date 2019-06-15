@@ -85,6 +85,11 @@ void Progress_Update(LCUI_Widget w)
         LCUI_ObjectRec _str;
         LCUI_Object percentage_str;
         LCUI_Object _str_1;
+        LCUI_ObjectRec _num_3;
+        LCUI_ObjectRec _num_4;
+        LCUI_ObjectRec _num_5;
+        LCUI_ObjectRec _num_6;
+        LCUI_ObjectRec _num_7;
 
         _this = Widget_GetData(w, progress_class.proto);
         if (_this->props_changes < 1)
@@ -100,6 +105,65 @@ void Progress_Update(LCUI_Widget w)
         percentage_str = Object_ToString(percentage);
         _str_1 = Object_Operate(percentage_str, "+", &_str);
         Widget_SetStyleString(_this->refs.bar, "width", _str_1->value.string);
+        Number_Init(&_num_3, 30);
+        Number_Init(&_num_4, 60);
+        Number_Init(&_num_5, 70);
+        Number_Init(&_num_6, 90);
+        Number_Init(&_num_7, 100);
+        if (Object_Compare(percentage, &_num_3) < 0)
+        {
+                LCUI_ObjectRec _str;
+
+                String_Init(&_str, "#d95c5c");
+                Widget_SetStyleString(_this->refs.bar, "background-color", _str.value.string);
+
+                Object_Destroy(&_str);
+        }
+        else if (Object_Compare(percentage, &_num_4) < 0)
+        {
+                LCUI_ObjectRec _str;
+
+                String_Init(&_str, "#efbc72");
+                Widget_SetStyleString(_this->refs.bar, "background-color", _str.value.string);
+
+                Object_Destroy(&_str);
+        }
+        else if (Object_Compare(percentage, &_num_5) < 0)
+        {
+                LCUI_ObjectRec _str;
+
+                String_Init(&_str, "#ddc928");
+                Widget_SetStyleString(_this->refs.bar, "background-color", _str.value.string);
+
+                Object_Destroy(&_str);
+        }
+        else if (Object_Compare(percentage, &_num_6) < 0)
+        {
+                LCUI_ObjectRec _str;
+
+                String_Init(&_str, "#b4d95c");
+                Widget_SetStyleString(_this->refs.bar, "background-color", _str.value.string);
+
+                Object_Destroy(&_str);
+        }
+        else if (Object_Compare(percentage, &_num_7) < 0)
+        {
+                LCUI_ObjectRec _str;
+
+                String_Init(&_str, "#66da81");
+                Widget_SetStyleString(_this->refs.bar, "background-color", _str.value.string);
+
+                Object_Destroy(&_str);
+        }
+        else
+        {
+                LCUI_ObjectRec _str;
+
+                String_Init(&_str, "#21ba45");
+                Widget_SetStyleString(_this->refs.bar, "background-color", _str.value.string);
+
+                Object_Destroy(&_str);
+        }
 
         Object_Destroy(&_num);
         Object_Delete(_num_1);
@@ -108,6 +172,11 @@ void Progress_Update(LCUI_Widget w)
         Object_Destroy(&_str);
         Object_Delete(percentage_str);
         Object_Delete(_str_1);
+        Object_Destroy(&_num_3);
+        Object_Destroy(&_num_4);
+        Object_Destroy(&_num_5);
+        Object_Destroy(&_num_6);
+        Object_Destroy(&_num_7);
 }
 
 static LCUI_Widget Progress_Template(LCUI_Widget w)

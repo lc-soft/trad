@@ -94,8 +94,14 @@ const char *app_css = "root {"
 "    padding: 5px;"
 "    margin: -5px -5px 10px -5px;"
 "}"
-".item {"
-"    margin-bottom: 15px;"
+".form-control textedit:focus {"
+"    z-index: 1;"
+"}"
+".form-control button {"
+"    margin-left: -1px;"
+"}"
+".mb-2 {"
+"    margin-bottom: 16px;"
 "}"
 ".button-group {"
 "    display: flex;"
@@ -127,11 +133,12 @@ static LCUI_Widget MyApp_Template(MyApp _this)
         _this->view = LCUIWidget_New(NULL);
         Widget_AddClass(_this->view, "example");
         _this->refs._textview = LCUIWidget_New("textview");
-        Widget_AddClass(_this->refs._textview, "item");
+        Widget_AddClass(_this->refs._textview, "mb-2");
         widget = LCUIWidget_New(NULL);
         Widget_AddClass(widget, "form-control");
         _this->refs.input = LCUIWidget_New("textedit");
         Widget_BindProperty(_this->refs.input, "value", &_this->state.input);
+        Widget_SetAttribute(_this->refs.input, "placeholder", "Input text...");
         _this->refs._button = LCUIWidget_New("button");
         _ev = malloc(sizeof(MyAppEventWrapperRec));
         _ev->_this = _this;
@@ -142,9 +149,9 @@ static LCUI_Widget MyApp_Template(MyApp _this)
         Widget_Append(widget, _this->refs.input);
         Widget_Append(widget, _this->refs._button);
         _this->refs._textview_1 = LCUIWidget_New("textview");
-        Widget_AddClass(_this->refs._textview_1, "item");
+        Widget_AddClass(_this->refs._textview_1, "mb-2");
         _this->refs._progress = LCUIWidget_New("progress");
-        Widget_AddClass(_this->refs._progress, "item");
+        Widget_AddClass(_this->refs._progress, "mb-2");
         Widget_BindProperty(_this->refs._progress, "value", &_this->state.value);
         Widget_BindProperty(_this->refs._progress, "total", &_this->state.total);
         widget_1 = LCUIWidget_New(NULL);
@@ -178,10 +185,15 @@ static LCUI_Widget MyApp_Template(MyApp _this)
 static void MyApp_OnBtnChangeClick(MyApp _this, LCUI_WidgetEvent e)
 {
         LCUI_Object prop_value;
+        LCUI_Object _str;
 
         prop_value = TextEdit_GetProperty(_this->refs.input, "value");
-	prop_value = Object_ToString(prop_value);
-        Object_Operate(&_this->state.text, "=", prop_value);
+        Object_ToString(prop_value);
+        _str = Object_ToString(prop_value);
+        Object_Operate(&_this->state.text, "=", _str);
+
+        Object_Delete(prop_value);
+        Object_Delete(_str);
 }
 
 static void MyApp_OnBtnMinusClick(MyApp _this, LCUI_WidgetEvent e)
@@ -230,7 +242,7 @@ static void MyApp_InitState(MyApp _this)
 {
         _this->state_changes = 1;
         String_Init(&_this->state.text, "World");
-        String_Init(&_this->state.input, "World");
+        String_Init(&_this->state.input, "Trad");
         Number_Init(&_this->state.value, 50);
         Number_Init(&_this->state.total, 100);
         Object_Watch(&_this->state.text, MyApp_OnStateTextChanged, _this);

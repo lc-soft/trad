@@ -59,8 +59,15 @@ const install = Compiler => class LCUIBaseParser extends Compiler {
     if (left && types.isObject(left)) {
       let right = this.parse(input.right)
 
-      right = types.toObject(right)
-      this.block.append(left.binding.operate('=', right.binding.get()))
+      // if right value is not a named variable
+      if (!right.id) {
+        right = declareObject(this, null, types.toObject(right))
+      } else if (right instanceof trad.CCallExpression) {
+        right = declareObject(this, null, right)
+      } else {
+        right = types.toObject(right)
+      }
+      this.block.append(left.binding.operate('=', right))
       return left
     }
     return super.parse(input)

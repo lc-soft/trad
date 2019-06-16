@@ -10,7 +10,7 @@ Trad is:
 - **Optimized for UI:** Simplify your development work with syntax features specialized around the needs of user interface creation.
 - **Easy to use:** Designed for C developers' usage habits, you can get started quickly without having to spend a lot of time reading complex documents.
 - **Not Productive:** The current version of the architecture design has not been stable and is only used for technical communication, not for production.
-- **Community-driven:** The source code is small and easy to read and modify. Anyone can participate in the design of language specifications, and this project development status is affected by community activity.
+- **Community-driven:** small size, easy to read and modify. Anyone can participate in the design of language specifications, and this project development status is affected by community activity.
 - **Cross platform:** Support for Linux and Windows desktop platforms, but does not support Mac OS and mobile platforms
 
 Trad's syntax is based on JavaScript, it has good compatibility with existing JavaScript development tools/editor extensions, and it won't change much for a long time, so you can temporarily write it as JavaScript.
@@ -34,7 +34,7 @@ Compile to binary file:
 
 **Note:** The UI layer of the Trad application is powered by [LCUI](https://github.com/lc-soft/LCUI) and you should install it before compiling.
 
-The current version only implements the features required for the smallest sample application and cannot be applied to actual projects. Please wait for subsequent updates.
+The current version only implements the features required for the smallest sample application and cannot be applied to actual projects. Please wait for future updates.
 
 ## Contribute
 
@@ -44,7 +44,7 @@ There are many ways to [contribute](CONTRIBUTING.md) to Trad.
 - Vote and discuss participation in feature requests.
 - Review the [source code changes](https://github.com/lc-soft/trad/pulls).
 - [Contribute bug fixes](CONTRIBUTING.md).
-- Read the [language specification](docs/README.md)
+- Read the [language specification](docs/README.md).
 
  Trad has adopted the code of conduct defined by the Contributor Covenant. This document is used across many open source communities, and we think it articulates our values well. For more, see the [Code of Conduct](CODE_OF_CONDUCT.md).
 
@@ -64,7 +64,7 @@ The main tasks are listed below, for detailed work plans and progress please see
 - LCUI extension
   - Redesign language binding of LCUI
   - Implement the Widget.render() method
-  - `@uithread` decorator
+  - `@UIThread` decorator
 - Tool chain
   - Compiler
     - Command-line interface

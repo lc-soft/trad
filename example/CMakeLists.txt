@@ -10,7 +10,11 @@ configure_file(
 )
 
 link_directories("${PROJECT_SOURCE_DIR}/vendor/lib/x64-windows")
-include_directories("${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/../../LCUI/include")
+include_directories(
+    "${PROJECT_SOURCE_DIR}/include"
+    "${PROJECT_SOURCE_DIR}/../../LCUI/include"
+    "${PROJECT_SOURCE_DIR}/vendor/include"
+)
 
 aux_source_directory(src DIR_SRC)
 aux_source_directory(src/components DIR_COMP)

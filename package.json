@@ -1,28 +1,37 @@
 {
-  "name": "trad",
+  "name": "tradlang",
   "bin": {
     "tradc": "./bin/tradc"
   },
   "version": "0.1.0",
-  "description": "",
+  "description": "A lightweight and C based language for building user interfaces.",
   "main": "index.js",
-  "directories": {
-    "example": "example"
-  },
   "scripts": {
     "tradc": "node ./bin/tradc",
     "build:example": "node ./bin/tradc example/src/app.jsx",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "files": [
+    "packages",
+    "bin"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/lc-soft/trad.git"
   },
-  "author": "lc-soft",
-  "license": "GPL-3.0-or-later",
+  "author": "lc-soft <root@lc-soft.io>",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/lc-soft/trad/issues"
   },
+  "keywords": [
+    "trad",
+    "jsx",
+    "c",
+    "compiler",
+    "language",
+    "javascript"
+  ],
   "homepage": "https://github.com/lc-soft/trad#readme",
   "dependencies": {
     "acorn": "^6.1.1",

@@ -13,6 +13,7 @@
         "ecmaVersion": 2018
     },
     "rules": {
+        "no-prototype-builtins": 0,
         "linebreak-style": ["error", "windows"],
         "semi": ["error", "never"],
         "comma-dangle": ["error", "never"],

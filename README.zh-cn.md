@@ -17,7 +17,7 @@ Trad 的语法基于 JavaScript，它与现有的 JavaScript 开发工具/编辑
 
 ## 安装
 
-    npm install -g trad
+    npm install -g tradlang
 
 ## 使用
 

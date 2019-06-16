@@ -19,7 +19,7 @@ Trad's syntax is based on JavaScript, it has good compatibility with existing Ja
 
 ## Installing
 
-    npm install -g trad
+    npm install -g tradlang
 
 ## Usage
 

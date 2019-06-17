@@ -2,6 +2,8 @@
 
 ## Introduction
 
+([中文](README.zh-cn.md)/**English**)
+
 **A lightweight and C based language for building user interfaces.**
 
 Trad is:
@@ -53,7 +55,7 @@ There are many ways to [contribute](CONTRIBUTING.md) to Trad.
 The main tasks are listed below, for detailed work plans and progress please see the [project boards](https://github.com/lc-soft/trad/projects).
 
 - Core
-  - basic syntax
+  - Basic syntax
   - Basic data type
   - Compatible with C syntax
   - Template literals (Template strings)

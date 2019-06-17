@@ -2,6 +2,8 @@
 
 ## 介绍
 
+(**中文**/[English](README.md))
+
 Trad 是一个专为简化 C 开发而设计的编程语言，它：
 
 - **基于 C：** 经编译器编译后能得到干净可读的标准 C 代码，其与 C 的关系就像 TypeScript 与 JavaScript 一样

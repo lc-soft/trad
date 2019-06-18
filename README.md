@@ -76,7 +76,7 @@ The main tasks are listed below, for detailed work plans and progress please see
   - Building tool
 - Documention
   - FAQ
-  - Lnaguage specification
+  - Language specification
   - Tutorial
 
 ## License

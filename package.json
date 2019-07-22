@@ -36,6 +36,7 @@
   "dependencies": {
     "acorn": "^6.1.1",
     "acorn-jsx": "^5.0.1",
+    "commander": "^2.20.0",
     "merge": "^1.2.1"
   },
   "devDependencies": {

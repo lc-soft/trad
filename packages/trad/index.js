@@ -694,7 +694,7 @@ class CMethod extends CFunction {
   }
 
   get cName() {
-    const name = `${this.parent.className}_${capitalize(this.methodName)}`
+    const name = `${this.parent.className}_${this.isStatic ? '_' : ''}${capitalize(this.methodName)}`
 
     if (this.parent.useNamespaceForMethods && this.parent.namespace) {
       return `${this.parent.namespace}_${name}`

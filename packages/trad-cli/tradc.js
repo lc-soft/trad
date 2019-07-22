@@ -1,9 +1,9 @@
 const { compile } = require('./index')
 const program = require('commander')
-const pjson = require('../../package.json')
+const version = require('../../package.json').version
 
 program
-  .version(pjson.version)
+  .version(version)
   .arguments('[file]')
   .description('Compile [file] to C source file.')
   .action(file => sourceFile = file)

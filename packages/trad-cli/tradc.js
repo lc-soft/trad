@@ -1,7 +1,18 @@
 const { compile } = require('./index')
+const program = require('commander')
+const pjson = require('../../package.json')
 
-// FIXME: Add command-line interfaces
+program
+  .version(pjson.version)
+  .arguments('[file]')
+  .description('Compile [file] to C source file.')
+  .action(file => sourceFile = file)
 
-if (process.argv.length === 3) {
-  compile(process.argv[2])
+program.parse(process.argv)
+
+if (typeof sourceFile === 'undefined') {
+  console.error('no source file given.\n')
+  program.help()
 }
+
+compile(sourceFile)

@@ -14,10 +14,7 @@ To enable us to quickly review and accept your pull requests, always create one 
 
 ### Where to Contribute
 
-Check out the [full issues list](https://github.com/lc-soft/trad/issues) for a list of all potential areas for contributions. Note that just because an issue exists in the repository does not mean we will accept a contribution to the core editor for it. There are several reasons we may not accept a pull request like:
-
-- Performance - One of Visual Studio Code's core values is to deliver a lightweight code editor, that means it should perform well in both real and perceived performance.
-- Architectural - The team and/or feature owner needs to agree with any architectural impact a change may make. Things like new extension APIs must be discussed with and agreed upon by the feature owner.
+Check out the [full issues list](https://github.com/lc-soft/trad/issues) for a list of all potential areas for contributions.
 
 To improve the chances to get a pull request merged you should select an issue that is labelled with the [`help-wanted`](https://github.com/lc-soft/trad/issues?q=is%3Aopen+is%3Aissue+label%3A%22help+wanted%22) or [`bug`](https://github.com/lc-soft/trad/issues?q=is%3Aopen+is%3Aissue+label%3A"bug") labels. If the issue you want to work on is not labelled with help-wanted or bug, you can start a conversation with the issue owner asking whether an external contribution will be considered.
 

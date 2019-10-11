@@ -2,6 +2,7 @@ const fs = require('fs')
 const path = require('path')
 const acorn = require('acorn')
 const acornJSX = require('acorn-jsx')
+const Logger = require('./src/logger')
 const TradJSON = require('./src/json')
 const { CBlock, CProgram } = require('../trad')
 const { LiteralParser } = require('./src/literal')
@@ -44,12 +45,16 @@ class Compiler {
     this.eol = '\n'
     this.tabSize = 8
     this.ports = options.ports
+    this.logger = options.logger
     // Parser context stack
     this.contexts = []
     this.contextIndex = -1
     this.program = null
     this.handlers = null
     this.options = options
+    if (!this.logger) {
+      this.logger = new Logger()
+    }
   }
 
   get context() {
@@ -100,7 +105,16 @@ class Compiler {
     let result
 
     this.beginParse(input)
-    result = this.parse(input)
+    try {
+      result = this.parse(input)
+    } catch (err) {
+      this.logger.record({
+        file: this.program.path,
+        type: 'error',
+        message: err.message,
+        location: this.context.node.loc.start
+      })
+    }
     this.endParse()
     return result
   }
@@ -120,6 +134,14 @@ class Compiler {
 
   duplicate() {
     return new this.constructor(this.options)
+  }
+
+  warn(message) {
+    this.logger.push({
+      rule,
+      message,
+      location: this.context.node.loc.start
+    })
   }
 
   parseChildren(children) {
@@ -163,22 +185,36 @@ class Compiler {
   }
 
   compile(fileName) {
+    let input
+    let hasError = false
     const filePath = path.resolve(fileName)
     const sourceFilePath = `${filePath}.c`
     const headerFilePath = `${filePath}.h`
     const exportFilePath = `${filePath}.json`
     const data = fs.readFileSync(filePath, 'utf-8')
     const parser = acorn.Parser.extend(acornJSX())
-    const input = parser.parse(data, { sourceType: 'module' })
-
+    
+    try {
+      input = parser.parse(data, { sourceType: 'module', locations: true })
+    } catch (err) {
+      this.logger.record({
+        type: 'error',
+        file: filePath,
+        message: err.message,
+        location: err.loc
+      })
+      return
+    }
     this.parseProgram(input, filePath)
+    if (this.logger.errors > 0) {
+      return
+    }
     console.log(`output ${sourceFilePath}`)
     fs.writeFileSync(sourceFilePath, this.dumpC())
     console.log(`output ${headerFilePath}`)
     fs.writeFileSync(headerFilePath, this.dumpH())
     console.log(`output ${exportFilePath}`)
     fs.writeFileSync(exportFilePath, this.dumpeJSON())
-
     const stat = fs.statSync(filePath)
     fs.utimesSync(exportFilePath, stat.atime, stat.mtime)
   }
@@ -254,4 +290,4 @@ class Compiler {
   }
 }
 
-module.exports = { Compiler }
+module.exports = { Compiler, Logger }

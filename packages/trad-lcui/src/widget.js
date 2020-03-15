@@ -163,7 +163,13 @@ const install = Compiler => class WidgetClassParser extends Compiler {
       const that = funcUpdate.block.getThis()
       funcUpdate.block.append(this.jsxComputedPropertyMethods.map(name => that.callMethod(name)))
       funcUpdate.block.append(this.jsxTextUpdateMethods.map(name => that.callMethod(name)))
-      constructor.block.append(functions.call(funcUpdate, constructor.widget))
+      constructor.block.append(
+        functions.call(
+          funcUpdate,
+          constructor.widget,
+          new trad.CObject('int', 'LCUI_WTASK_USER')
+        )
+      )
     }
   }
 

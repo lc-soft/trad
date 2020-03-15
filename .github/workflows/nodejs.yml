@@ -35,8 +35,8 @@ jobs:
     - name: Run test
       run: |
         tradc example/src/app.jsx
-        mkdir exmaple/build
-        cd exmaple/build
+        mkdir example/build
+        cd example/build
         cmake ../
         make
       env:

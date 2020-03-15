@@ -1,5 +1,8 @@
 # Trad
 
+[![GitHub Actions](https://github.com/lc-soft/trad/workflows/Node.js%20CI/badge.svg)](https://github.com/lc-soft/trad/actions)
+[![Build Status](https://travis-ci.org/lc-soft/trad.svg?branch=master)](https://travis-ci.org/lc-soft/trad)
+
 ## 介绍
 
 (**中文**/[English](README.md))

@@ -1,5 +1,8 @@
 # Trad
 
+[![GitHub Actions](https://github.com/lc-soft/trad/workflows/Node.js%20CI/badge.svg)](https://github.com/lc-soft/trad/actions)
+[![Build Status](https://travis-ci.org/lc-soft/trad.svg?branch=master)](https://travis-ci.org/lc-soft/trad)
+
 ## Introduction
 
 ([中文](README.zh-cn.md)/**English**)
@@ -48,7 +51,7 @@ There are many ways to [contribute](CONTRIBUTING.md) to Trad.
 - [Contribute bug fixes](CONTRIBUTING.md).
 - Read the [language specification](docs/README.md).
 
- Trad has adopted the code of conduct defined by the Contributor Covenant. This document is used across many open source communities, and we think it articulates our values well. For more, see the [Code of Conduct](CODE_OF_CONDUCT.md).
+Trad has adopted the code of conduct defined by the Contributor Covenant. This document is used across many open source communities, and we think it articulates our values well. For more, see the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Roadmap
 

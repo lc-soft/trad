@@ -33,6 +33,11 @@
     "javascript"
   ],
   "homepage": "https://github.com/lc-soft/trad#readme",
+  "husky": {
+    "hooks": {
+      "commit-msg": "commitlint -e $HUSKY_GIT_PARAMS"
+    }
+  },
   "dependencies": {
     "acorn": "^6.1.1",
     "acorn-jsx": "^5.0.1",
@@ -42,11 +47,15 @@
     "pluralize": "^8.0.0"
   },
   "devDependencies": {
+    "@commitlint/cli": "^8.2.0",
+    "@commitlint/config-conventional": "^8.2.0",
+    "@commitlint/travis-cli": "^8.2.0",
     "eslint": "^5.16.0",
     "eslint-config-airbnb": "^17.1.0",
     "eslint-config-airbnb-base": "^13.1.0",
     "eslint-plugin-import": "^2.17.2",
     "eslint-plugin-jsx-a11y": "^6.2.1",
-    "eslint-plugin-react": "^7.12.4"
+    "eslint-plugin-react": "^7.12.4",
+    "husky": "^3.0.7"
   }
 }

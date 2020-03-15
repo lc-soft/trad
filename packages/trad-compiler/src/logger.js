@@ -1,3 +1,5 @@
+/* eslint-disable no-console */
+
 const chalk = require('chalk')
 const pluralize = require('pluralize')
 
@@ -34,20 +36,21 @@ class Logger {
       console.log(file)
       this.records[file].forEach((record) => {
         const loc = `${record.location.line}:${record.location.column}`.padEnd(8, ' ')
-  
+
         if (record.type === 'error') {
           console.log(`${loc}${chalk.red('error')} ${record.message}`)
         } else {
-          console.log(`${loc}${chalk.yellow('warning')} ${warn.message}`)
+          console.log(`${loc}${chalk.yellow('warning')} ${record.message}`)
         }
       })
       console.log()
     })
 
-    const result = 
-      `✖ ${total} ${pluralize('problem', total)} (` +
-      `${this.errors} ${pluralize('error', this.errors)}, ` +
+    const result = [
+      `✖ ${total} ${pluralize('problem', total)} (`,
+      `${this.errors} ${pluralize('error', this.errors)}, `,
       `${this.warnings} ${pluralize('warning', this.warnings)})`
+    ].join('')
 
     console.log(this.errors > 0 ? chalk.red(result) : chalk.yellow(result))
     console.log()

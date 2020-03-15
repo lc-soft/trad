@@ -1,8 +1,45 @@
+/* eslint-disable no-param-reassign */
+
 // FIXME: This file includes too many class declaration, needs to refactor
 
 const assert = require('assert')
 const pathModule = require('path')
 const { capitalize, toVariableName } = require('../trad-utils')
+
+const keywords = {
+  // C
+  // eslint-disable-next-line
+  '*': function (ctype) {
+    ctype.isPointer = true
+  },
+  short: true,
+  const(ctype) {
+    ctype.isConst = true
+  },
+  signed: true,
+  unsigned: true,
+  long: true,
+  double: true,
+  int: true,
+  size_t: true,
+  wchar_t: true,
+  char: true,
+  float: true,
+  void: true,
+  string: true,
+  number: true,
+  struct(ctype) {
+    ctype.isComposite = true
+  },
+  typedef: true,
+  // Trad
+  class(ctype) {
+    ctype.isComposite = true
+  },
+  module(ctype) {
+    ctype.isComposite = true
+  }
+}
 
 // Convert to right value
 function rvalue(value, stat) {
@@ -29,6 +66,28 @@ function rvalue(value, stat) {
     return new CObject(type, value.define().slice(0, -1))
   }
   return value
+}
+
+function createType(name) {
+  const ctype = new CType(name)
+
+  // FIXME: cannot parse "void*"
+  ctype.name = name
+    .split(' ')
+    .map(k => k.trim())
+    .filter(str => !!str)
+    .map((keyword) => {
+      const handler = keywords[keyword]
+
+      if (typeof handler === 'undefined') {
+        assert(this.isComposite, `${keyword} is an undeclared identifier`)
+      } else if (typeof handler === 'function') {
+        handler(this)
+      }
+      return keyword
+    })
+    .join(' ')
+  return ctype
 }
 
 class CNode {
@@ -166,10 +225,12 @@ class CStatement extends CCode {
     this.statementType = name
   }
 
+  // eslint-disable-next-line class-methods-use-this
   export() {
     return ''
   }
 
+  // eslint-disable-next-line class-methods-use-this
   declare() {
     return ''
   }
@@ -225,7 +286,7 @@ class CIfStatement extends CStatement {
 
   define() {
     const lines = []
-    let test = this.test
+    let { test } = this
 
     if (typeof test !== 'string') {
       test = this.test.define().slice(0, -1)
@@ -295,7 +356,7 @@ class CCallExpression extends CExpression {
   }
 
   get callee() {
-    const callee = this.meta.callee
+    const { callee } = this.meta
 
     if (callee instanceof CObject) {
       assert(callee.typeDeclaration instanceof CFunction, `${callee.id} is not a function`)
@@ -383,7 +444,7 @@ class CDeclaration extends CCode {
     const mod = this.closest(stat => stat instanceof CModule || stat instanceof CProgram)
 
     if (mod) {
-      return mod.inStandardDirectory ? mod.name: mod.path
+      return mod.inStandardDirectory ? mod.name : mod.path
     }
     return ''
   }
@@ -481,6 +542,8 @@ class CIdentifier extends CDeclaration {
 
 class CNamespace extends CIdentifier {}
 
+
+/* eslint-disable class-methods-use-this */
 class CType extends CIdentifier {
   constructor(name) {
     super(name)
@@ -498,17 +561,14 @@ class CType extends CIdentifier {
     this.meta.variablePrefix = prefix
   }
 
-  // eslint-disable-next-line class-methods-use-this
   export() {
     return ''
   }
 
-  // eslint-disable-next-line class-methods-use-this
   declare() {
     return ''
   }
 
-  // eslint-disable-next-line class-methods-use-this
   define() {
     return ''
   }
@@ -518,7 +578,6 @@ class CType extends CIdentifier {
   }
 
   destroy() {
-    return
   }
 
   duplicate(obj) {
@@ -533,11 +592,13 @@ class CType extends CIdentifier {
     return `${left.id} - ${right.id}`
   }
 
-  stringify(obj) {
+  stringify() {
     // FIXME: add toString() for basic types, like: int, double, char*
     assert(0, 'cannot convert to string')
   }
 }
+
+/* eslint-enable class-methods-use-this */
 
 class CPreprocessorDirective extends CCode {
   constructor(name) {
@@ -870,6 +931,7 @@ class CClassReference extends CTypedef {
     return this.reference.variablePrefix
   }
 
+  // eslint-disable-next-line
   set variablePrefix(_prefix) {
     assert(0, 'variablePrefix is readonly')
   }
@@ -1026,7 +1088,7 @@ class CBinding {
 
   init(...args) {
     if (this.cThis.pointerLevel > 0) {
-      return new CAssignmentExpression(obj, this.cClass.create(...args))
+      return new CAssignmentExpression(this.cThis, this.cClass.create(...args))
     }
     return this.callMethod('init', ...args)
   }
@@ -1192,11 +1254,10 @@ function mapExports(list) {
 function formatBlocks(blocks) {
   const outputs = []
 
-  blocks.forEach((block, i) => {
+  blocks.forEach((block) => {
     if (block instanceof Array && block.some(b => !!b)) {
       outputs.push(block)
       outputs.push('')
-      return
     }
   })
   outputs.pop()
@@ -1237,13 +1298,13 @@ class CBlock extends CDeclaration {
   }
 
   define() {
+    let returnStat
     const types = []
     const typedefs = []
     const objects = []
     const deletions = []
     const classMethods = []
     const staticFunctions = []
-    let returnStat = undefined
     const body = this.body.filter((stat) => {
       if (typeof stat === 'string') {
         if (stat.indexOf('return') === 0) {
@@ -1406,7 +1467,7 @@ class CModule extends CType {
   append(stat) {
     assert(stat instanceof CIdentifier)
     if (this.exports[stat.name]) {
-      return
+      return undefined
     }
     if (stat instanceof CClass) {
       this.append(stat.typedef)
@@ -1420,58 +1481,6 @@ class CModule extends CType {
   createReference(name) {
     return new CObject(this, name)
   }
-}
-
-const keywords = {
-  // C
-  '*': function (ctype) {
-    ctype.isPointer = true
-  },
-  'short': true,
-  'const': function (ctype) {
-    ctype.isConst = true
-  },
-  'signed': true,
-  'unsigned': true,
-  'long': true,
-  'double': true,
-  'int': true,
-  'size_t': true,
-  'wchar_t': true,
-  'unsigned': true,
-  'char': true,
-  'float': true,
-  'void': true,
-  'string': true,
-  'number': true,
-  'struct': function (ctype) {
-    ctype.isComposite = true
-  },
-  'typedef': true,
-  // Trad
-  'class': function (ctype) {
-    ctype.isComposite = true
-  },
-  'module': function (ctype) {
-    ctype.isComposite = true
-  }
-}
-
-function createType(name) {
-  const ctype = new CType(name)
-
-  // FIXME: cannot parse "void*"
-  ctype.name = name.split(' ').map(k => k.trim()).filter(str => !!str).map((keyword) => {
-    const handler = keywords[keyword]
-
-    if (typeof handler === 'undefined') {
-      assert(this.isComposite, `${keyword} is an undeclared identifier`)
-    } else if (typeof handler === 'function') {
-      handler(this)
-    }
-    return keyword
-  }).join(' ')
-  return ctype
 }
 
 class CString extends CType {
@@ -1556,7 +1565,8 @@ class CProgram extends CBlock {
     if (stat instanceof CInclude) {
       this.addInclude(stat)
       return stat
-    } else if (stat instanceof CModule) {
+    }
+    if (stat instanceof CModule) {
       this.modules[stat.name] = stat
       return stat
     }

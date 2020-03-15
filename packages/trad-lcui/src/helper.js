@@ -41,9 +41,16 @@ function initUpdateMethod(cClass, MethodClass = types.WidgetMethod) {
     return false
   })
 
-  const ifStat = new trad.CIfStatement(conditions.join(' && '), new trad.CBlock(new trad.CReturnStatment()))
-  const lines = [ifStat]
+  const lines = []
 
+  if (MethodClass === types.WidgetMethod) {
+    funcUpdate.meta.funcArgs.push(new trad.CObject('int', 'task'))
+    lines.push(new trad.CIfStatement('task != LCUI_WTASK_USER', new trad.CBlock(new trad.CReturnStatment())))
+  }
+
+  const ifStat = new trad.CIfStatement(conditions.join(' && '), new trad.CBlock(new trad.CReturnStatment()))
+
+  lines.push(ifStat)
   if (stateChanges) {
     lines.push(functions.assign(stateChanges, 0))
   }

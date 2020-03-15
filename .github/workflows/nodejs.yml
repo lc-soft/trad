@@ -27,11 +27,13 @@ jobs:
       uses: actions/setup-node@v1
       with:
         node-version: ${{ matrix.node-version }}
-      run: npm install
-    - name: Run test
+    - name: Setup
       run: |
+        npm install
         npm link
         tradc --version
+    - name: Run test
+      run: |
         tradc example/src/app.jsx
         mkdir exmaple/build
         cd exmaple/build

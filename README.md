@@ -58,6 +58,7 @@ Trad has adopted the code of conduct defined by the Contributor Covenant. This d
 The main tasks are listed below, for detailed work plans and progress please see the [project boards](https://github.com/lc-soft/trad/projects).
 
 - Core
+  - Rewrite Trad's compiler
   - Basic syntax
   - Basic data type
   - Compatible with C syntax

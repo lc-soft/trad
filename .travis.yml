@@ -28,7 +28,7 @@ script:
   - npm link
   - tradc --version
   - tradc example/src/app.jsx
-  - mkdir exmaple/build
-  - cd exmaple/build
+  - mkdir example/build
+  - cd example/build
   - cmake ../
   - make

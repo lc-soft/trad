@@ -57,6 +57,7 @@ Trad 的语法基于 JavaScript，它与现有的 JavaScript 开发工具/编辑
 以下只列出了主要的任务，如需了解详细的任务计划和进度，请查看[项目看板](https://github.com/lc-soft/trad/projects)。
 
 - 核心
+  - 重写 Trad 的编译器
   - 基础语法
   - 基础数据类型
   - 兼容 C 的语法

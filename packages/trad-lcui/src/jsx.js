@@ -237,7 +237,8 @@ const install = Compiler => class JSXParser extends Compiler {
     if (types.isObject(value)) {
       this.block.append(functions.Widget_BindProperty(ctx.widget, attrName, value))
       return true
-    } else if (value instanceof trad.CObject) {
+    }
+    if (value instanceof trad.CObject) {
       this.block.append(functions.Widget_SetAttribute(ctx.widget, attrName, value.value))
       return true
     }

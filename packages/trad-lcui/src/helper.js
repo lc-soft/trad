@@ -12,7 +12,7 @@ function findStyles(program) {
 }
 
 function initUpdateMethod(cClass, MethodClass = types.WidgetMethod) {
-  let conditions = []
+  const conditions = []
   let insertIndex = 0
   let funcUpdate = cClass.getMethod('update')
   const that = new trad.CObject(cClass.typedefPointer, '_this')

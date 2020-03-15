@@ -1,9 +1,28 @@
+/* eslint-disable no-param-reassign  */
+
 const assert = require('assert')
 const lib = require('./lib')
 const types = require('./types')
 const functions = require('./functions')
 const helper = require('./helper')
 const trad = require('../../trad')
+
+function addWidgetNewMethod(cClass) {
+  const widget = new types.Object('Widget', 'w')
+  const method = new trad.CMethod('new', [], widget.type)
+
+  method.isStatic = true
+  method.block.append(`return LCUIWidget_New("${lib.convertPascalNaming(cClass.className)}");`)
+  cClass.addMethod(method)
+}
+
+function addWidgetDeleteMethod(cClass) {
+  const widget = new types.Object('Widget', 'w')
+  const method = new types.WidgetMethod('delete')
+
+  method.block.append(`Widget_Destroy(${widget.id});`)
+  cClass.addMethod(method)
+}
 
 const install = Compiler => class WidgetClassParser extends Compiler {
   constructor(...args) {
@@ -101,26 +120,9 @@ const install = Compiler => class WidgetClassParser extends Compiler {
     cClass.parent.createObject(protoClass.typedef, `${lib.convertPascalNaming(cClass.className, '_')}_class`)
   }
 
-  addWidgetNewMethod(cClass) {
-    const widget = new types.Object('Widget', 'w')
-    const method = new trad.CMethod('new', [], widget.type)
-
-    method.isStatic = true
-    method.block.append(`return LCUIWidget_New("${lib.convertPascalNaming(cClass.className)}");`)
-    cClass.addMethod(method)
-  }
-
-  addWidgetDeleteMethod(cClass) {
-    const widget = new types.Object('Widget', 'w')
-    const method = new types.WidgetMethod('delete')
-
-    method.block.append(`Widget_Destroy(${widget.id});`)
-    cClass.addMethod(method)
-  }
-
   addWidgetRegisterMethod(cClass) {
+    let superClassName
     const className = lib.convertPascalNaming(cClass.className)
-    let superClassName = cClass.superClass ? lib.convertPascalNaming(cClass.superClass.className) : null
     const proto = this.widgetProtoIdentifyName
     const styles = helper.findStyles(this.program)
     const funcInstall = cClass.addMethod(new trad.CMethod('install'))
@@ -130,6 +132,9 @@ const install = Compiler => class WidgetClassParser extends Compiler {
     const constructor = cClass.getMethod('constructor')
     const destructor = cClass.getMethod('destructor')
 
+    if (cClass.superClass) {
+      superClassName = lib.convertPascalNaming(cClass.superClass.className)
+    }
     if (superClassName === 'widget') {
       superClassName = null
     }
@@ -155,6 +160,7 @@ const install = Compiler => class WidgetClassParser extends Compiler {
     funcTemplate.isExported = false
     constructor.block.append(functions.call(funcTemplate, constructor.widget))
     if (funcUpdate) {
+      const that = funcUpdate.block.getThis()
       funcUpdate.block.append(this.jsxComputedPropertyMethods.map(name => that.callMethod(name)))
       funcUpdate.block.append(this.jsxTextUpdateMethods.map(name => that.callMethod(name)))
       constructor.block.append(functions.call(funcUpdate, constructor.widget))
@@ -163,8 +169,8 @@ const install = Compiler => class WidgetClassParser extends Compiler {
 
   afterParseWidgetClass(cClass) {
     cClass.getSuper().node.remove()
-    this.addWidgetNewMethod(cClass)
-    this.addWidgetDeleteMethod(cClass)
+    addWidgetNewMethod(cClass)
+    addWidgetDeleteMethod(cClass)
     this.addWidgetRegisterMethod(cClass)
     this.enableJSX = false
     this.enableDataBinding = false

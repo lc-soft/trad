@@ -14,7 +14,7 @@ const cstrConst = new CObject('const char', 'cstr', { isPointer: true })
 const cptr = new CObject('void', 'ptr', { isPointer: true })
 const cfunc = new CObject('void', 'func', { isPointer: true })
 const cwidget = new types.Object('Widget', 'widget')
-const csize = new CObject('size_t', `size`)
+const csize = new CObject('size_t', 'size')
 
 const cfuncLCUIInit = new CFunction('LCUI_Init', [], 'int')
 const cfuncLCUILoadCSSString = new CFunction('LCUI_LoadCSSString', [cstrConst, cstrConst], csize.typeDeclaration)

@@ -138,7 +138,6 @@ class Compiler {
 
   warn(message) {
     this.logger.push({
-      rule,
       message,
       location: this.context.node.loc.start
     })
@@ -186,14 +185,13 @@ class Compiler {
 
   compile(fileName) {
     let input
-    let hasError = false
     const filePath = path.resolve(fileName)
     const sourceFilePath = `${filePath}.c`
     const headerFilePath = `${filePath}.h`
     const exportFilePath = `${filePath}.json`
     const data = fs.readFileSync(filePath, 'utf-8')
     const parser = acorn.Parser.extend(acornJSX())
-    
+
     try {
       input = parser.parse(data, { sourceType: 'module', locations: true })
     } catch (err) {
